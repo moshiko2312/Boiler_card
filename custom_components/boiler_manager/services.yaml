@@ -97,6 +97,59 @@ create_schedule:
       description: Enable task on creation.
       example: true
 
+create_timeline:
+  name: Create Timeline
+  description: Create a timeline task (multiple time points with existing timer options) and expose it as a switch.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    name:
+      name: Name
+      description: Friendly timeline name.
+      example: "Morning Timeline"
+      required: true
+    timeline_points:
+      name: Timeline Points
+      description: List of points with time and duration option.
+      example:
+        - at: "06:00"
+          duration_option: "30m"
+          duration_minutes: 30
+        - at: "10:00"
+          duration_option: "180m"
+          duration_minutes: 180
+      required: true
+    days:
+      name: Days
+      description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).
+      example: [0, 1, 2, 3, 4]
+    months:
+      name: Months
+      description: Months list as 1-12.
+      example: [1, 2, 3, 11, 12]
+    recurrence:
+      name: Recurrence
+      description: forever (default), once, or range.
+      example: "forever"
+    start_date:
+      name: Start Date
+      description: Optional lower date bound in YYYY-MM-DD.
+      example: "2026-11-01"
+    end_date:
+      name: End Date
+      description: Optional upper date bound in YYYY-MM-DD.
+      example: "2026-12-31"
+    enabled:
+      name: Enabled
+      description: Enable timeline on creation.
+      example: true
+
 update_schedule:
   name: Update Schedule
   description: Update an existing schedule task.
@@ -118,6 +171,10 @@ update_schedule:
       name: Name
       description: Friendly task name.
       example: "Evening Heat"
+    task_type:
+      name: Task Type
+      description: window or timeline.
+      example: "timeline"
     start_time:
       name: Start Time
       description: Start in HH:MM.
@@ -126,6 +183,16 @@ update_schedule:
       name: End Time
       description: End in HH:MM.
       example: "20:00"
+    timeline_points:
+      name: Timeline Points
+      description: Points for timeline tasks.
+      example:
+        - at: "06:00"
+          duration_option: "30m"
+          duration_minutes: 30
+        - at: "10:00"
+          duration_option: "180m"
+          duration_minutes: 180
     days:
       name: Days
       description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 import logging
+import re
 import uuid
 
 from homeassistant.config_entries import ConfigEntry
@@ -19,16 +20,21 @@ from homeassistant.util import dt as dt_util
 from .const import (
     ATTR_DAYS,
     ATTR_DURATION,
+    ATTR_DURATION_MINUTES,
+    ATTR_DURATION_OPTION,
     ATTR_ENABLED,
     ATTR_END_TIME,
     ATTR_END_DATE,
     ATTR_MINUTES,
     ATTR_MONTHS,
+    ATTR_POINT_TIME,
     ATTR_RECURRENCE,
     ATTR_START_TIME,
     ATTR_START_DATE,
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
+    ATTR_TASK_TYPE,
+    ATTR_TIMELINE_POINTS,
     CONF_BOILER_ENTITY,
     CONF_CURRENT_SENSOR,
     CONF_NAME,
@@ -47,6 +53,9 @@ from .const import (
     SCHEDULER_INTERVAL,
     STORAGE_KEY,
     STORAGE_VERSION,
+    TASK_TYPE_TIMELINE,
+    TASK_TYPE_WINDOW,
+    TASK_TYPES,
     WEEKDAY_LABELS,
     signal_state_updated,
     signal_tasks_updated,
@@ -60,6 +69,22 @@ class BoilerManagerError(HomeAssistantError):
 
 
 @dataclass
+class BoilerTimelinePoint:
+    """One timeline point (time + duration option)."""
+
+    at: str
+    duration_option: str
+    duration_minutes: int
+
+    def as_dict(self) -> dict:
+        return {
+            ATTR_POINT_TIME: self.at,
+            ATTR_DURATION_OPTION: self.duration_option,
+            ATTR_DURATION_MINUTES: self.duration_minutes,
+        }
+
+
+@dataclass
 class BoilerTask:
     """Represents one on/off schedule task."""
 
@@ -67,12 +92,14 @@ class BoilerTask:
     name: str
     start_time: str
     end_time: str
+    task_type: str
     days: list[int]
     months: list[int]
     recurrence: str
     start_date: str | None
     end_date: str | None
     enabled: bool
+    timeline_points: list[BoilerTimelinePoint] = field(default_factory=list)
     once_started: bool = False
 
     def as_dict(self) -> dict:
@@ -82,6 +109,8 @@ class BoilerTask:
             ATTR_TASK_NAME: self.name,
             ATTR_START_TIME: self.start_time,
             ATTR_END_TIME: self.end_time,
+            ATTR_TASK_TYPE: self.task_type,
+            ATTR_TIMELINE_POINTS: [point.as_dict() for point in self.timeline_points],
             ATTR_DAYS: self.days,
             ATTR_MONTHS: self.months,
             ATTR_RECURRENCE: self.recurrence,
@@ -243,6 +272,64 @@ class BoilerManager:
             name=task_name,
             start_time=normalized_start,
             end_time=normalized_end,
+            task_type=TASK_TYPE_WINDOW,
+            timeline_points=[],
+            days=normalized_days,
+            months=normalized_months,
+            recurrence=normalized_recurrence,
+            start_date=normalized_start_date,
+            end_date=normalized_end_date,
+            enabled=bool(enabled),
+            once_started=False,
+        )
+
+        self._tasks[task_id] = task
+        await self._async_save()
+
+        async_dispatcher_send(
+            self.hass,
+            signal_tasks_updated(self.entry.entry_id),
+            {"action": "add", ATTR_TASK_ID: task_id},
+        )
+
+        await self._async_apply_schedule_state()
+        self._async_notify_state()
+        return task
+
+    async def async_create_timeline(
+        self,
+        *,
+        name: str,
+        points: list[dict] | None,
+        days: list[int] | None,
+        months: list[int] | None = None,
+        recurrence: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        enabled: bool,
+    ) -> BoilerTask:
+        """Create a new timeline task (multiple points on same day pattern)."""
+        normalized_days = _normalize_days(days)
+        normalized_months = _normalize_months(months)
+        normalized_recurrence = _normalize_recurrence(recurrence)
+        normalized_start_date, normalized_end_date = _normalize_date_bounds(
+            start_date,
+            end_date,
+            normalized_recurrence,
+        )
+        timeline_points = _normalize_timeline_points(points)
+        first_start, last_end = _timeline_time_bounds(timeline_points)
+
+        task_name = str(name or "").strip() or "Timeline"
+        task_id = uuid.uuid4().hex[:10]
+
+        task = BoilerTask(
+            task_id=task_id,
+            name=task_name,
+            start_time=first_start,
+            end_time=last_end,
+            task_type=TASK_TYPE_TIMELINE,
+            timeline_points=timeline_points,
             days=normalized_days,
             months=normalized_months,
             recurrence=normalized_recurrence,
@@ -299,8 +386,10 @@ class BoilerManager:
         task_id: str,
         *,
         name: str | None = None,
+        task_type: str | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
+        timeline_points: list[dict] | None = None,
         days: list[int] | None = None,
         months: list[int] | None = None,
         recurrence: str | None = None,
@@ -317,10 +406,37 @@ class BoilerManager:
 
         if name is not None:
             task.name = str(name).strip() or task.name
-        if start_time is not None:
-            task.start_time = _normalize_time_string(start_time)
-        if end_time is not None:
-            task.end_time = _normalize_time_string(end_time)
+
+        next_task_type = task.task_type if task_type is None else _normalize_task_type(task_type)
+        task.task_type = next_task_type
+
+        if next_task_type == TASK_TYPE_TIMELINE:
+            if timeline_points is not None:
+                next_points = _normalize_timeline_points(timeline_points)
+            elif task.timeline_points:
+                next_points = list(task.timeline_points)
+            else:
+                derived_start = _normalize_time_string(start_time) if start_time is not None else task.start_time
+                derived_end = _normalize_time_string(end_time) if end_time is not None else task.end_time
+                minutes = max(1, _minutes_between(derived_start, derived_end))
+                next_points = _normalize_timeline_points(
+                    [
+                        {
+                            ATTR_POINT_TIME: derived_start,
+                            ATTR_DURATION_OPTION: _minutes_to_option_label(minutes),
+                            ATTR_DURATION_MINUTES: minutes,
+                        }
+                    ]
+                )
+            task.timeline_points = next_points
+            task.start_time, task.end_time = _timeline_time_bounds(next_points)
+        else:
+            task.timeline_points = []
+            if start_time is not None:
+                task.start_time = _normalize_time_string(start_time)
+            if end_time is not None:
+                task.end_time = _normalize_time_string(end_time)
+
         if days is not None:
             task.days = _normalize_days(days)
         if months is not None:
@@ -529,26 +645,28 @@ class BoilerManager:
             if not task.enabled:
                 continue
 
-            start = _time_from_hhmm(task.start_time)
-            end = _time_from_hhmm(task.end_time)
+            windows = _task_time_windows(task)
+            for start, end in windows:
+                if start == end:
+                    continue
 
-            if start == end:
-                continue
+                # Same-day window, e.g. 10:00 -> 12:00.
+                if start < end:
+                    if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
+                        active.append(task)
+                        break
+                    continue
 
-            # Same-day window, e.g. 10:00 -> 12:00.
-            if start < end:
-                if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
+                # Cross-midnight window, e.g. 22:00 -> 02:00.
+                if now_time >= start:
+                    if _task_matches_schedule_day(task, weekday, current_date):
+                        active.append(task)
+                        break
+                    continue
+
+                if now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
                     active.append(task)
-                continue
-
-            # Cross-midnight window, e.g. 22:00 -> 02:00.
-            if now_time >= start:
-                if _task_matches_schedule_day(task, weekday, current_date):
-                    active.append(task)
-                continue
-
-            if now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
-                active.append(task)
+                    break
 
         return active
 
@@ -597,6 +715,23 @@ def _task_from_raw(raw: dict) -> BoilerTask:
 
     start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
     end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+    task_type = _normalize_task_type(raw.get(ATTR_TASK_TYPE))
+    timeline_points = _normalize_timeline_points(raw.get(ATTR_TIMELINE_POINTS))
+    if task_type == TASK_TYPE_TIMELINE and not timeline_points:
+        # Fallback for old/partial payloads.
+        timeline_points = _normalize_timeline_points(
+            [
+                {
+                    ATTR_POINT_TIME: start_time,
+                    ATTR_DURATION_OPTION: _minutes_to_option_label(
+                        max(1, _minutes_between(start_time, end_time))
+                    ),
+                    ATTR_DURATION_MINUTES: max(1, _minutes_between(start_time, end_time)),
+                }
+            ]
+        )
+    if task_type == TASK_TYPE_TIMELINE:
+        start_time, end_time = _timeline_time_bounds(timeline_points)
     days = _normalize_days(raw.get(ATTR_DAYS))
     months = _normalize_months(raw.get(ATTR_MONTHS))
     recurrence = _normalize_recurrence(raw.get(ATTR_RECURRENCE))
@@ -613,6 +748,8 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         name=name,
         start_time=start_time,
         end_time=end_time,
+        task_type=task_type,
+        timeline_points=timeline_points,
         days=days,
         months=months,
         recurrence=recurrence,
@@ -706,6 +843,140 @@ def _normalize_recurrence(value: str | None) -> str:
     if normalized not in RECURRENCE_OPTIONS:
         raise BoilerManagerError(f"Unsupported recurrence: {value}")
     return normalized
+
+
+def _normalize_task_type(value: str | None) -> str:
+    """Normalize task type."""
+    if value is None:
+        return TASK_TYPE_WINDOW
+
+    normalized = str(value).strip().lower()
+    if normalized not in TASK_TYPES:
+        raise BoilerManagerError(f"Unsupported task type: {value}")
+    return normalized
+
+
+def _normalize_timeline_points(value: list[dict] | None) -> list[BoilerTimelinePoint]:
+    """Normalize timeline point payloads."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise BoilerManagerError("Timeline points must be a list")
+
+    normalized: list[BoilerTimelinePoint] = []
+    for raw in value:
+        if not isinstance(raw, dict):
+            raise BoilerManagerError("Invalid timeline point format")
+
+        at = _normalize_time_string(raw.get(ATTR_POINT_TIME))
+        option = str(raw.get(ATTR_DURATION_OPTION) or "").strip()
+        minutes_raw = raw.get(ATTR_DURATION_MINUTES)
+
+        if minutes_raw is None:
+            minutes = _option_to_minutes(option)
+        else:
+            try:
+                minutes = int(minutes_raw)
+            except (TypeError, ValueError) as err:
+                raise BoilerManagerError("Invalid timeline duration minutes") from err
+
+        if minutes <= 0:
+            raise BoilerManagerError("Timeline duration must be greater than zero")
+        if not option:
+            option = _minutes_to_option_label(minutes)
+
+        normalized.append(
+            BoilerTimelinePoint(
+                at=at,
+                duration_option=option,
+                duration_minutes=minutes,
+            )
+        )
+
+    if not normalized:
+        raise BoilerManagerError("At least one timeline point must be provided")
+
+    normalized.sort(key=lambda point: point.at)
+    return normalized
+
+
+def _option_to_minutes(value: str) -> int:
+    """Parse minutes from option text like 30m / 30 min / etc."""
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return 0
+    if "no timer" in normalized or "ללא" in normalized or "без таймера" in normalized:
+        return 0
+
+    match = re.search(r"(\d+)", normalized)
+    if not match:
+        return 0
+    return int(match.group(1))
+
+
+def _minutes_to_option_label(minutes: int) -> str:
+    """Build default option label."""
+    return f"{int(minutes)}m"
+
+
+def _minutes_between(start_hhmm: str, end_hhmm: str) -> int:
+    """Minutes from start to end, wrapping across midnight when needed."""
+    start = _time_from_hhmm(start_hhmm)
+    end = _time_from_hhmm(end_hhmm)
+    base = date(2000, 1, 1)
+    start_dt = datetime.combine(base, start)
+    end_dt = datetime.combine(base, end)
+    if end_dt <= start_dt:
+        end_dt += timedelta(days=1)
+    return int((end_dt - start_dt).total_seconds() // 60)
+
+
+def _time_plus_minutes(start_hhmm: str, minutes: int) -> str:
+    """Return HH:MM after adding minutes to a start HH:MM."""
+    start = _time_from_hhmm(start_hhmm)
+    base = datetime.combine(date(2000, 1, 1), start)
+    result = base + timedelta(minutes=minutes)
+    return result.time().replace(second=0, microsecond=0).strftime("%H:%M")
+
+
+def _timeline_time_bounds(points: list[BoilerTimelinePoint]) -> tuple[str, str]:
+    """Return rough first/last bounds for timeline metadata display."""
+    if not points:
+        return "00:00", "00:00"
+
+    sorted_points = sorted(points, key=lambda point: point.at)
+    start = sorted_points[0].at
+
+    def _end_key(point: BoilerTimelinePoint) -> tuple[int, str]:
+        start_minutes = _time_from_hhmm(point.at).hour * 60 + _time_from_hhmm(point.at).minute
+        end_minutes = start_minutes + int(point.duration_minutes)
+        return end_minutes, point.at
+
+    last_point = max(sorted_points, key=_end_key)
+    end = _time_plus_minutes(last_point.at, last_point.duration_minutes)
+    return start, end
+
+
+def _task_time_windows(task: BoilerTask) -> list[tuple[time, time]]:
+    """Return normalized active windows for a task."""
+    if task.task_type == TASK_TYPE_TIMELINE and task.timeline_points:
+        windows: list[tuple[time, time]] = []
+        for point in task.timeline_points:
+            start = _time_from_hhmm(point.at)
+            end = _time_from_hhmm(_time_plus_minutes(point.at, point.duration_minutes))
+            windows.append((start, end))
+        return windows
+
+    return [(_time_from_hhmm(task.start_time), _time_from_hhmm(task.end_time))]
+
+
+def format_timeline_for_display(points: list[BoilerTimelinePoint]) -> str:
+    """Human-readable timeline summary for UI."""
+    if not points:
+        return ""
+    ordered = sorted(points, key=lambda point: point.at)
+    chunks = [f"{point.at}→{point.duration_option}" for point in ordered]
+    return " | ".join(chunks)
 
 
 def _normalize_date_bounds(

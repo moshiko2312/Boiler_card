@@ -19,23 +19,30 @@ from .const import (
     ATTR_ENABLED,
     ATTR_END_TIME,
     ATTR_END_DATE,
+    ATTR_DURATION_MINUTES,
+    ATTR_DURATION_OPTION,
     ATTR_ENTRY_ID,
     ATTR_MINUTES,
     ATTR_MONTHS,
+    ATTR_POINT_TIME,
     ATTR_RECURRENCE,
     ATTR_START_TIME,
     ATTR_START_DATE,
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
+    ATTR_TASK_TYPE,
+    ATTR_TIMELINE_POINTS,
     CONF_BOILER_ENTITY,
     DOMAIN,
     RECURRENCE_OPTIONS,
+    SERVICE_CREATE_TIMELINE,
     SERVICE_CREATE_SCHEDULE,
     SERVICE_DELETE_SCHEDULE,
     SERVICE_RUN_TIMED,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON_CONTINUOUS,
     SERVICE_UPDATE_SCHEDULE,
+    TASK_TYPES,
 )
 from .manager import BoilerManager, BoilerManagerError
 
@@ -76,13 +83,39 @@ CREATE_SCHEDULE_SCHEMA = vol.Schema(
     extra=vol.PREVENT_EXTRA,
 )
 
+TIMELINE_POINT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_POINT_TIME): cv.string,
+        vol.Required(ATTR_DURATION_OPTION): cv.string,
+        vol.Optional(ATTR_DURATION_MINUTES): vol.Coerce(int),
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+CREATE_TIMELINE_SCHEMA = vol.Schema(
+    {
+        **BASE_SERVICE_SCHEMA,
+        vol.Required(ATTR_TASK_NAME): cv.string,
+        vol.Required(ATTR_TIMELINE_POINTS): [TIMELINE_POINT_SCHEMA],
+        vol.Optional(ATTR_DAYS): [vol.Any(vol.In(list(range(7))), cv.string)],
+        vol.Optional(ATTR_MONTHS): [vol.Any(vol.In(list(range(1, 13))), cv.string)],
+        vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
+        vol.Optional(ATTR_START_DATE): cv.string,
+        vol.Optional(ATTR_END_DATE): cv.string,
+        vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
 UPDATE_SCHEDULE_SCHEMA = vol.Schema(
     {
         **BASE_SERVICE_SCHEMA,
         vol.Required(ATTR_TASK_ID): cv.string,
         vol.Optional(ATTR_TASK_NAME): cv.string,
+        vol.Optional(ATTR_TASK_TYPE): vol.In(TASK_TYPES),
         vol.Optional(ATTR_START_TIME): cv.string,
         vol.Optional(ATTR_END_TIME): cv.string,
+        vol.Optional(ATTR_TIMELINE_POINTS): [TIMELINE_POINT_SCHEMA],
         vol.Optional(ATTR_DAYS): [vol.Any(vol.In(list(range(7))), cv.string)],
         vol.Optional(ATTR_MONTHS): [vol.Any(vol.In(list(range(1, 13))), cv.string)],
         vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
@@ -171,6 +204,19 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             enabled=call.data.get(ATTR_ENABLED, True),
         )
 
+    async def _create_timeline(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        await manager.async_create_timeline(
+            name=call.data[ATTR_TASK_NAME],
+            points=call.data[ATTR_TIMELINE_POINTS],
+            days=call.data.get(ATTR_DAYS),
+            months=call.data.get(ATTR_MONTHS),
+            recurrence=call.data.get(ATTR_RECURRENCE),
+            start_date=call.data.get(ATTR_START_DATE),
+            end_date=call.data.get(ATTR_END_DATE),
+            enabled=call.data.get(ATTR_ENABLED, True),
+        )
+
     async def _update_schedule(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
 
@@ -178,8 +224,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             key in call.data
             for key in (
                 ATTR_TASK_NAME,
+                ATTR_TASK_TYPE,
                 ATTR_START_TIME,
                 ATTR_END_TIME,
+                ATTR_TIMELINE_POINTS,
                 ATTR_DAYS,
                 ATTR_MONTHS,
                 ATTR_RECURRENCE,
@@ -193,8 +241,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         await manager.async_update_task(
             task_id=call.data[ATTR_TASK_ID],
             name=call.data.get(ATTR_TASK_NAME),
+            task_type=call.data.get(ATTR_TASK_TYPE),
             start_time=call.data.get(ATTR_START_TIME),
             end_time=call.data.get(ATTR_END_TIME),
+            timeline_points=call.data.get(ATTR_TIMELINE_POINTS),
             days=call.data.get(ATTR_DAYS),
             months=call.data.get(ATTR_MONTHS),
             recurrence=call.data.get(ATTR_RECURRENCE),
@@ -235,6 +285,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_CREATE_TIMELINE,
+        _wrap_service_errors(_create_timeline),
+        schema=CREATE_TIMELINE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_UPDATE_SCHEDULE,
         _wrap_service_errors(_update_schedule),
         schema=UPDATE_SCHEDULE_SCHEMA,
@@ -257,6 +313,7 @@ def _async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_RUN_TIMED,
         SERVICE_TURN_OFF,
         SERVICE_CREATE_SCHEDULE,
+        SERVICE_CREATE_TIMELINE,
         SERVICE_UPDATE_SCHEDULE,
         SERVICE_DELETE_SCHEDULE,
     ):

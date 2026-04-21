@@ -1,177 +1,221 @@
-# Boiler Water Card (Home Assistant)
+# Boiler Card + Boiler Manager (Home Assistant)
 
-Custom Lovelace card for a hot-water boiler with:
-- `Turn On` and `Turn Off` buttons
-- Center popup timer picker with grid options from 15 minutes to 4 hours (15-minute steps)
-- Selecting a timer from the popup starts heating immediately and resets countdown automatically
-- Dynamic boiler heating icon with deep modern colors (blue → orange → red) based on timer progress
-- `No Timer` mode
-- Server-side auto shutoff for safety
-- Support for `switch`, `light`, and other entities that can be controlled via service calls
-- Mobile-first responsive layout for both card and popup timer sheet
+Custom boiler control solution for Home Assistant with:
+- Lovelace custom card (`boiler-water-card`)
+- Built-in custom integration (`boiler_manager`)
+- Timer control, recurring tasks, and timeline tasks
+- Task entities as real `switch` entities
+- Optional sensor mirror support (temperature / power / current)
+
+## What You Get
+
+- Quick buttons: `15 / 30 / 60 / Off`
+- Timer popup from hamburger menu
+- Tasks popup from same hamburger menu
+- Create, edit, enable/disable, and delete tasks from card UI
+- Task recurrence options:
+  - `forever`
+  - `once` (auto-removes after first completed run)
+  - `range` (start/end date)
+- Day and month filtering
+- Timeline task type:
+  - Multiple points per day
+  - Each point uses existing timer options (same as timer picker)
+  - Overlap behavior: extends until latest end time (max end wins)
 
 ## Project Structure
 
-- `www/boiler-card/boiler-card.js` - custom card frontend
-- `home-assistant/packages/boiler_hot_water.yaml` - helpers/scripts/automations
-- `lovelace/boiler-card-example.yaml` - ready card configuration
+- `www/boiler-card/boiler-card.js` - source frontend card
+- `custom_components/boiler_manager/` - integration
+- `lovelace/boiler-card-example.yaml` - example card config
+- `home-assistant/packages/boiler_hot_water.yaml` - optional legacy package flow
 
-## Install
+## Installation
 
-1. Copy frontend file:
-   - source: `www/boiler-card/boiler-card.js`
-   - destination: `/config/www/boiler-card/boiler-card.js`
+### 1) Install Integration
 
-2. Copy package file:
-   - source: `home-assistant/packages/boiler_hot_water.yaml`
-   - destination: `/config/packages/boiler_hot_water.yaml`
+Copy:
+- Source: `custom_components/boiler_manager`
+- Destination: `/config/custom_components/boiler_manager`
 
-3. Ensure packages are enabled in `configuration.yaml`:
+Restart Home Assistant.
 
-```yaml
-homeassistant:
-  packages: !include_dir_named packages
-```
+Add integration:
+- `Settings -> Devices & Services -> Add Integration -> Boiler Manager`
 
-4. Add Lovelace resource:
-   - URL: `/local/boiler-card/boiler-card.js?v=1`
-   - Type: `JavaScript Module`
+Configure:
+- Boiler entity (`switch.*` or `light.*`)
+- Optional sensors:
+  - temperature sensor
+  - power sensor
+  - current sensor
 
-5. Restart Home Assistant.
+### 2) Frontend Card File
 
-## Add Card
+On integration startup, card assets are auto-copied to:
+- `/config/www/boiler-card/boiler-card.js`
 
-Use the example from `lovelace/boiler-card-example.yaml` or paste this:
+Important:
+- This copy step does **not** modify Lovelace Resources list.
+- It only updates files inside `/config/www/boiler-card`.
+
+### 3) Add Lovelace Resource (once)
+
+`Settings -> Dashboards -> Resources -> Add Resource`
+
+- URL: `/local/boiler-card/boiler-card.js?v=1`
+- Type: `JavaScript Module`
+
+If already exists, do not add again.
+
+### 4) Add Card
 
 ```yaml
 type: custom:boiler-water-card
-title: דוד מים חמים / Boiler
+title: דוד מים חמים
 boiler_entity: switch.boiler
-duration_entity: input_select.boiler_duration
-timer_entity: timer.boiler_runtime
-script_on_timed: script.boiler_turn_on_timed
-script_on_continuous: script.boiler_turn_on_continuous
-script_off: script.boiler_turn_off
-```
-
-Built-in integration mode (no script entities required):
-
-```yaml
-type: custom:boiler-water-card
-title: דוד מים חמים / Boiler
-boiler_entity: switch.boiler
+integration_entry_id: 01JABCDEFGH1234567890
 service_run_timed: boiler_manager.run_timed
 service_on_continuous: boiler_manager.turn_on_continuous
 service_off: boiler_manager.turn_off
-# Optional when you have multiple Boiler Manager entries:
-# integration_entry_id: 01JABCDEFGH1234567890
+service_create_schedule: boiler_manager.create_schedule
+service_create_timeline: boiler_manager.create_timeline
+service_update_schedule: boiler_manager.update_schedule
+service_delete_schedule: boiler_manager.delete_schedule
 ```
 
-## Advanced Entity Support
+Notes:
+- `integration_entry_id` is optional if you have only one Boiler Manager entry.
+- The card can also run in script mode (legacy), but built-in integration mode is recommended.
 
-The card supports advanced on/off service parameters, useful for `light` entities and beyond:
+## Card Usage Guide
 
-```yaml
-type: custom:boiler-water-card
-title: Boiler Light Example
-boiler_entity: light.boiler_indicator
-duration_entity: input_select.boiler_duration
-timer_entity: timer.boiler_runtime
-script_on_timed: script.boiler_turn_on_timed
-script_on_continuous: script.boiler_turn_on_continuous
-script_off: script.boiler_turn_off
-turn_on_action: homeassistant.turn_on
-turn_off_action: homeassistant.turn_off
-turn_on_data:
-  brightness_pct: 100
-  transition: 1
-  color_temp_kelvin: 4000
-turn_off_data:
-  transition: 1
-state_on_values:
-  - "on"
-state_off_values:
-  - "off"
-  - "idle"
-  - "standby"
-  - "unavailable"
-  - "unknown"
-```
+### Timer Mode
 
-Available advanced fields:
-- `turn_on_action`: any Home Assistant service (default: `homeassistant.turn_on`)
-- `turn_off_action`: any Home Assistant service (default: `homeassistant.turn_off`)
-- `turn_on_data`: full service-data payload passed as-is to the turn-on action
-- `turn_off_data`: full service-data payload passed as-is to the turn-off action
-- `state_on_values`: states treated as ON in card UI
-- `state_off_values`: states treated as OFF in card UI
+- Open hamburger menu (`☰`)
+- Choose `Timer`
+- Pick duration option
+- Boiler starts immediately via integration service
 
-For non-standard entity domains, set `state_on_values`/`state_off_values` explicitly to match your entity states.
+### Tasks Mode
 
-## Important
+- Open hamburger menu (`☰`)
+- Choose `Tasks`
+- Click `Add`
 
-- The package includes `input_text.boiler_switch_entity` (default target) and `input_text.boiler_active_entity` (runtime target).
-- Set `input_text.boiler_switch_entity` to your real boiler entity (example: `switch.shelly_boiler`) if you do not use `switch.boiler`.
-- The card passes `boiler_entity`, `turn_on_action`, `turn_off_action`, `turn_on_data`, and `turn_off_data` to scripts.
-- Timer helper is configured with `restore: true`, so after Home Assistant restart it resumes from the saved remaining time.
-- If entities do not exist yet, import the package file first and restart HA.
-- Auto shutoff is handled by automation `boiler_turn_off_on_timer_finished`.
+#### Task Type: Time Window
 
-## Custom Component (Built-In Scheduler)
+- Select `Type = Time Window`
+- Set `Start` and `End`
+- Select days
+- Select months
+- Set recurrence (`forever / once / range`)
+- Save
 
-New integration files are under:
-- `custom_components/boiler_manager/`
+#### Task Type: Timeline
 
-This integration moves control logic into Home Assistant (no package scripts required):
-- Built-in services: `boiler_manager.turn_on_continuous`, `boiler_manager.run_timed`, `boiler_manager.turn_off`
-- Built-in recurring schedules (`from` -> `to` + selected days)
-- Every created schedule appears as a `switch` entity
-- Deleting a schedule removes its switch entity
-- Optional mirror sensors for temperature / power / current
+- Select `Type = Timeline`
+- Add one or more points
+- For each point:
+  - choose time (`HH:MM`)
+  - choose timer option from existing options (15m..)
+- Select days
+- Select months
+- Set recurrence
+- Save
 
-### Install Integration
+### Edit Existing Task
 
-1. Copy folder:
-   - source: `custom_components/boiler_manager`
-   - destination: `/config/custom_components/boiler_manager`
-2. Restart Home Assistant
-3. Add integration: `Settings -> Devices & Services -> Add Integration -> Boiler Manager`
-4. Configure:
-   - boiler entity (`switch.*` / `light.*`)
-   - optional sensor entities (`sensor.*`) for temperature / power / current
+- In Tasks list click `Edit`
+- Change fields
+- Save
 
-When the integration loads, it automatically installs/updates the card file at:
-- `/config/www/boiler-card/boiler-card.js`
+### Delete Task
 
-### Schedule Services
+- In Tasks list click `Delete`
+- Task is removed permanently
+- Task switch entity is removed from entity registry
 
-Create schedule task:
+## Services
+
+### Core Control
+
+- `boiler_manager.turn_on_continuous`
+- `boiler_manager.run_timed`
+- `boiler_manager.turn_off`
+
+### Task Management
+
+- `boiler_manager.create_schedule`
+- `boiler_manager.create_timeline`
+- `boiler_manager.update_schedule`
+- `boiler_manager.delete_schedule`
+
+### create_timeline example
 
 ```yaml
-service: boiler_manager.create_schedule
+service: boiler_manager.create_timeline
 data:
-  name: Morning Heat
-  start_time: "10:00"
-  end_time: "12:00"
+  boiler_entity: switch.boiler
+  name: "Morning Timeline"
+  timeline_points:
+    - at: "06:00"
+      duration_option: "30m"
+      duration_minutes: 30
+    - at: "10:00"
+      duration_option: "180m"
+      duration_minutes: 180
   days: [0, 1, 2, 3, 4]
+  months: [1, 2, 3, 10, 11, 12]
+  recurrence: "forever"
   enabled: true
 ```
 
-Delete schedule task:
-
-```yaml
-service: boiler_manager.delete_schedule
-data:
-  task_id: a1b2c3d4e5
-```
-
-Update schedule task:
+### update_schedule example (timeline edit)
 
 ```yaml
 service: boiler_manager.update_schedule
 data:
   task_id: a1b2c3d4e5
-  start_time: "09:30"
-  end_time: "11:30"
-  days: [0, 2, 4]
+  task_type: "timeline"
+  timeline_points:
+    - at: "07:00"
+      duration_option: "45m"
+      duration_minutes: 45
+    - at: "11:00"
+      duration_option: "120m"
+      duration_minutes: 120
+  days: [0, 1, 2, 3, 4]
+  months: [1, 2, 3, 4, 5, 6]
+  recurrence: "range"
+  start_date: "2026-05-01"
+  end_date: "2026-08-31"
 ```
+
+## Entity Behavior
+
+- Each task is exposed as a `switch` entity
+- Friendly name equals task name from UI
+- Extra attributes include:
+  - `task_type`
+  - `days`, `months`, `recurrence`, `start_date`, `end_date`
+  - `timeline_points`, `timeline_label` for timeline tasks
+  - `active_now`
+
+## Troubleshooting
+
+- If new UI changes are not visible:
+  - Hard refresh browser: `Ctrl/Cmd + Shift + R`
+- If services are missing:
+  - Restart Home Assistant
+- If card says missing entities:
+  - Verify integration loaded successfully in `Settings -> Devices & Services`
+- If you changed frontend JS manually:
+  - Ensure latest file exists at `/config/www/boiler-card/boiler-card.js`
+
+## Legacy Package Mode (Optional)
+
+Legacy package setup still exists in:
+- `home-assistant/packages/boiler_hot_water.yaml`
+
+Use built-in integration mode for new installs.
