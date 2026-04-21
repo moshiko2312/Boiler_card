@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_BOILER_ENTITY,
@@ -37,11 +37,21 @@ class BoilerManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
-                vol.Required(CONF_BOILER_ENTITY): cv.entity_id,
-                vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
-                vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
-                vol.Optional(CONF_CURRENT_SENSOR): cv.entity_id,
+                vol.Required(CONF_NAME, default=DEFAULT_NAME): selector.TextSelector(
+                    selector.TextSelectorConfig()
+                ),
+                vol.Required(CONF_BOILER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig()
+                ),
+                vol.Optional(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
+                vol.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
+                vol.Optional(CONF_CURRENT_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
             }
         )
 
@@ -67,11 +77,21 @@ class BoilerManagerOptionsFlow(config_entries.OptionsFlow):
         current = {**self._config_entry.data, **self._config_entry.options}
         base_schema = vol.Schema(
             {
-                vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
-                vol.Required(CONF_BOILER_ENTITY): cv.entity_id,
-                vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
-                vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
-                vol.Optional(CONF_CURRENT_SENSOR): cv.entity_id,
+                vol.Required(CONF_NAME, default=DEFAULT_NAME): selector.TextSelector(
+                    selector.TextSelectorConfig()
+                ),
+                vol.Required(CONF_BOILER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig()
+                ),
+                vol.Optional(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
+                vol.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
+                vol.Optional(CONF_CURRENT_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
             }
         )
         # Compatibility fallback for older HA versions.
