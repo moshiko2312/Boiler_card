@@ -95,6 +95,9 @@ class BoilerWaterCard extends HTMLElement {
           --boiler-ok: #198754;
           --boiler-off: #64748b;
           --boiler-danger: #c63d2f;
+          display: block;
+          width: 100%;
+          box-sizing: border-box;
           font-family: "Heebo", "Rubik", "Noto Sans Hebrew", sans-serif;
         }
 
@@ -120,14 +123,16 @@ class BoilerWaterCard extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          flex-wrap: wrap;
           gap: 12px;
         }
 
         .title {
           margin: 0;
-          font-size: 1.1rem;
+          font-size: clamp(1rem, 2.4vw, 1.18rem);
           letter-spacing: 0.01em;
           line-height: 1.2;
+          min-width: 0;
         }
 
         .subtitle {
@@ -272,6 +277,7 @@ class BoilerWaterCard extends HTMLElement {
           width: 100%;
           border-radius: 12px;
           border: 1px solid #d4deeb;
+          min-height: 46px;
           padding: 10px 12px;
           font-size: 0.96rem;
           color: var(--boiler-text);
@@ -301,6 +307,7 @@ class BoilerWaterCard extends HTMLElement {
         .actions button {
           border: 0;
           border-radius: 12px;
+          min-height: 48px;
           padding: 11px 10px;
           font-weight: 800;
           cursor: pointer;
@@ -360,7 +367,7 @@ class BoilerWaterCard extends HTMLElement {
         .timer-modal-panel {
           position: relative;
           width: min(560px, calc(100vw - 28px));
-          max-height: min(80vh, 620px);
+          max-height: min(80dvh, 620px);
           overflow: auto;
           border-radius: 18px;
           border: 1px solid rgba(80, 108, 140, 0.25);
@@ -368,6 +375,8 @@ class BoilerWaterCard extends HTMLElement {
           box-shadow: 0 26px 60px rgba(14, 27, 51, 0.35);
           padding: 14px;
           animation: card-enter 180ms ease;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
         }
 
         .timer-modal-head {
@@ -408,6 +417,7 @@ class BoilerWaterCard extends HTMLElement {
           color: #1f2e44;
           font-weight: 700;
           font-size: 0.9rem;
+          min-height: 44px;
           padding: 10px 8px;
           cursor: pointer;
           transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
@@ -425,14 +435,67 @@ class BoilerWaterCard extends HTMLElement {
           color: #8d4718;
         }
 
+        @media (max-width: 760px) {
+          .timer-modal {
+            align-items: flex-end;
+          }
+
+          .timer-modal-panel {
+            width: 100vw;
+            max-height: min(86dvh, 760px);
+            border-radius: 20px 20px 0 0;
+            border-left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+            animation: modal-sheet-up 190ms ease;
+          }
+
+          .timer-modal-head {
+            position: sticky;
+            top: 0;
+            background: #ffffff;
+            z-index: 1;
+            padding-bottom: 6px;
+          }
+
+          .timer-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+        }
+
         @media (max-width: 520px) {
           .wrap {
             padding: 14px;
             gap: 10px;
           }
 
+          .row {
+            gap: 8px;
+          }
+
+          .title {
+            width: 100%;
+            line-height: 1.25;
+          }
+
+          .chip {
+            font-size: 0.74rem;
+            padding: 5px 10px;
+          }
+
+          .subtitle {
+            font-size: 0.88rem;
+          }
+
           .actions {
             grid-template-columns: 1fr;
+          }
+
+          .actions button {
+            min-height: 50px;
+            font-size: 1rem;
           }
 
           .countdown-value {
@@ -440,12 +503,27 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-grid {
-            grid-template-columns: repeat(3, minmax(80px, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
           .boiler-visual {
-            grid-template-columns: 76px 1fr;
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            text-align: center;
+          }
+
+          .boiler-icon {
+            width: 52px;
+            height: 70px;
+          }
+
+          .boiler-meta {
+            gap: 5px;
+          }
+
+          .timer-picker-btn {
+            min-height: 48px;
+            font-size: 0.94rem;
           }
         }
 
@@ -475,6 +553,17 @@ class BoilerWaterCard extends HTMLElement {
           }
           50% {
             box-shadow: 0 0 0 8px rgba(0, 0, 0, 0);
+          }
+        }
+
+        @keyframes modal-sheet-up {
+          from {
+            transform: translateY(16px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
           }
         }
       </style>

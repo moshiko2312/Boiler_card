@@ -8,6 +8,7 @@ Custom Lovelace card for a hot-water boiler with:
 - `No Timer` mode
 - Server-side auto shutoff for safety
 - Support for `switch`, `light`, and other entities that can be controlled via service calls
+- Mobile-first responsive layout for both card and popup timer sheet
 
 ## Project Structure
 
