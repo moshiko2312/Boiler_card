@@ -453,6 +453,16 @@ class BoilerWaterCard extends HTMLElement {
           color: var(--primary-text-color, #1f2e44);
         }
 
+        .quick-timer-btn.off-action.selected {
+          border-color: rgba(165, 232, 255, 0.95);
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(12, 56, 78, 0.45);
+          box-shadow:
+            0 6px 14px rgba(68, 164, 196, 0.24),
+            inset 0 1px 0 rgba(255, 255, 255, 0.36);
+        }
+
         .timer-menu-btn {
           border: 1px solid #ced8e6;
           border-radius: 8px;
@@ -992,6 +1002,7 @@ class BoilerWaterCard extends HTMLElement {
     const isBoilerOn = this._isEntityOn(boilerEntity);
     const timerActive = timerEntity?.state === "active" || timerEntity?.state === "paused";
     const pendingOff = this._offPendingUntil > Date.now();
+    const offSelected = pendingOff || (!isBoilerOn && !timerActive);
     const allowSelectedState = this._isEntityOn(boilerEntity)
       || timerEntity?.state === "active"
       || timerEntity?.state === "paused";
@@ -999,13 +1010,13 @@ class BoilerWaterCard extends HTMLElement {
     buttons.forEach((button) => {
       if (button.dataset.action === "off") {
         button.dataset.option = "";
-        button.classList.toggle("selected", pendingOff || (!isBoilerOn && !timerActive));
+        button.classList.toggle("selected", offSelected);
         return;
       }
       const minutes = Number.parseInt(button.dataset.minutes || "", 10);
       const option = this._optionByMinutes(minutes, options);
       button.dataset.option = option || "";
-      button.classList.toggle("selected", allowSelectedState && !!option && option === selected);
+      button.classList.toggle("selected", !offSelected && allowSelectedState && !!option && option === selected);
     });
   }
 
@@ -1107,9 +1118,6 @@ class BoilerWaterCard extends HTMLElement {
     if (!scripts.onContinuous) {
       missing.push(this._config.script_on_continuous);
     }
-    if (!scripts.off) {
-      missing.push(this._config.script_off);
-    }
 
     if (missing.length === 0) {
       this._elements.error.hidden = true;
@@ -1124,15 +1132,20 @@ class BoilerWaterCard extends HTMLElement {
   _syncControls(boiler, duration, timer, scripts) {
     const hasHass = !!this._hass;
     const hasCoreEntities = !!boiler && !!duration && !!timer;
-    const hasScripts = !!scripts.onTimed && !!scripts.onContinuous && !!scripts.off;
+    const hasOnScripts = !!scripts.onTimed && !!scripts.onContinuous;
     const hasDuration = !!duration;
 
-    const disabled = !hasHass || !hasCoreEntities || !hasScripts;
+    const timedButtonsDisabled = !hasHass || !hasCoreEntities || !hasOnScripts;
+    const offButtonDisabled = !hasHass || !boiler;
     this._elements.timerMenuBtn.disabled = !hasHass || !hasDuration;
     this._elements.quickTimerBtns.forEach((button) => {
       const hasOption = !!button.dataset.option;
       const isOffAction = button.dataset.action === "off";
-      button.disabled = disabled || (!isOffAction && !hasOption);
+      if (isOffAction) {
+        button.disabled = offButtonDisabled;
+        return;
+      }
+      button.disabled = timedButtonsDisabled || !hasOption;
     });
     if (this._elements.timerMenuBtn.disabled) {
       this._closeTimerModal();
@@ -1408,7 +1421,7 @@ class BoilerWaterCard extends HTMLElement {
 
   _handleTurnOff() {
     const buttons = this._elements.quickTimerBtns || [];
-    this._offPendingUntil = Date.now() + 5000;
+    this._offPendingUntil = Date.now() + 12000;
     let offButton = null;
     buttons.forEach((button) => {
       const isOffButton = button.dataset.action === "off";
@@ -1418,18 +1431,28 @@ class BoilerWaterCard extends HTMLElement {
       }
     });
     offButton?.focus({ preventScroll: true });
+    this._sync();
 
-    this._runScript(this._config.script_off, {
-      boiler_entity: this._config.boiler_entity,
-      turn_off_action: this._config.turn_off_action,
-      turn_off_data: this._safeServiceData(this._config.turn_off_data),
-    });
-
+    const entityDomain = String(this._config.boiler_entity || "").split(".")[0];
+    // Send direct OFF to the entity domain (works for switch/light/etc).
+    if (entityDomain) {
+      this._callEntityAction(
+        `${entityDomain}.turn_off`,
+        this._config.boiler_entity,
+        null
+      );
+    }
     this._callEntityAction(
       "homeassistant.turn_off",
       this._config.boiler_entity,
-      this._config.turn_off_data
+      null
     );
+
+    if (this._config.timer_entity) {
+      this._hass?.callService("timer", "cancel", {
+        entity_id: this._config.timer_entity,
+      });
+    }
   }
 
   _runScript(entityId, variables = null) {
