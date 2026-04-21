@@ -21,6 +21,7 @@ const DEFAULT_DURATION_OPTIONS = [
 const DEFAULT_CONFIG = {
   title: "דוד מים חמים / Boiler",
   boiler_entity: "switch.boiler",
+  boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "input_select.boiler_duration",
   timer_entity: "timer.boiler_runtime",
   script_on_timed: "script.boiler_turn_on_timed",
@@ -149,7 +150,7 @@ class BoilerWaterCard extends HTMLElement {
           --heat-glow: rgba(56, 189, 248, 0.35);
           --heat-progress: 0%;
           display: grid;
-          grid-template-columns: 76px 1fr;
+          grid-template-columns: 112px 1fr;
           align-items: center;
           gap: 10px;
           border-radius: 14px;
@@ -159,23 +160,24 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .boiler-icon {
-          width: 54px;
-          height: 54px;
+          width: 104px;
+          height: 72px;
           margin: 0 auto;
-          border-radius: 999px;
+          border-radius: 12px;
           border: 2px solid #264160;
           background: linear-gradient(180deg, #f8fbff 0%, #e6eef8 100%);
-          display: grid;
-          place-items: center;
+          overflow: hidden;
           box-shadow: 0 0 0 0 var(--heat-glow);
           animation: boiler-glow 1.8s ease-in-out infinite;
         }
 
-        .boiler-main-icon {
-          --mdc-icon-size: 30px;
-          color: var(--heat-primary);
-          filter: drop-shadow(0 0 6px var(--heat-glow));
-          transition: color 420ms ease, filter 420ms ease;
+        .boiler-main-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          filter: saturate(1.05) contrast(1.03);
+          transition: filter 420ms ease;
         }
 
         .boiler-meta {
@@ -228,9 +230,8 @@ class BoilerWaterCard extends HTMLElement {
           animation: none;
         }
 
-        .boiler-visual.off .boiler-main-icon {
-          color: #8a97aa;
-          filter: none;
+        .boiler-visual.off .boiler-main-image {
+          filter: grayscale(1) brightness(0.86) contrast(0.95);
         }
 
         .boiler-visual.off .boiler-progress-track {
@@ -569,8 +570,8 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .boiler-icon {
-            width: 50px;
-            height: 50px;
+            width: min(160px, 74vw);
+            height: 96px;
           }
 
           .boiler-meta {
@@ -635,7 +636,7 @@ class BoilerWaterCard extends HTMLElement {
 
           <div class="boiler-visual" id="boiler-visual">
             <div class="boiler-icon" id="boiler-icon">
-              <ha-icon class="boiler-main-icon" icon="mdi:water-boiler"></ha-icon>
+              <img class="boiler-main-image" id="boiler-main-image" alt="Boiler Water Flow" />
             </div>
             <div class="boiler-meta">
               <p class="boiler-stage" id="boiler-stage">Cool Start / התחלה קרה</p>
@@ -685,6 +686,7 @@ class BoilerWaterCard extends HTMLElement {
       title: this.shadowRoot.getElementById("title"),
       subtitle: this.shadowRoot.getElementById("subtitle"),
       boilerVisual: this.shadowRoot.getElementById("boiler-visual"),
+      boilerMainImage: this.shadowRoot.getElementById("boiler-main-image"),
       boilerStage: this.shadowRoot.getElementById("boiler-stage"),
       boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
       boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
@@ -722,6 +724,10 @@ class BoilerWaterCard extends HTMLElement {
     const scripts = this._scriptEntities();
 
     this._elements.title.textContent = cfg.title;
+    const flowImage = cfg.boiler_flow_image || "/local/boiler-card/boiler-flow.png";
+    if (this._elements.boilerMainImage?.getAttribute("src") !== flowImage) {
+      this._elements.boilerMainImage.setAttribute("src", flowImage);
+    }
     this._syncTimerPicker(duration);
     this._syncHeatingVisual(boiler, timer, duration);
     this._syncStatus(boiler, timer);
