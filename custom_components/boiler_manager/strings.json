@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Boiler Manager",
+        "description": "Configure your boiler entity and optional source sensors.",
+        "data": {
+          "name": "Name",
+          "boiler_entity": "Boiler entity",
+          "temperature_sensor": "Temperature sensor (optional)",
+          "power_sensor": "Power sensor (optional)",
+          "current_sensor": "Current sensor (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This boiler entity is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Boiler Manager options",
+        "data": {
+          "name": "Name",
+          "boiler_entity": "Boiler entity",
+          "temperature_sensor": "Temperature sensor (optional)",
+          "power_sensor": "Power sensor (optional)",
+          "current_sensor": "Current sensor (optional)"
+        }
+      }
+    }
+  }
+}

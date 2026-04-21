@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "מנהל דוד",
+        "description": "הגדרת ישות הדוד וחיישנים אופציונליים.",
+        "data": {
+          "name": "שם",
+          "boiler_entity": "ישות דוד",
+          "temperature_sensor": "חיישן טמפרטורה (אופציונלי)",
+          "power_sensor": "חיישן צריכה (אופציונלי)",
+          "current_sensor": "חיישן זרם (אופציונלי)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "ישות הדוד כבר מוגדרת"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "אפשרויות מנהל דוד",
+        "data": {
+          "name": "שם",
+          "boiler_entity": "ישות דוד",
+          "temperature_sensor": "חיישן טמפרטורה (אופציונלי)",
+          "power_sensor": "חיישן צריכה (אופציונלי)",
+          "current_sensor": "חיישן זרם (אופציונלי)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,138 @@
+turn_on_continuous:
+  name: Turn On Continuous
+  description: Turn on the boiler until explicitly turned off.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+
+run_timed:
+  name: Run Timed
+  description: Turn on boiler for a fixed duration.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    duration:
+      name: Duration
+      description: HH:MM:SS or MM:SS duration string.
+      example: "01:30:00"
+    minutes:
+      name: Minutes
+      description: Alternative to duration string.
+      example: 90
+
+turn_off:
+  name: Turn Off
+  description: Turn off boiler and clear manual timed/continuous mode.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+
+create_schedule:
+  name: Create Schedule
+  description: Create a recurring from-to task and expose it as a switch entity.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    name:
+      name: Name
+      description: Friendly task name.
+      example: "Morning Heat"
+      required: true
+    start_time:
+      name: Start Time
+      description: Schedule start in HH:MM.
+      example: "10:00"
+      required: true
+    end_time:
+      name: End Time
+      description: Schedule end in HH:MM.
+      example: "12:00"
+      required: true
+    days:
+      name: Days
+      description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).
+      example: [0, 1, 2, 3, 4]
+    enabled:
+      name: Enabled
+      description: Enable task on creation.
+      example: true
+
+update_schedule:
+  name: Update Schedule
+  description: Update an existing schedule task.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    task_id:
+      name: Task ID
+      description: Schedule task identifier.
+      example: "a1b2c3d4e5"
+      required: true
+    name:
+      name: Name
+      description: Friendly task name.
+      example: "Evening Heat"
+    start_time:
+      name: Start Time
+      description: Start in HH:MM.
+      example: "18:00"
+    end_time:
+      name: End Time
+      description: End in HH:MM.
+      example: "20:00"
+    days:
+      name: Days
+      description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).
+      example: [0, 2, 4]
+    enabled:
+      name: Enabled
+      description: Enable/disable this task.
+      example: true
+
+delete_schedule:
+  name: Delete Schedule
+  description: Delete a schedule task and remove its switch entity.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    task_id:
+      name: Task ID
+      description: Schedule task identifier to remove.
+      example: "a1b2c3d4e5"
+      required: true

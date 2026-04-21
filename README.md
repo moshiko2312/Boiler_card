@@ -54,6 +54,19 @@ script_on_continuous: script.boiler_turn_on_continuous
 script_off: script.boiler_turn_off
 ```
 
+Built-in integration mode (no script entities required):
+
+```yaml
+type: custom:boiler-water-card
+title: דוד מים חמים / Boiler
+boiler_entity: switch.boiler
+service_run_timed: boiler_manager.run_timed
+service_on_continuous: boiler_manager.turn_on_continuous
+service_off: boiler_manager.turn_off
+# Optional when you have multiple Boiler Manager entries:
+# integration_entry_id: 01JABCDEFGH1234567890
+```
+
 ## Advanced Entity Support
 
 The card supports advanced on/off service parameters, useful for `light` entities and beyond:
@@ -103,3 +116,62 @@ For non-standard entity domains, set `state_on_values`/`state_off_values` explic
 - Timer helper is configured with `restore: true`, so after Home Assistant restart it resumes from the saved remaining time.
 - If entities do not exist yet, import the package file first and restart HA.
 - Auto shutoff is handled by automation `boiler_turn_off_on_timer_finished`.
+
+## Custom Component (Built-In Scheduler)
+
+New integration files are under:
+- `custom_components/boiler_manager/`
+
+This integration moves control logic into Home Assistant (no package scripts required):
+- Built-in services: `boiler_manager.turn_on_continuous`, `boiler_manager.run_timed`, `boiler_manager.turn_off`
+- Built-in recurring schedules (`from` -> `to` + selected days)
+- Every created schedule appears as a `switch` entity
+- Deleting a schedule removes its switch entity
+- Optional mirror sensors for temperature / power / current
+
+### Install Integration
+
+1. Copy folder:
+   - source: `custom_components/boiler_manager`
+   - destination: `/config/custom_components/boiler_manager`
+2. Restart Home Assistant
+3. Add integration: `Settings -> Devices & Services -> Add Integration -> Boiler Manager`
+4. Configure:
+   - boiler entity (`switch.*` / `light.*`)
+   - optional sensor entities (`sensor.*`) for temperature / power / current
+
+When the integration loads, it automatically installs/updates the card file at:
+- `/config/www/boiler-card/boiler-card.js`
+
+### Schedule Services
+
+Create schedule task:
+
+```yaml
+service: boiler_manager.create_schedule
+data:
+  name: Morning Heat
+  start_time: "10:00"
+  end_time: "12:00"
+  days: [0, 1, 2, 3, 4]
+  enabled: true
+```
+
+Delete schedule task:
+
+```yaml
+service: boiler_manager.delete_schedule
+data:
+  task_id: a1b2c3d4e5
+```
+
+Update schedule task:
+
+```yaml
+service: boiler_manager.update_schedule
+data:
+  task_id: a1b2c3d4e5
+  start_time: "09:30"
+  end_time: "11:30"
+  days: [0, 2, 4]
+```
