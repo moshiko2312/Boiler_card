@@ -1,0 +1,105 @@
+input_select:
+  boiler_duration:
+    name: Boiler Duration
+    options:
+      - "15m"
+      - "30m"
+      - "45m"
+      - "60m"
+      - "75m"
+      - "90m"
+      - "105m"
+      - "120m"
+      - "135m"
+      - "150m"
+      - "165m"
+      - "180m"
+      - "195m"
+      - "210m"
+      - "225m"
+      - "240m"
+      - "No Timer"
+    initial: "30m"
+    icon: mdi:timer-outline
+
+timer:
+  boiler_runtime:
+    name: Boiler Runtime
+    duration: "00:30:00"
+
+script:
+  boiler_turn_on_timed:
+    alias: Boiler - Turn On Timed
+    mode: restart
+    sequence:
+      - variables:
+          picked_option: "{{ duration_option if duration_option is defined else states('input_select.boiler_duration') }}"
+          picked_minutes: >-
+            {% set raw = picked_option | regex_replace(find='[^0-9]', replace='') %}
+            {{ raw | int(30) }}
+          resolved_duration: >-
+            {% if duration is defined and duration %}
+              {{ duration }}
+            {% else %}
+              {{ '%02d:%02d:00' | format((picked_minutes // 60) | int, (picked_minutes % 60) | int) }}
+            {% endif %}
+      - action: switch.turn_on
+        target:
+          entity_id: switch.boiler
+      - action: timer.start
+        target:
+          entity_id: timer.boiler_runtime
+        data:
+          duration: "{{ resolved_duration }}"
+
+  boiler_turn_on_continuous:
+    alias: Boiler - Turn On Continuous
+    mode: single
+    sequence:
+      - action: timer.cancel
+        target:
+          entity_id: timer.boiler_runtime
+      - action: switch.turn_on
+        target:
+          entity_id: switch.boiler
+
+  boiler_turn_off:
+    alias: Boiler - Turn Off
+    mode: single
+    sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.boiler
+      - action: timer.cancel
+        target:
+          entity_id: timer.boiler_runtime
+
+automation:
+  - id: boiler_turn_off_on_timer_finished
+    alias: Boiler - Turn Off On Timer Finished
+    mode: single
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.boiler_runtime
+    action:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.boiler
+
+  - id: boiler_cancel_timer_when_manually_off
+    alias: Boiler - Cancel Timer On Manual Off
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.boiler
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: timer.boiler_runtime
+        state: "active"
+    action:
+      - action: timer.cancel
+        target:
+          entity_id: timer.boiler_runtime

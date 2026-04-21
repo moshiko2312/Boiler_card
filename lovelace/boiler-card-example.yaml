@@ -1,0 +1,8 @@
+type: custom:boiler-water-card
+title: דוד מים חמים / Boiler
+boiler_entity: switch.boiler
+duration_entity: input_select.boiler_duration
+timer_entity: timer.boiler_runtime
+script_on_timed: script.boiler_turn_on_timed
+script_on_continuous: script.boiler_turn_on_continuous
+script_off: script.boiler_turn_off
