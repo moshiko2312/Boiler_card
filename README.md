@@ -5,6 +5,7 @@ Custom Lovelace card for a hot-water boiler with:
 - Timer dropdown from 15 minutes to 4 hours (15-minute steps)
 - `No Timer` mode
 - Server-side auto shutoff for safety
+- Support for `switch`, `light`, and other entities that can be controlled via service calls
 
 ## Project Structure
 
@@ -50,10 +51,51 @@ script_on_continuous: script.boiler_turn_on_continuous
 script_off: script.boiler_turn_off
 ```
 
+## Advanced Entity Support
+
+The card supports advanced on/off service parameters, useful for `light` entities and beyond:
+
+```yaml
+type: custom:boiler-water-card
+title: Boiler Light Example
+boiler_entity: light.boiler_indicator
+duration_entity: input_select.boiler_duration
+timer_entity: timer.boiler_runtime
+script_on_timed: script.boiler_turn_on_timed
+script_on_continuous: script.boiler_turn_on_continuous
+script_off: script.boiler_turn_off
+turn_on_action: homeassistant.turn_on
+turn_off_action: homeassistant.turn_off
+turn_on_data:
+  brightness_pct: 100
+  transition: 1
+  color_temp_kelvin: 4000
+turn_off_data:
+  transition: 1
+state_on_values:
+  - "on"
+state_off_values:
+  - "off"
+  - "idle"
+  - "standby"
+  - "unavailable"
+  - "unknown"
+```
+
+Available advanced fields:
+- `turn_on_action`: any Home Assistant service (default: `homeassistant.turn_on`)
+- `turn_off_action`: any Home Assistant service (default: `homeassistant.turn_off`)
+- `turn_on_data`: full service-data payload passed as-is to the turn-on action
+- `turn_off_data`: full service-data payload passed as-is to the turn-off action
+- `state_on_values`: states treated as ON in card UI
+- `state_off_values`: states treated as OFF in card UI
+
+For non-standard entity domains, set `state_on_values`/`state_off_values` explicitly to match your entity states.
+
 ## Important
 
 - The package includes `input_text.boiler_switch_entity` (default target) and `input_text.boiler_active_entity` (runtime target).
 - Set `input_text.boiler_switch_entity` to your real boiler entity (example: `switch.shelly_boiler`) if you do not use `switch.boiler`.
-- The card also passes `boiler_entity` to scripts, so timer-based shutoff remains aligned with the card target.
+- The card passes `boiler_entity`, `turn_on_action`, `turn_off_action`, `turn_on_data`, and `turn_off_data` to scripts.
 - If entities do not exist yet, import the package file first and restart HA.
 - Auto shutoff is handled by automation `boiler_turn_off_on_timer_finished`.

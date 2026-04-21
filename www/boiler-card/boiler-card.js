@@ -26,6 +26,12 @@ const DEFAULT_CONFIG = {
   script_on_timed: "script.boiler_turn_on_timed",
   script_on_continuous: "script.boiler_turn_on_continuous",
   script_off: "script.boiler_turn_off",
+  turn_on_action: "homeassistant.turn_on",
+  turn_off_action: "homeassistant.turn_off",
+  turn_on_data: {},
+  turn_off_data: {},
+  state_on_values: ["on"],
+  state_off_values: ["off", "idle", "standby", "unavailable", "unknown"],
 };
 
 class BoilerWaterCard extends HTMLElement {
@@ -376,7 +382,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    const isOn = boiler?.state === "on";
+    const isOn = this._isEntityOn(boiler);
 
     this._elements.statusChip.textContent = isOn ? "ON / דולק" : "OFF / כבוי";
     this._elements.statusChip.classList.toggle("on", isOn);
@@ -402,7 +408,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    if (boiler?.state === "on") {
+    if (this._isEntityOn(boiler)) {
       this._elements.countdownLabel.textContent = "No Timer / ללא טיימר";
       this._elements.countdownValue.textContent = "∞";
       return;
@@ -514,6 +520,8 @@ class BoilerWaterCard extends HTMLElement {
     if (this._isNoTimerOption(durationState)) {
       this._runScript(this._config.script_on_continuous, {
         boiler_entity: this._config.boiler_entity,
+        turn_on_action: this._config.turn_on_action,
+        turn_on_data: this._safeServiceData(this._config.turn_on_data),
       });
       return;
     }
@@ -522,12 +530,16 @@ class BoilerWaterCard extends HTMLElement {
       duration_option: durationState,
       duration: this._optionToHhMmSs(durationState) || "00:30:00",
       boiler_entity: this._config.boiler_entity,
+      turn_on_action: this._config.turn_on_action,
+      turn_on_data: this._safeServiceData(this._config.turn_on_data),
     });
   }
 
   _handleTurnOff() {
     this._runScript(this._config.script_off, {
       boiler_entity: this._config.boiler_entity,
+      turn_off_action: this._config.turn_off_action,
+      turn_off_data: this._safeServiceData(this._config.turn_off_data),
     });
   }
 
@@ -639,6 +651,49 @@ class BoilerWaterCard extends HTMLElement {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+  }
+
+  _safeServiceData(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    return value;
+  }
+
+  _stateListFromConfig(value, fallback) {
+    if (!Array.isArray(value)) {
+      return fallback;
+    }
+
+    const normalized = value
+      .map((item) => String(item || "").trim().toLowerCase())
+      .filter((item) => item.length > 0);
+
+    return normalized.length > 0 ? normalized : fallback;
+  }
+
+  _isEntityOn(entity) {
+    if (!entity || typeof entity.state !== "string") {
+      return false;
+    }
+
+    const state = entity.state.trim().toLowerCase();
+    const onStates = this._stateListFromConfig(this._config.state_on_values, ["on"]);
+    const offStates = this._stateListFromConfig(this._config.state_off_values, [
+      "off",
+      "unavailable",
+      "unknown",
+    ]);
+
+    if (onStates.includes(state)) {
+      return true;
+    }
+
+    if (offStates.includes(state)) {
+      return false;
+    }
+
+    return false;
   }
 
   _scriptEntities() {

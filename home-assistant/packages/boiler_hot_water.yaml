@@ -50,6 +50,18 @@ script:
               {% set configured = states('input_text.boiler_switch_entity') %}
               {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
             {% endif %}
+          turn_on_service: >-
+            {% if turn_on_action is defined and turn_on_action %}
+              {{ turn_on_action }}
+            {% else %}
+              homeassistant.turn_on
+            {% endif %}
+          turn_on_service_data: >-
+            {% if turn_on_data is defined and turn_on_data is mapping %}
+              {{ turn_on_data }}
+            {% else %}
+              {{ dict() }}
+            {% endif %}
           picked_option: "{{ duration_option if duration_option is defined else states('input_select.boiler_duration') }}"
           picked_minutes: >-
             {% set raw = picked_option | regex_replace(find='[^0-9]', replace='') %}
@@ -60,9 +72,10 @@ script:
             {% else %}
               {{ '%02d:%02d:00' | format((picked_minutes // 60) | int, (picked_minutes % 60) | int) }}
             {% endif %}
-      - action: homeassistant.turn_on
+      - action: "{{ turn_on_service }}"
         target:
           entity_id: "{{ boiler_target }}"
+        data: "{{ turn_on_service_data }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.boiler_active_entity
@@ -86,12 +99,25 @@ script:
               {% set configured = states('input_text.boiler_switch_entity') %}
               {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
             {% endif %}
+          turn_on_service: >-
+            {% if turn_on_action is defined and turn_on_action %}
+              {{ turn_on_action }}
+            {% else %}
+              homeassistant.turn_on
+            {% endif %}
+          turn_on_service_data: >-
+            {% if turn_on_data is defined and turn_on_data is mapping %}
+              {{ turn_on_data }}
+            {% else %}
+              {{ dict() }}
+            {% endif %}
       - action: timer.cancel
         target:
           entity_id: timer.boiler_runtime
-      - action: homeassistant.turn_on
+      - action: "{{ turn_on_service }}"
         target:
           entity_id: "{{ boiler_target }}"
+        data: "{{ turn_on_service_data }}"
       - action: input_text.set_value
         target:
           entity_id: input_text.boiler_active_entity
@@ -115,9 +141,22 @@ script:
                 {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
               {% endif %}
             {% endif %}
-      - action: homeassistant.turn_off
+          turn_off_service: >-
+            {% if turn_off_action is defined and turn_off_action %}
+              {{ turn_off_action }}
+            {% else %}
+              homeassistant.turn_off
+            {% endif %}
+          turn_off_service_data: >-
+            {% if turn_off_data is defined and turn_off_data is mapping %}
+              {{ turn_off_data }}
+            {% else %}
+              {{ dict() }}
+            {% endif %}
+      - action: "{{ turn_off_service }}"
         target:
           entity_id: "{{ boiler_target }}"
+        data: "{{ turn_off_service_data }}"
       - action: timer.cancel
         target:
           entity_id: timer.boiler_runtime

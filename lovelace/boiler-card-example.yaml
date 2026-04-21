@@ -6,3 +6,20 @@ timer_entity: timer.boiler_runtime
 script_on_timed: script.boiler_turn_on_timed
 script_on_continuous: script.boiler_turn_on_continuous
 script_off: script.boiler_turn_off
+
+# Optional: service-level customization (supports light/switch/other domains)
+# turn_on_action: homeassistant.turn_on
+# turn_off_action: homeassistant.turn_off
+# turn_on_data:
+#   brightness_pct: 100
+#   transition: 1
+# turn_off_data:
+#   transition: 1
+# state_on_values:
+#   - "on"
+# state_off_values:
+#   - "off"
+#   - "idle"
+#   - "standby"
+#   - "unavailable"
+#   - "unknown"
