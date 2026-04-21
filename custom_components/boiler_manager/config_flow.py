@@ -20,11 +20,10 @@ from .const import (
 )
 
 
-class BoilerManagerConfigFlow(config_entries.ConfigFlow):
+class BoilerManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Boiler Manager config flow."""
 
     VERSION = 1
-    domain = DOMAIN
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle initial setup step."""
