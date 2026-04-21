@@ -36,6 +36,8 @@ const I18N = {
     timer_label: "טיימר",
     timer_select: "בחר טיימר",
     timer_menu: "תפריט טיימר",
+    timer_prev_page: "עמוד קודם",
+    timer_next_page: "עמוד הבא",
     turn_on: "הדלק",
     turn_off: "כיבוי",
     missing_entity: "ישות חסרה",
@@ -65,6 +67,8 @@ const I18N = {
     timer_label: "Timer",
     timer_select: "Select Timer",
     timer_menu: "Timer menu",
+    timer_prev_page: "Previous page",
+    timer_next_page: "Next page",
     turn_on: "Turn On",
     turn_off: "Turn Off",
     missing_entity: "Missing entity",
@@ -94,6 +98,8 @@ const I18N = {
     timer_label: "Таймер",
     timer_select: "Выбрать таймер",
     timer_menu: "Меню таймера",
+    timer_prev_page: "Предыдущая страница",
+    timer_next_page: "Следующая страница",
     turn_on: "Включить",
     turn_off: "Выключить",
     missing_entity: "Отсутствует сущность",
@@ -136,6 +142,9 @@ class BoilerWaterCard extends HTMLElement {
     this._hass = null;
     this._elements = {};
     this._ticker = null;
+    this._timerPageIndex = 0;
+    this._timerPageSize = 6;
+    this._offPendingUntil = 0;
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
@@ -195,8 +204,8 @@ class BoilerWaterCard extends HTMLElement {
           --boiler-bg-b: var(--ha-card-background, var(--card-background-color, #f8fdff));
           --boiler-text: var(--primary-text-color, #192436);
           --boiler-muted: var(--secondary-text-color, #5a6880);
-          --boiler-accent: #ea7a20;
-          --boiler-accent-soft: #ffd9bb;
+          --boiler-accent: #86d6ee;
+          --boiler-accent-soft: #d8f5ff;
           --boiler-ok: #198754;
           --boiler-off: #64748b;
           --boiler-danger: var(--error-color, #c63d2f);
@@ -403,6 +412,11 @@ class BoilerWaterCard extends HTMLElement {
           box-shadow:
             0 4px 10px rgba(20, 35, 58, 0.18),
             inset 0 1px 0 rgba(255, 255, 255, 0.32);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.2;
           transition:
             transform 120ms ease,
             border-color 120ms ease,
@@ -419,12 +433,18 @@ class BoilerWaterCard extends HTMLElement {
             inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
 
+        .quick-timer-btn:focus-visible {
+          outline: 2px solid rgba(165, 232, 255, 0.95);
+          outline-offset: 2px;
+        }
+
         .quick-timer-btn.selected {
-          border-color: rgba(235, 146, 74, 0.9);
-          background: linear-gradient(165deg, rgba(246, 173, 114, 0.35), rgba(243, 132, 53, 0.2));
-          color: #8d4718;
+          border-color: rgba(165, 232, 255, 0.95);
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(12, 56, 78, 0.45);
           box-shadow:
-            0 6px 14px rgba(210, 116, 39, 0.24),
+            0 6px 14px rgba(68, 164, 196, 0.24),
             inset 0 1px 0 rgba(255, 255, 255, 0.36);
         }
 
@@ -520,6 +540,48 @@ class BoilerWaterCard extends HTMLElement {
           color: var(--boiler-text);
         }
 
+        .timer-modal-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-inline-start: auto;
+        }
+
+        .timer-page-controls {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .timer-page-btn {
+          border: 1px solid #ced8e6;
+          border-radius: 8px;
+          width: 30px;
+          height: 30px;
+          background: #f4f8fd;
+          color: #2b3f5a;
+          font-size: 1rem;
+          line-height: 1;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+
+        .timer-page-btn:hover {
+          background: #ebf3fb;
+          border-color: #9ab8db;
+        }
+
+        .timer-page-indicator {
+          min-width: 38px;
+          text-align: center;
+          font-size: 0.72rem;
+          color: var(--boiler-muted);
+          font-weight: 700;
+        }
+
         .timer-close-btn {
           border: 0;
           border-radius: 10px;
@@ -533,7 +595,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .timer-grid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(92px, 1fr));
+          grid-template-columns: repeat(3, minmax(110px, 1fr));
           gap: 9px;
         }
 
@@ -552,6 +614,11 @@ class BoilerWaterCard extends HTMLElement {
           box-shadow:
             0 4px 10px rgba(20, 35, 58, 0.18),
             inset 0 1px 0 rgba(255, 255, 255, 0.32);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.2;
           transition:
             transform 120ms ease,
             border-color 120ms ease,
@@ -569,11 +636,12 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-option-btn.selected {
-          border-color: rgba(235, 146, 74, 0.9);
-          background: linear-gradient(165deg, rgba(246, 173, 114, 0.35), rgba(243, 132, 53, 0.2));
-          color: #8d4718;
+          border-color: rgba(165, 232, 255, 0.95);
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(12, 56, 78, 0.45);
           box-shadow:
-            0 6px 14px rgba(210, 116, 39, 0.24),
+            0 6px 14px rgba(68, 164, 196, 0.24),
             inset 0 1px 0 rgba(255, 255, 255, 0.36);
         }
 
@@ -587,10 +655,42 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel[dir="rtl"] .timer-option-btn {
-          text-align: right;
+          text-align: center;
+        }
+
+        .timer-modal-panel[dir="rtl"] .timer-modal-actions {
+          margin-inline-start: 0;
+          margin-inline-end: auto;
         }
 
         @media (max-width: 760px) {
+          .boiler-visual {
+            grid-template-columns: minmax(92px, 26vw) minmax(0, 1fr);
+            gap: 10px;
+            text-align: initial;
+          }
+
+          .boiler-icon {
+            width: clamp(92px, 26vw, 150px);
+            height: auto;
+            aspect-ratio: 3 / 2;
+          }
+
+          .boiler-meta {
+            gap: 4px;
+          }
+
+          .timer-menu-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+          }
+
+          .quick-timers {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+          }
+
           .timer-modal {
             align-items: flex-end;
           }
@@ -647,23 +747,29 @@ class BoilerWaterCard extends HTMLElement {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .quick-timers {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+          .timer-page-btn {
+            width: 32px;
+            height: 32px;
           }
 
-          .boiler-visual {
-            grid-template-columns: 1fr;
-            gap: 6px;
-            text-align: center;
+          .quick-timers {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 5px;
           }
 
           .boiler-icon {
-            width: min(128px, 70vw);
-            height: 82px;
+            width: clamp(84px, 24vw, 118px);
+            height: auto;
           }
 
           .boiler-meta {
             gap: 4px;
+          }
+
+          .quick-timer-btn {
+            min-height: 38px;
+            padding: 4px 2px;
+            font-size: 0.78rem;
           }
         }
 
@@ -674,12 +780,24 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-menu-btn {
-            width: 36px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
           }
 
           .timer-option-btn {
             min-height: 50px;
+          }
+        }
+
+        @media (pointer: coarse) and (max-width: 520px) {
+          .quick-timer-btn {
+            min-height: 38px;
+            font-size: 0.78rem;
+          }
+
+          .timer-menu-btn {
+            width: 44px;
+            height: 44px;
           }
         }
 
@@ -759,7 +877,14 @@ class BoilerWaterCard extends HTMLElement {
         <div class="timer-modal-panel" id="timer-modal-panel" role="dialog" aria-modal="true" aria-label="Timer Picker">
           <div class="timer-modal-head">
             <h3 class="timer-modal-title" id="timer-modal-title">Select Timer</h3>
-            <button type="button" class="timer-close-btn" id="timer-close-btn">✕</button>
+            <div class="timer-modal-actions">
+              <div class="timer-page-controls" id="timer-page-controls">
+                <button type="button" class="timer-page-btn" id="timer-page-prev-btn" aria-label="Previous page">‹</button>
+                <span class="timer-page-indicator" id="timer-page-indicator">1 / 1</span>
+                <button type="button" class="timer-page-btn" id="timer-page-next-btn" aria-label="Next page">›</button>
+              </div>
+              <button type="button" class="timer-close-btn" id="timer-close-btn">✕</button>
+            </div>
           </div>
           <div class="timer-grid" id="timer-grid"></div>
         </div>
@@ -785,12 +910,18 @@ class BoilerWaterCard extends HTMLElement {
       timerModalPanel: this.shadowRoot.getElementById("timer-modal-panel"),
       timerCloseBtn: this.shadowRoot.getElementById("timer-close-btn"),
       timerModalTitle: this.shadowRoot.getElementById("timer-modal-title"),
+      timerPageControls: this.shadowRoot.getElementById("timer-page-controls"),
+      timerPagePrevBtn: this.shadowRoot.getElementById("timer-page-prev-btn"),
+      timerPageNextBtn: this.shadowRoot.getElementById("timer-page-next-btn"),
+      timerPageIndicator: this.shadowRoot.getElementById("timer-page-indicator"),
       timerGrid: this.shadowRoot.getElementById("timer-grid"),
     };
 
     this._elements.timerMenuBtn.addEventListener("click", () => this._openTimerModal());
     this._elements.timerCloseBtn.addEventListener("click", () => this._closeTimerModal());
     this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
+    this._elements.timerPagePrevBtn.addEventListener("click", () => this._changeTimerPage(-1));
+    this._elements.timerPageNextBtn.addEventListener("click", () => this._changeTimerPage(1));
     this._elements.quickTimerBtns.forEach((button) => {
       button.addEventListener("click", () => this._handleQuickTimerClick(button));
     });
@@ -818,6 +949,14 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.quickOffBtn) {
       this._elements.quickOffBtn.textContent = this._t("turn_off");
     }
+    if (this._elements.timerPagePrevBtn) {
+      this._elements.timerPagePrevBtn.setAttribute("aria-label", this._t("timer_prev_page"));
+      this._elements.timerPagePrevBtn.setAttribute("title", this._t("timer_prev_page"));
+    }
+    if (this._elements.timerPageNextBtn) {
+      this._elements.timerPageNextBtn.setAttribute("aria-label", this._t("timer_next_page"));
+      this._elements.timerPageNextBtn.setAttribute("title", this._t("timer_next_page"));
+    }
     if (this._elements.timerMenuBtn) {
       this._elements.timerMenuBtn.setAttribute("aria-label", this._t("timer_menu"));
       this._elements.timerMenuBtn.setAttribute("title", this._t("timer_menu"));
@@ -826,7 +965,7 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.boilerMainImage?.getAttribute("src") !== flowImage) {
       this._elements.boilerMainImage.setAttribute("src", flowImage);
     }
-    this._syncTimerPicker(duration);
+    this._syncTimerPicker(duration, boiler, timer);
     this._syncHeatingVisual(boiler, timer, duration);
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
@@ -834,9 +973,10 @@ class BoilerWaterCard extends HTMLElement {
     this._syncControls(boiler, duration, timer, scripts);
   }
 
-  _syncTimerPicker(durationEntity) {
+  _syncTimerPicker(durationEntity, boilerEntity, timerEntity) {
     const options = this._durationOptions(durationEntity);
     const selected = this._selectedDurationOption(durationEntity, options);
+    this._timerPageIndex = this._clamp(this._timerPageIndex, 0, this._timerPageCount(options) - 1);
 
     if (this._elements.timerMenuBtn) {
       this._elements.timerMenuBtn.setAttribute(
@@ -844,22 +984,28 @@ class BoilerWaterCard extends HTMLElement {
         `${this._t("timer_label")}: ${this._renderOptionLabel(selected)}`
       );
     }
-    this._syncQuickTimerButtons(options, selected);
+    this._syncQuickTimerButtons(options, selected, boilerEntity, timerEntity);
     this._renderTimerGrid(options, selected);
   }
 
-  _syncQuickTimerButtons(options, selected) {
+  _syncQuickTimerButtons(options, selected, boilerEntity, timerEntity) {
+    const isBoilerOn = this._isEntityOn(boilerEntity);
+    const timerActive = timerEntity?.state === "active" || timerEntity?.state === "paused";
+    const pendingOff = this._offPendingUntil > Date.now();
+    const allowSelectedState = this._isEntityOn(boilerEntity)
+      || timerEntity?.state === "active"
+      || timerEntity?.state === "paused";
     const buttons = this._elements.quickTimerBtns || [];
     buttons.forEach((button) => {
       if (button.dataset.action === "off") {
         button.dataset.option = "";
-        button.classList.remove("selected");
+        button.classList.toggle("selected", pendingOff || (!isBoilerOn && !timerActive));
         return;
       }
       const minutes = Number.parseInt(button.dataset.minutes || "", 10);
       const option = this._optionByMinutes(minutes, options);
       button.dataset.option = option || "";
-      button.classList.toggle("selected", !!option && option === selected);
+      button.classList.toggle("selected", allowSelectedState && !!option && option === selected);
     });
   }
 
@@ -880,8 +1026,14 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    const pageCount = this._timerPageCount(options);
+    this._timerPageIndex = this._clamp(this._timerPageIndex, 0, pageCount - 1);
+    const start = this._timerPageIndex * this._timerPageSize;
+    const end = start + this._timerPageSize;
+    const pageOptions = options.slice(start, end);
+
     grid.innerHTML = "";
-    options.forEach((option) => {
+    pageOptions.forEach((option) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "timer-option-btn";
@@ -895,6 +1047,8 @@ class BoilerWaterCard extends HTMLElement {
       });
       grid.appendChild(button);
     });
+
+    this._syncTimerPagerControls(pageCount);
   }
 
   _syncStatus(boiler, timer) {
@@ -1144,6 +1298,7 @@ class BoilerWaterCard extends HTMLElement {
       this._handleTurnOff();
       return;
     }
+    this._offPendingUntil = 0;
 
     const option = button.dataset.option;
     if (!option) {
@@ -1181,8 +1336,65 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    const duration = this._hass?.states[this._config.duration_entity];
+    const options = this._durationOptions(duration);
+    const selected = this._selectedDurationOption(duration, options);
+    this._setTimerPageToOption(options, selected);
+    this._renderTimerGrid(options, selected);
     this._elements.timerModal.hidden = false;
     window.addEventListener("keydown", this._handleEscapeKey);
+  }
+
+  _changeTimerPage(direction) {
+    const duration = this._hass?.states[this._config.duration_entity];
+    const options = this._durationOptions(duration);
+    const pageCount = this._timerPageCount(options);
+    const nextPage = this._clamp(this._timerPageIndex + direction, 0, pageCount - 1);
+    if (nextPage === this._timerPageIndex) {
+      return;
+    }
+
+    this._timerPageIndex = nextPage;
+    const selected = this._selectedDurationOption(duration, options);
+    this._renderTimerGrid(options, selected);
+  }
+
+  _timerPageCount(options) {
+    if (!Array.isArray(options) || options.length === 0) {
+      return 1;
+    }
+    return Math.max(1, Math.ceil(options.length / this._timerPageSize));
+  }
+
+  _setTimerPageToOption(options, option) {
+    if (!Array.isArray(options) || options.length === 0) {
+      this._timerPageIndex = 0;
+      return;
+    }
+    const selectedIndex = options.indexOf(option);
+    if (selectedIndex < 0) {
+      this._timerPageIndex = 0;
+      return;
+    }
+    this._timerPageIndex = Math.floor(selectedIndex / this._timerPageSize);
+  }
+
+  _syncTimerPagerControls(pageCount) {
+    if (!this._elements.timerPageControls) {
+      return;
+    }
+
+    const multiPage = pageCount > 1;
+    this._elements.timerPageControls.hidden = !multiPage;
+    if (this._elements.timerPageIndicator) {
+      this._elements.timerPageIndicator.textContent = `${this._timerPageIndex + 1} / ${pageCount}`;
+    }
+    if (this._elements.timerPagePrevBtn) {
+      this._elements.timerPagePrevBtn.disabled = !multiPage || this._timerPageIndex <= 0;
+    }
+    if (this._elements.timerPageNextBtn) {
+      this._elements.timerPageNextBtn.disabled = !multiPage || this._timerPageIndex >= pageCount - 1;
+    }
   }
 
   _closeTimerModal() {
@@ -1195,11 +1407,29 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _handleTurnOff() {
+    const buttons = this._elements.quickTimerBtns || [];
+    this._offPendingUntil = Date.now() + 5000;
+    let offButton = null;
+    buttons.forEach((button) => {
+      const isOffButton = button.dataset.action === "off";
+      button.classList.toggle("selected", isOffButton);
+      if (isOffButton) {
+        offButton = button;
+      }
+    });
+    offButton?.focus({ preventScroll: true });
+
     this._runScript(this._config.script_off, {
       boiler_entity: this._config.boiler_entity,
       turn_off_action: this._config.turn_off_action,
       turn_off_data: this._safeServiceData(this._config.turn_off_data),
     });
+
+    this._callEntityAction(
+      "homeassistant.turn_off",
+      this._config.boiler_entity,
+      this._config.turn_off_data
+    );
   }
 
   _runScript(entityId, variables = null) {
@@ -1213,6 +1443,26 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     this._hass.callService("script", "turn_on", data);
+  }
+
+  _callEntityAction(action, entityId, data = null) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    const normalizedAction = String(action || "").trim().toLowerCase();
+    const [domain, service] = normalizedAction.includes(".")
+      ? normalizedAction.split(".", 2)
+      : ["homeassistant", normalizedAction || "turn_off"];
+
+    if (!domain || !service) {
+      return;
+    }
+
+    this._hass.callService(domain, service, {
+      ...this._safeServiceData(data),
+      entity_id: entityId,
+    });
   }
 
   _remainingSeconds(timer) {
