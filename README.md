@@ -99,5 +99,6 @@ For non-standard entity domains, set `state_on_values`/`state_off_values` explic
 - The package includes `input_text.boiler_switch_entity` (default target) and `input_text.boiler_active_entity` (runtime target).
 - Set `input_text.boiler_switch_entity` to your real boiler entity (example: `switch.shelly_boiler`) if you do not use `switch.boiler`.
 - The card passes `boiler_entity`, `turn_on_action`, `turn_off_action`, `turn_on_data`, and `turn_off_data` to scripts.
+- Timer helper is configured with `restore: true`, so after Home Assistant restart it resumes from the saved remaining time.
 - If entities do not exist yet, import the package file first and restart HA.
 - Auto shutoff is handled by automation `boiler_turn_off_on_timer_finished`.

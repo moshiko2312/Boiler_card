@@ -36,6 +36,7 @@ timer:
   boiler_runtime:
     name: Boiler Runtime
     duration: "00:30:00"
+    restore: true
 
 script:
   boiler_turn_on_timed:
