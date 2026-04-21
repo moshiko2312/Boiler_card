@@ -3,6 +3,7 @@
 Custom Lovelace card for a hot-water boiler with:
 - `Turn On` and `Turn Off` buttons
 - Center popup timer picker with grid options from 15 minutes to 4 hours (15-minute steps)
+- Selecting a timer from the popup starts heating immediately and resets countdown automatically
 - Dynamic boiler heating icon with deep modern colors (blue → orange → red) based on timer progress
 - `No Timer` mode
 - Server-side auto shutoff for safety

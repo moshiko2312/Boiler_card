@@ -848,6 +848,31 @@ class BoilerWaterCard extends HTMLElement {
       entity_id: this._config.duration_entity,
       option,
     });
+
+    this._activateSelectedDuration(option);
+  }
+
+  _activateSelectedDuration(option) {
+    if (!this._hass) {
+      return;
+    }
+
+    if (this._isNoTimerOption(option)) {
+      this._runScript(this._config.script_on_continuous, {
+        boiler_entity: this._config.boiler_entity,
+        turn_on_action: this._config.turn_on_action,
+        turn_on_data: this._safeServiceData(this._config.turn_on_data),
+      });
+      return;
+    }
+
+    this._runScript(this._config.script_on_timed, {
+      duration_option: option,
+      duration: this._optionToHhMmSs(option) || "00:30:00",
+      boiler_entity: this._config.boiler_entity,
+      turn_on_action: this._config.turn_on_action,
+      turn_on_data: this._safeServiceData(this._config.turn_on_data),
+    });
   }
 
   _openTimerModal() {
@@ -874,23 +899,7 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const durationState = this._hass.states[this._config.duration_entity]?.state || "30m";
-
-    if (this._isNoTimerOption(durationState)) {
-      this._runScript(this._config.script_on_continuous, {
-        boiler_entity: this._config.boiler_entity,
-        turn_on_action: this._config.turn_on_action,
-        turn_on_data: this._safeServiceData(this._config.turn_on_data),
-      });
-      return;
-    }
-
-    this._runScript(this._config.script_on_timed, {
-      duration_option: durationState,
-      duration: this._optionToHhMmSs(durationState) || "00:30:00",
-      boiler_entity: this._config.boiler_entity,
-      turn_on_action: this._config.turn_on_action,
-      turn_on_data: this._safeServiceData(this._config.turn_on_data),
-    });
+    this._activateSelectedDuration(durationState);
   }
 
   _handleTurnOff() {
