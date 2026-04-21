@@ -8,7 +8,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL, EVENT_HOMEASSISTANT_STARTED, Platform
+from homeassistant.const import CONF_URL, EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
@@ -288,30 +288,40 @@ def _wrap_service_errors(handler):
 
 
 async def _async_install_frontend_card(hass: HomeAssistant) -> None:
-    """Install/update Lovelace card file under /config/www automatically."""
-    source = Path(__file__).resolve().parent / "frontend" / "boiler-card.js"
-    target = Path(hass.config.path("www", "boiler-card", "boiler-card.js"))
+    """Install/update Lovelace frontend assets under /config/www automatically."""
+    source_dir = Path(__file__).resolve().parent / "frontend"
+    target_dir = Path(hass.config.path("www", "boiler-card"))
 
-    if not source.exists():
-        _LOGGER.warning("Boiler card source file is missing: %s", source)
+    if not source_dir.exists():
+        _LOGGER.warning("Boiler frontend assets folder is missing: %s", source_dir)
         return
 
     try:
-        await hass.async_add_executor_job(_copy_card_file, source, target)
-        _LOGGER.debug("Boiler card installed to: %s", target)
+        copied = await hass.async_add_executor_job(_copy_frontend_assets, source_dir, target_dir)
+        _LOGGER.debug("Boiler frontend assets synced to %s (%d changed)", target_dir, copied)
     except OSError as err:
-        _LOGGER.error("Failed to install boiler card into www: %s", err)
+        _LOGGER.error("Failed to install boiler frontend assets into www: %s", err)
 
 
-def _copy_card_file(source: Path, target: Path) -> None:
-    """Copy card file if changed."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    source_bytes = source.read_bytes()
+def _copy_frontend_assets(source_dir: Path, target_dir: Path) -> int:
+    """Copy all frontend assets if changed."""
+    target_dir.mkdir(parents=True, exist_ok=True)
+    changed = 0
 
-    if target.exists() and target.read_bytes() == source_bytes:
-        return
+    for source in source_dir.iterdir():
+        if not source.is_file():
+            continue
 
-    target.write_bytes(source_bytes)
+        target = target_dir / source.name
+        source_bytes = source.read_bytes()
+
+        if target.exists() and target.read_bytes() == source_bytes:
+            continue
+
+        target.write_bytes(source_bytes)
+        changed += 1
+
+    return changed
 
 
 def _async_schedule_resource_retry_on_start(hass: HomeAssistant) -> None:
@@ -366,44 +376,8 @@ async def _async_ensure_lovelace_resource(hass: HomeAssistant) -> None:
 
     try:
         items = list(resources.async_items() or [])
-
-        exact = next(
-            (
-                item
-                for item in items
-                if str(item.get(CONF_URL, "")).strip() == CARD_RESOURCE_URL
-            ),
-            None,
-        )
-        if exact:
-            if str(exact.get(CONF_TYPE, "")).strip() != "module":
-                await resources.async_update_item(
-                    exact[CONF_ID],
-                    {
-                        CONF_RESOURCE_TYPE_WS: "module",
-                        CONF_URL: CARD_RESOURCE_URL,
-                    },
-                )
-                _LOGGER.info("Updated Lovelace resource type for %s", CARD_RESOURCE_URL)
-            return
-
-        legacy = next(
-            (
-                item
-                for item in items
-                if str(item.get(CONF_URL, "")).split("?", 1)[0].strip() == CARD_LOCAL_PATH
-            ),
-            None,
-        )
-        if legacy:
-            await resources.async_update_item(
-                legacy[CONF_ID],
-                {
-                    CONF_RESOURCE_TYPE_WS: "module",
-                    CONF_URL: CARD_RESOURCE_URL,
-                },
-            )
-            _LOGGER.info("Updated Lovelace resource URL to %s", CARD_RESOURCE_URL)
+        # Safety rule: never modify existing resources, only add if missing.
+        if any(str(item.get(CONF_URL, "")).split("?", 1)[0].strip() == CARD_LOCAL_PATH for item in items):
             return
 
         await resources.async_create_item(
