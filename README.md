@@ -2,7 +2,7 @@
 
 Custom Lovelace card for a hot-water boiler with:
 - `Turn On` and `Turn Off` buttons
-- Timer dropdown from 15 minutes to 4 hours (15-minute steps)
+- Center popup timer picker with grid options from 15 minutes to 4 hours (15-minute steps)
 - `No Timer` mode
 - Server-side auto shutoff for safety
 - Support for `switch`, `light`, and other entities that can be controlled via service calls

@@ -42,6 +42,11 @@ class BoilerWaterCard extends HTMLElement {
     this._hass = null;
     this._elements = {};
     this._ticker = null;
+    this._handleEscapeKey = (event) => {
+      if (event.key === "Escape") {
+        this._closeTimerModal();
+      }
+    };
   }
 
   connectedCallback() {
@@ -55,6 +60,7 @@ class BoilerWaterCard extends HTMLElement {
       window.clearInterval(this._ticker);
       this._ticker = null;
     }
+    window.removeEventListener("keydown", this._handleEscapeKey);
   }
 
   setConfig(config) {
@@ -76,6 +82,7 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _renderShell() {
+    window.removeEventListener("keydown", this._handleEscapeKey);
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -176,7 +183,7 @@ class BoilerWaterCard extends HTMLElement {
           color: var(--boiler-muted);
         }
 
-        select {
+        .timer-picker-btn {
           width: 100%;
           border-radius: 12px;
           border: 1px solid #d4deeb;
@@ -184,13 +191,20 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.96rem;
           color: var(--boiler-text);
           background: rgba(255, 255, 255, 0.92);
-          outline: none;
-          transition: border-color 140ms ease, box-shadow 140ms ease;
+          text-align: left;
+          font-weight: 700;
+          cursor: pointer;
+          transition: border-color 140ms ease, box-shadow 140ms ease, transform 120ms ease;
         }
 
-        select:focus {
+        .timer-picker-btn:hover {
+          transform: translateY(-1px);
+        }
+
+        .timer-picker-btn:focus {
           border-color: #7aa7da;
           box-shadow: 0 0 0 3px rgba(122, 167, 218, 0.2);
+          outline: none;
         }
 
         .actions {
@@ -199,7 +213,7 @@ class BoilerWaterCard extends HTMLElement {
           gap: 10px;
         }
 
-        button {
+        .actions button {
           border: 0;
           border-radius: 12px;
           padding: 11px 10px;
@@ -209,11 +223,12 @@ class BoilerWaterCard extends HTMLElement {
           transition: transform 120ms ease, filter 120ms ease;
         }
 
-        button:active {
+        .actions button:active {
           transform: translateY(1px);
         }
 
-        button[disabled] {
+        .actions button[disabled],
+        .timer-picker-btn[disabled] {
           cursor: not-allowed;
           opacity: 0.56;
           transform: none;
@@ -237,6 +252,94 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.82rem;
         }
 
+        .timer-modal {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .timer-modal[hidden] {
+          display: none;
+        }
+
+        .timer-modal-backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(10, 20, 35, 0.5);
+          backdrop-filter: blur(2px);
+        }
+
+        .timer-modal-panel {
+          position: relative;
+          width: min(560px, calc(100vw - 28px));
+          max-height: min(80vh, 620px);
+          overflow: auto;
+          border-radius: 18px;
+          border: 1px solid rgba(80, 108, 140, 0.25);
+          background: #ffffff;
+          box-shadow: 0 26px 60px rgba(14, 27, 51, 0.35);
+          padding: 14px;
+          animation: card-enter 180ms ease;
+        }
+
+        .timer-modal-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .timer-modal-title {
+          margin: 0;
+          font-size: 1rem;
+          color: var(--boiler-text);
+        }
+
+        .timer-close-btn {
+          border: 0;
+          border-radius: 10px;
+          width: 34px;
+          height: 34px;
+          font-size: 1rem;
+          color: #2f3b4f;
+          background: #edf3f8;
+          cursor: pointer;
+        }
+
+        .timer-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(92px, 1fr));
+          gap: 9px;
+        }
+
+        .timer-option-btn {
+          border: 1px solid #d4deeb;
+          border-radius: 11px;
+          background: #f7fbff;
+          color: #1f2e44;
+          font-weight: 700;
+          font-size: 0.9rem;
+          padding: 10px 8px;
+          cursor: pointer;
+          transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+        }
+
+        .timer-option-btn:hover {
+          transform: translateY(-1px);
+          border-color: #93b7df;
+          background: #f0f7ff;
+        }
+
+        .timer-option-btn.selected {
+          border-color: #e48a41;
+          background: #ffefe1;
+          color: #8d4718;
+        }
+
         @media (max-width: 520px) {
           .wrap {
             padding: 14px;
@@ -249,6 +352,10 @@ class BoilerWaterCard extends HTMLElement {
 
           .countdown-value {
             font-size: 1.34rem;
+          }
+
+          .timer-grid {
+            grid-template-columns: repeat(3, minmax(80px, 1fr));
           }
         }
 
@@ -287,8 +394,8 @@ class BoilerWaterCard extends HTMLElement {
             <span class="countdown-value" id="countdown-value">--:--</span>
           </div>
 
-          <label class="field-label" for="duration-select">Timer / טיימר</label>
-          <select id="duration-select"></select>
+          <label class="field-label" for="timer-picker-btn">Timer / טיימר</label>
+          <button type="button" class="timer-picker-btn" id="timer-picker-btn">Select Timer / בחר טיימר</button>
 
           <div class="actions">
             <button class="on-btn" id="on-btn">הדלק / Turn On</button>
@@ -298,6 +405,17 @@ class BoilerWaterCard extends HTMLElement {
           <p class="error" id="error" hidden></p>
         </div>
       </ha-card>
+
+      <div class="timer-modal" id="timer-modal" hidden>
+        <div class="timer-modal-backdrop" id="timer-modal-backdrop"></div>
+        <div class="timer-modal-panel" role="dialog" aria-modal="true" aria-label="Timer Picker">
+          <div class="timer-modal-head">
+            <h3 class="timer-modal-title">בחר טיימר / Select Timer</h3>
+            <button type="button" class="timer-close-btn" id="timer-close-btn">✕</button>
+          </div>
+          <div class="timer-grid" id="timer-grid"></div>
+        </div>
+      </div>
     `;
 
     this._elements = {
@@ -306,15 +424,19 @@ class BoilerWaterCard extends HTMLElement {
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       statusChip: this.shadowRoot.getElementById("status-chip"),
-      durationSelect: this.shadowRoot.getElementById("duration-select"),
+      timerPickerBtn: this.shadowRoot.getElementById("timer-picker-btn"),
       onBtn: this.shadowRoot.getElementById("on-btn"),
       offBtn: this.shadowRoot.getElementById("off-btn"),
       error: this.shadowRoot.getElementById("error"),
+      timerModal: this.shadowRoot.getElementById("timer-modal"),
+      timerModalBackdrop: this.shadowRoot.getElementById("timer-modal-backdrop"),
+      timerCloseBtn: this.shadowRoot.getElementById("timer-close-btn"),
+      timerGrid: this.shadowRoot.getElementById("timer-grid"),
     };
 
-    this._elements.durationSelect.addEventListener("change", (event) =>
-      this._handleDurationChange(event)
-    );
+    this._elements.timerPickerBtn.addEventListener("click", () => this._openTimerModal());
+    this._elements.timerCloseBtn.addEventListener("click", () => this._closeTimerModal());
+    this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
     this._elements.onBtn.addEventListener("click", () => this._handleTurnOn());
     this._elements.offBtn.addEventListener("click", () => this._handleTurnOff());
   }
@@ -331,46 +453,53 @@ class BoilerWaterCard extends HTMLElement {
     const scripts = this._scriptEntities();
 
     this._elements.title.textContent = cfg.title;
-    this._syncDurationOptions(duration);
+    this._syncTimerPicker(duration);
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
     this._syncError(boiler, duration, timer, scripts);
     this._syncButtons(boiler, duration, timer, scripts);
   }
 
-  _syncDurationOptions(durationEntity) {
-    const select = this._elements.durationSelect;
+  _syncTimerPicker(durationEntity) {
     const options = this._durationOptions(durationEntity);
+    const selected = this._selectedDurationOption(durationEntity, options);
 
-    if (select.options.length !== options.length) {
-      select.innerHTML = "";
-      options.forEach((option) => {
-        const item = document.createElement("option");
-        item.value = option;
-        item.textContent = this._renderOptionLabel(option);
-        select.appendChild(item);
-      });
-    } else {
-      options.forEach((option, index) => {
-        if (select.options[index].value !== option) {
-          select.options[index].value = option;
-          select.options[index].textContent = this._renderOptionLabel(option);
-        }
-      });
-    }
+    this._elements.timerPickerBtn.textContent = `Timer: ${this._renderOptionLabel(selected)}`;
+    this._renderTimerGrid(options, selected);
+  }
 
+  _selectedDurationOption(durationEntity, options) {
     const selected = durationEntity?.state || "30m";
     if (options.includes(selected)) {
-      select.value = selected;
-      return;
+      return selected;
     }
-
     if (options.includes("30m")) {
-      select.value = "30m";
+      return "30m";
+    }
+    return options[0] || "30m";
+  }
+
+  _renderTimerGrid(options, selected) {
+    const grid = this._elements.timerGrid;
+    if (!grid) {
       return;
     }
 
-    select.value = options[0] || "";
+    grid.innerHTML = "";
+    options.forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "timer-option-btn";
+      if (option === selected) {
+        button.classList.add("selected");
+      }
+      button.textContent = this._renderOptionLabel(option);
+      button.addEventListener("click", () => {
+        this._selectDurationOption(option);
+        this._closeTimerModal();
+      });
+      grid.appendChild(button);
+    });
   }
 
   _syncStatus(boiler, timer) {
@@ -454,10 +583,15 @@ class BoilerWaterCard extends HTMLElement {
     const hasHass = !!this._hass;
     const hasCoreEntities = !!boiler && !!duration && !!timer;
     const hasScripts = !!scripts.onTimed && !!scripts.onContinuous && !!scripts.off;
+    const hasDuration = !!duration;
 
     const disabled = !hasHass || !hasCoreEntities || !hasScripts;
     this._elements.onBtn.disabled = disabled;
     this._elements.offBtn.disabled = disabled;
+    this._elements.timerPickerBtn.disabled = !hasHass || !hasDuration;
+    if (this._elements.timerPickerBtn.disabled) {
+      this._closeTimerModal();
+    }
   }
 
   _refreshLiveCountdown() {
@@ -499,15 +633,33 @@ class BoilerWaterCard extends HTMLElement {
     return `${minutes}m / ${minutes} דקות`;
   }
 
-  _handleDurationChange(event) {
+  _selectDurationOption(option) {
     if (!this._hass) {
       return;
     }
 
     this._hass.callService("input_select", "select_option", {
       entity_id: this._config.duration_entity,
-      option: event.target.value,
+      option,
     });
+  }
+
+  _openTimerModal() {
+    if (!this._elements.timerModal || this._elements.timerPickerBtn.disabled) {
+      return;
+    }
+
+    this._elements.timerModal.hidden = false;
+    window.addEventListener("keydown", this._handleEscapeKey);
+  }
+
+  _closeTimerModal() {
+    if (!this._elements.timerModal) {
+      return;
+    }
+
+    this._elements.timerModal.hidden = true;
+    window.removeEventListener("keydown", this._handleEscapeKey);
   }
 
   _handleTurnOn() {
