@@ -8,8 +8,8 @@ import logging
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import CONF_ID, CONF_TYPE, CONF_URL, EVENT_HOMEASSISTANT_STARTED, Platform
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
@@ -23,6 +23,8 @@ from .const import (
     ATTR_START_TIME,
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
+    CARD_LOCAL_PATH,
+    CARD_RESOURCE_URL,
     CONF_BOILER_ENTITY,
     DOMAIN,
     SERVICE_CREATE_SCHEDULE,
@@ -40,6 +42,7 @@ PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.SENSOR]
 
 DATA_MANAGERS = "managers"
 DATA_SERVICES_REGISTERED = "services_registered"
+DATA_RESOURCE_START_LISTENER = "resource_start_listener"
 
 BASE_SERVICE_SCHEMA = {
     vol.Optional(ATTR_ENTRY_ID): cv.string,
@@ -94,12 +97,17 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(DATA_MANAGERS, {})
     hass.data[DOMAIN].setdefault(DATA_SERVICES_REGISTERED, False)
+    await _async_install_frontend_card(hass)
+    await _async_ensure_lovelace_resource(hass)
+    _async_schedule_resource_retry_on_start(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Boiler Manager from config entry."""
     await _async_install_frontend_card(hass)
+    await _async_ensure_lovelace_resource(hass)
+    _async_schedule_resource_retry_on_start(hass)
 
     manager = BoilerManager(hass, entry)
     await manager.async_setup()
@@ -304,3 +312,106 @@ def _copy_card_file(source: Path, target: Path) -> None:
         return
 
     target.write_bytes(source_bytes)
+
+
+def _async_schedule_resource_retry_on_start(hass: HomeAssistant) -> None:
+    """Ensure we retry resource registration once HA is fully started."""
+    if hass.is_running:
+        hass.async_create_task(_async_ensure_lovelace_resource(hass))
+        return
+
+    if hass.data[DOMAIN].get(DATA_RESOURCE_START_LISTENER):
+        return
+
+    @callback
+    def _async_retry(_event) -> None:
+        """Retry resource registration after startup."""
+        hass.data[DOMAIN].pop(DATA_RESOURCE_START_LISTENER, None)
+        hass.async_create_task(_async_ensure_lovelace_resource(hass))
+
+    hass.data[DOMAIN][DATA_RESOURCE_START_LISTENER] = hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STARTED,
+        _async_retry,
+    )
+
+
+async def _async_ensure_lovelace_resource(hass: HomeAssistant) -> None:
+    """Automatically register the card JS as a Lovelace module resource."""
+    try:
+        from homeassistant.components.lovelace.const import (
+            CONF_RESOURCE_TYPE_WS,
+            LOVELACE_DATA,
+            MODE_STORAGE,
+        )
+    except ImportError:
+        _LOGGER.debug("Lovelace constants are unavailable, skipping resource registration")
+        return
+
+    lovelace_data = hass.data.get(LOVELACE_DATA)
+    if lovelace_data is None:
+        _LOGGER.debug("Lovelace data is not ready yet, resource registration deferred")
+        return
+
+    if getattr(lovelace_data, "resource_mode", None) != MODE_STORAGE:
+        _LOGGER.info(
+            "Lovelace is not in storage mode, skipping auto resource registration for %s",
+            CARD_LOCAL_PATH,
+        )
+        return
+
+    resources = getattr(lovelace_data, "resources", None)
+    if resources is None:
+        _LOGGER.debug("Lovelace resources collection is unavailable")
+        return
+
+    try:
+        items = list(resources.async_items() or [])
+
+        exact = next(
+            (
+                item
+                for item in items
+                if str(item.get(CONF_URL, "")).strip() == CARD_RESOURCE_URL
+            ),
+            None,
+        )
+        if exact:
+            if str(exact.get(CONF_TYPE, "")).strip() != "module":
+                await resources.async_update_item(
+                    exact[CONF_ID],
+                    {
+                        CONF_RESOURCE_TYPE_WS: "module",
+                        CONF_URL: CARD_RESOURCE_URL,
+                    },
+                )
+                _LOGGER.info("Updated Lovelace resource type for %s", CARD_RESOURCE_URL)
+            return
+
+        legacy = next(
+            (
+                item
+                for item in items
+                if str(item.get(CONF_URL, "")).split("?", 1)[0].strip() == CARD_LOCAL_PATH
+            ),
+            None,
+        )
+        if legacy:
+            await resources.async_update_item(
+                legacy[CONF_ID],
+                {
+                    CONF_RESOURCE_TYPE_WS: "module",
+                    CONF_URL: CARD_RESOURCE_URL,
+                },
+            )
+            _LOGGER.info("Updated Lovelace resource URL to %s", CARD_RESOURCE_URL)
+            return
+
+        await resources.async_create_item(
+            {
+                CONF_RESOURCE_TYPE_WS: "module",
+                CONF_URL: CARD_RESOURCE_URL,
+            }
+        )
+        _LOGGER.info("Added Lovelace resource automatically: %s", CARD_RESOURCE_URL)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Automatic Lovelace resource registration failed: %s", err)

@@ -3,8 +3,19 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import json
+from pathlib import Path
 
 DOMAIN = "boiler_manager"
+
+_MANIFEST_PATH = Path(__file__).resolve().parent / "manifest.json"
+try:
+    INTEGRATION_VERSION = str(json.loads(_MANIFEST_PATH.read_text(encoding="utf-8")).get("version", "0"))
+except (OSError, ValueError, TypeError):
+    INTEGRATION_VERSION = "0"
+
+CARD_LOCAL_PATH = "/local/boiler-card/boiler-card.js"
+CARD_RESOURCE_URL = f"{CARD_LOCAL_PATH}?v={INTEGRATION_VERSION}"
 
 CONF_NAME = "name"
 CONF_BOILER_ENTITY = "boiler_entity"

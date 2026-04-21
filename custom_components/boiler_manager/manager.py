@@ -9,7 +9,7 @@ import uuid
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceNotFound
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
@@ -405,8 +405,13 @@ class BoilerManager:
         try:
             await self.hass.services.async_call(domain, service, data, blocking=True)
             return
-        except ServiceNotFound:
-            _LOGGER.debug("Service %s.%s not found, falling back to homeassistant.%s", domain, service, service)
+        except HomeAssistantError:
+            _LOGGER.debug(
+                "Service %s.%s failed/unavailable, falling back to homeassistant.%s",
+                domain,
+                service,
+                service,
+            )
 
         try:
             await self.hass.services.async_call("homeassistant", service, data, blocking=True)
