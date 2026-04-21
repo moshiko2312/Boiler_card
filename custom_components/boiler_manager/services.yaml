@@ -76,6 +76,22 @@ create_schedule:
       name: Days
       description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).
       example: [0, 1, 2, 3, 4]
+    months:
+      name: Months
+      description: Months list as 1-12.
+      example: [1, 2, 3, 11, 12]
+    recurrence:
+      name: Recurrence
+      description: forever (default), once, or range.
+      example: "range"
+    start_date:
+      name: Start Date
+      description: Optional lower date bound in YYYY-MM-DD.
+      example: "2026-11-01"
+    end_date:
+      name: End Date
+      description: Optional upper date bound in YYYY-MM-DD.
+      example: "2026-12-31"
     enabled:
       name: Enabled
       description: Enable task on creation.
@@ -114,6 +130,22 @@ update_schedule:
       name: Days
       description: Days list as 0-6 (Mon-Sun) or short names (mon, tue, ...).
       example: [0, 2, 4]
+    months:
+      name: Months
+      description: Months list as 1-12.
+      example: [6, 7, 8]
+    recurrence:
+      name: Recurrence
+      description: forever, once, or range.
+      example: "once"
+    start_date:
+      name: Start Date
+      description: Optional lower date bound in YYYY-MM-DD.
+      example: "2026-06-01"
+    end_date:
+      name: End Date
+      description: Optional upper date bound in YYYY-MM-DD.
+      example: "2026-06-30"
     enabled:
       name: Enabled
       description: Enable/disable this task.

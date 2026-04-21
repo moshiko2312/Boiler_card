@@ -63,6 +63,18 @@ const I18N = {
     task_delete: "מחיקה",
     task_enabled: "פעיל",
     task_disabled: "כבוי",
+    task_edit: "עריכה",
+    menu_timers: "טיימר",
+    menu_tasks: "משימות",
+    recurrence_label: "מחזוריות",
+    recurrence_forever: "קבוע",
+    recurrence_once: "פעם אחת",
+    recurrence_range: "טווח תאריכים",
+    date_start: "מתאריך",
+    date_end: "עד תאריך",
+    months_label: "חודשים",
+    task_add_title: "הוספת משימה",
+    task_edit_title: "עריכת משימה",
     day_mon: "ב׳",
     day_tue: "ג׳",
     day_wed: "ד׳",
@@ -113,6 +125,18 @@ const I18N = {
     task_delete: "Delete",
     task_enabled: "Enabled",
     task_disabled: "Disabled",
+    task_edit: "Edit",
+    menu_timers: "Timer",
+    menu_tasks: "Tasks",
+    recurrence_label: "Recurrence",
+    recurrence_forever: "Forever",
+    recurrence_once: "One Time",
+    recurrence_range: "Date Range",
+    date_start: "From Date",
+    date_end: "To Date",
+    months_label: "Months",
+    task_add_title: "Add Task",
+    task_edit_title: "Edit Task",
     day_mon: "Mon",
     day_tue: "Tue",
     day_wed: "Wed",
@@ -163,6 +187,18 @@ const I18N = {
     task_delete: "Удалить",
     task_enabled: "Включено",
     task_disabled: "Выключено",
+    task_edit: "Изменить",
+    menu_timers: "Таймер",
+    menu_tasks: "Задачи",
+    recurrence_label: "Повтор",
+    recurrence_forever: "Постоянно",
+    recurrence_once: "Один раз",
+    recurrence_range: "Период дат",
+    date_start: "С даты",
+    date_end: "По дату",
+    months_label: "Месяцы",
+    task_add_title: "Добавить задачу",
+    task_edit_title: "Изменить задачу",
     day_mon: "Пн",
     day_tue: "Вт",
     day_wed: "Ср",
@@ -191,6 +227,7 @@ const DEFAULT_CONFIG = {
   service_on_continuous: "boiler_manager.turn_on_continuous",
   service_off: "boiler_manager.turn_off",
   service_create_schedule: "boiler_manager.create_schedule",
+  service_update_schedule: "boiler_manager.update_schedule",
   service_delete_schedule: "boiler_manager.delete_schedule",
   turn_on_action: "homeassistant.turn_on",
   turn_off_action: "homeassistant.turn_off",
@@ -210,6 +247,8 @@ class BoilerWaterCard extends HTMLElement {
     this._ticker = null;
     this._timerPageIndex = 0;
     this._timerPageSize = 6;
+    this._menuMode = "timer";
+    this._editingTaskId = null;
     this._offPendingUntil = 0;
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
@@ -582,14 +621,22 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .tasks-add-btn {
-          border: 1px solid rgba(150, 197, 228, 0.6);
-          border-radius: 9px;
-          background: linear-gradient(165deg, rgba(152, 225, 252, 0.35), rgba(89, 166, 217, 0.26));
-          color: #1d3f5e;
-          font-size: 0.8rem;
-          font-weight: 700;
-          padding: 6px 10px;
+          border: 1px solid rgba(122, 183, 230, 0.95);
+          border-radius: 10px;
+          background: linear-gradient(165deg, #63b7ec, #3f93cc);
+          color: #f7fbff;
+          text-shadow: 0 1px 1px rgba(14, 45, 70, 0.35);
+          font-size: 0.82rem;
+          font-weight: 800;
+          padding: 7px 12px;
           cursor: pointer;
+          box-shadow:
+            0 3px 8px rgba(34, 84, 120, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        }
+
+        .tasks-add-btn:hover {
+          filter: brightness(1.05);
         }
 
         .tasks-add-btn[disabled] {
@@ -642,28 +689,49 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .task-toggle-btn,
+        .task-edit-btn,
         .task-delete-btn {
-          border: 1px solid rgba(173, 196, 220, 0.55);
-          border-radius: 8px;
-          background: rgba(245, 251, 255, 0.75);
-          color: #21405d;
-          font-size: 0.7rem;
-          font-weight: 700;
-          min-height: 30px;
-          padding: 4px 8px;
+          border: 1px solid rgba(148, 170, 198, 0.78);
+          border-radius: 10px;
+          background: linear-gradient(165deg, rgba(250, 253, 255, 0.96), rgba(233, 242, 251, 0.92));
+          color: #15334f;
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+          font-size: 0.78rem;
+          font-weight: 800;
+          min-height: 34px;
+          padding: 5px 10px;
           cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(28, 53, 82, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
 
         .task-toggle-btn.on {
-          border-color: rgba(130, 219, 170, 0.8);
-          background: rgba(94, 209, 139, 0.22);
-          color: #145b33;
+          border-color: #68c78f;
+          background: linear-gradient(165deg, #46b975, #2f9460);
+          color: #ffffff;
+          text-shadow: 0 1px 1px rgba(8, 48, 28, 0.45);
+        }
+
+        .task-edit-btn {
+          border-color: #7ab6e6;
+          color: #113d63;
+          background: linear-gradient(165deg, #d8ecfb, #bdddf6);
         }
 
         .task-delete-btn {
-          border-color: rgba(245, 165, 165, 0.8);
-          color: #8d1d1d;
-          background: rgba(255, 227, 227, 0.84);
+          border-color: #de8b8b;
+          color: #781f1f;
+          text-shadow: none;
+          background: linear-gradient(165deg, #f7d8d8, #f1bebe);
+        }
+
+        .task-toggle-btn:focus-visible,
+        .task-edit-btn:focus-visible,
+        .task-delete-btn:focus-visible,
+        .tasks-add-btn:focus-visible {
+          outline: 2px solid rgba(170, 225, 255, 0.95);
+          outline-offset: 2px;
         }
 
         .tasks-empty {
@@ -699,6 +767,17 @@ class BoilerWaterCard extends HTMLElement {
           box-sizing: border-box;
         }
 
+        .schedule-select {
+          border: 1px solid rgba(154, 184, 219, 0.7);
+          border-radius: 10px;
+          background: rgba(248, 252, 255, 0.95);
+          color: #1f2e44;
+          min-height: 38px;
+          padding: 8px 10px;
+          font-size: 0.9rem;
+          box-sizing: border-box;
+        }
+
         .schedule-time-row {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -708,6 +787,12 @@ class BoilerWaterCard extends HTMLElement {
         .schedule-days {
           display: grid;
           grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 5px;
+        }
+
+        .schedule-months {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 5px;
         }
 
@@ -723,10 +808,23 @@ class BoilerWaterCard extends HTMLElement {
           padding: 0;
         }
 
-        .schedule-day.selected {
+        .schedule-day.selected,
+        .schedule-month.selected {
           border-color: rgba(165, 232, 255, 0.95);
           background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
           color: #fff;
+        }
+
+        .schedule-month {
+          border: 1px solid rgba(173, 196, 220, 0.55);
+          border-radius: 8px;
+          background: rgba(245, 251, 255, 0.75);
+          color: #21405d;
+          min-height: 30px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 0;
         }
 
         .schedule-modal-actions {
@@ -818,6 +916,37 @@ class BoilerWaterCard extends HTMLElement {
           align-items: center;
           gap: 6px;
           margin-inline-start: auto;
+        }
+
+        .menu-mode-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(222, 236, 248, 0.6);
+          border: 1px solid rgba(164, 189, 215, 0.55);
+          border-radius: 10px;
+          padding: 3px;
+        }
+
+        .menu-mode-btn {
+          border: 0;
+          border-radius: 8px;
+          min-height: 30px;
+          padding: 4px 10px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #21405d;
+          background: transparent;
+          cursor: pointer;
+        }
+
+        .menu-mode-btn.active {
+          color: #fff;
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+        }
+
+        .menu-view[hidden] {
+          display: none;
         }
 
         .timer-page-controls {
@@ -1141,14 +1270,6 @@ class BoilerWaterCard extends HTMLElement {
             <button type="button" class="quick-timer-btn off-action" id="quick-off-btn" data-action="off">Off</button>
           </div>
 
-          <div class="tasks-card" id="tasks-card">
-            <div class="tasks-head">
-              <p class="tasks-title" id="tasks-title">Tasks</p>
-              <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
-            </div>
-            <div class="tasks-list" id="tasks-list"></div>
-          </div>
-
           <p class="error" id="error" hidden></p>
         </div>
       </ha-card>
@@ -1158,6 +1279,10 @@ class BoilerWaterCard extends HTMLElement {
         <div class="timer-modal-panel" id="timer-modal-panel" role="dialog" aria-modal="true" aria-label="Timer Picker">
           <div class="timer-modal-head">
             <h3 class="timer-modal-title" id="timer-modal-title">Select Timer</h3>
+            <div class="menu-mode-toggle">
+              <button type="button" class="menu-mode-btn" id="modal-mode-timer-btn">Timer</button>
+              <button type="button" class="menu-mode-btn" id="modal-mode-tasks-btn">Tasks</button>
+            </div>
             <div class="timer-modal-actions">
               <div class="timer-page-controls" id="timer-page-controls">
                 <button type="button" class="timer-page-btn" id="timer-page-prev-btn" aria-label="Previous page">‹</button>
@@ -1167,7 +1292,18 @@ class BoilerWaterCard extends HTMLElement {
               <button type="button" class="timer-close-btn" id="timer-close-btn">✕</button>
             </div>
           </div>
-          <div class="timer-grid" id="timer-grid"></div>
+          <div class="menu-view" id="modal-timer-view">
+            <div class="timer-grid" id="timer-grid"></div>
+          </div>
+          <div class="menu-view" id="modal-tasks-view" hidden>
+            <div class="tasks-card">
+              <div class="tasks-head">
+                <p class="tasks-title" id="tasks-title">Tasks</p>
+                <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
+              </div>
+              <div class="tasks-list" id="tasks-list"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1194,8 +1330,30 @@ class BoilerWaterCard extends HTMLElement {
               </div>
             </div>
             <div class="schedule-field">
+              <label class="schedule-label" for="schedule-recurrence-input" id="schedule-recurrence-label">Recurrence</label>
+              <select class="schedule-select" id="schedule-recurrence-input">
+                <option value="forever">Forever</option>
+                <option value="once">One Time</option>
+                <option value="range">Date Range</option>
+              </select>
+            </div>
+            <div class="schedule-time-row" id="schedule-date-row">
+              <div class="schedule-field">
+                <label class="schedule-label" for="schedule-start-date-input" id="schedule-date-start-label">From Date</label>
+                <input class="schedule-input" id="schedule-start-date-input" type="date" />
+              </div>
+              <div class="schedule-field">
+                <label class="schedule-label" for="schedule-end-date-input" id="schedule-date-end-label">To Date</label>
+                <input class="schedule-input" id="schedule-end-date-input" type="date" />
+              </div>
+            </div>
+            <div class="schedule-field">
               <span class="schedule-label" id="schedule-days-label">Days</span>
               <div class="schedule-days" id="schedule-days"></div>
+            </div>
+            <div class="schedule-field">
+              <span class="schedule-label" id="schedule-months-label">Months</span>
+              <div class="schedule-months" id="schedule-months"></div>
             </div>
             <div class="schedule-modal-actions">
               <button type="button" class="schedule-action-btn" id="schedule-cancel-btn">Cancel</button>
@@ -1897,7 +2055,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    const name = String(this._elements.scheduleNameInput?.value || "").trim() || "Task";
+    const name = String(this._elements.scheduleNameInput?.value || "").trim();
     const startTime = String(this._elements.scheduleStartInput?.value || "").trim();
     const endTime = String(this._elements.scheduleEndInput?.value || "").trim();
     if (!startTime || !endTime) {
@@ -1972,7 +2130,7 @@ class BoilerWaterCard extends HTMLElement {
 
       const name = document.createElement("p");
       name.className = "task-name";
-      name.textContent = attrs.friendly_name || attrs.task_id || taskState.entity_id;
+      name.textContent = attrs.task_name || attrs.friendly_name || attrs.task_id || taskState.entity_id;
       main.appendChild(name);
 
       const meta = document.createElement("p");
@@ -2088,6 +2246,9 @@ class BoilerWaterCard extends HTMLElement {
     if (!domain || !service) {
       return false;
     }
+    if (!this._isServiceAvailable(serviceRef)) {
+      return false;
+    }
 
     this._hass.callService(domain, service, this._safeServiceData(data));
     return true;
@@ -2115,17 +2276,17 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _hasBuiltInControlServices() {
-    return this._isServiceRef(this._config.service_run_timed)
-      && this._isServiceRef(this._config.service_on_continuous)
-      && this._isServiceRef(this._config.service_off);
+    return this._isServiceAvailable(this._config.service_run_timed)
+      && this._isServiceAvailable(this._config.service_on_continuous)
+      && this._isServiceAvailable(this._config.service_off);
   }
 
   _hasScheduleCreateService() {
-    return this._isServiceRef(this._config.service_create_schedule);
+    return this._isServiceAvailable(this._config.service_create_schedule);
   }
 
   _hasScheduleDeleteService() {
-    return this._isServiceRef(this._config.service_delete_schedule);
+    return this._isServiceAvailable(this._config.service_delete_schedule);
   }
 
   _isServiceRef(value) {
@@ -2138,6 +2299,15 @@ class BoilerWaterCard extends HTMLElement {
     }
     const [domain, service] = normalized.split(".", 2);
     return !!domain && !!service;
+  }
+
+  _isServiceAvailable(serviceRef) {
+    if (!this._hass || !this._isServiceRef(serviceRef)) {
+      return false;
+    }
+    const normalized = String(serviceRef).trim().toLowerCase();
+    const [domain, service] = normalized.split(".", 2);
+    return !!(this._hass.services?.[domain]?.[service]);
   }
 
   _callEntityAction(action, entityId, data = null) {

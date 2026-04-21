@@ -62,6 +62,7 @@ async def async_setup_entry(
         if action == "update":
             entity = entities.get(task_id)
             if entity:
+                entity._sync_name_from_task(sync_registry=True)
                 entity.async_write_ha_state()
 
     entry.async_on_unload(
@@ -76,21 +77,20 @@ async def async_setup_entry(
 class BoilerTaskSwitch(SwitchEntity):
     """One schedule task switch entity."""
 
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
     _attr_icon = "mdi:calendar-clock"
 
     def __init__(self, manager: BoilerManager, task_id: str) -> None:
         self._manager = manager
         self._task_id = task_id
         self._attr_unique_id = f"{manager.entry.entry_id}_task_{task_id}"
+        self._last_known_name = ""
+        self._sync_name_from_task(sync_registry=False)
 
     @property
     def name(self) -> str:
         """Switch name."""
-        task = self._task
-        if not task:
-            return f"Task {self._task_id}"
-        return task.name
+        return self._attr_name
 
     @property
     def available(self) -> bool:
@@ -112,10 +112,15 @@ class BoilerTaskSwitch(SwitchEntity):
 
         return {
             "task_id": task.task_id,
+            "task_name": task.name,
             "start_time": task.start_time,
             "end_time": task.end_time,
             "days": task.days,
             "days_label": format_days_for_display(task.days),
+            "months": task.months,
+            "recurrence": task.recurrence,
+            "start_date": task.start_date,
+            "end_date": task.end_date,
             "active_now": task.task_id in self._manager.active_task_ids,
             "entry_id": self._manager.entry.entry_id,
             "boiler_entity": self._manager.boiler_entity,
@@ -136,6 +141,7 @@ class BoilerTaskSwitch(SwitchEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe for manager state updates."""
+        self._sync_name_from_task(sync_registry=True)
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -147,8 +153,36 @@ class BoilerTaskSwitch(SwitchEntity):
     @callback
     def _handle_manager_update(self) -> None:
         """Push state updates from manager."""
+        self._sync_name_from_task(sync_registry=False)
         self.async_write_ha_state()
 
     @property
     def _task(self) -> BoilerTask | None:
         return self._manager.get_task(self._task_id)
+
+    @callback
+    def _sync_name_from_task(self, sync_registry: bool) -> None:
+        """Keep entity name in sync with task name."""
+        task = self._task
+        next_name = task.name if task else f"Task {self._task_id}"
+        if not next_name:
+            next_name = f"Task {self._task_id}"
+
+        if next_name == self._last_known_name:
+            return
+
+        self._attr_name = next_name
+        self._last_known_name = next_name
+
+        if not sync_registry or not self.hass or not self.entity_id:
+            return
+
+        registry = er.async_get(self.hass)
+        if not registry.async_get(self.entity_id):
+            return
+
+        try:
+            registry.async_update_entity(self.entity_id, name=next_name)
+        except Exception:  # noqa: BLE001
+            # Keep runtime entity stable even if registry update API changes.
+            return

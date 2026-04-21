@@ -8,8 +8,8 @@ import logging
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_URL, EVENT_HOMEASSISTANT_STARTED, Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
@@ -18,15 +18,18 @@ from .const import (
     ATTR_DURATION,
     ATTR_ENABLED,
     ATTR_END_TIME,
+    ATTR_END_DATE,
     ATTR_ENTRY_ID,
     ATTR_MINUTES,
+    ATTR_MONTHS,
+    ATTR_RECURRENCE,
     ATTR_START_TIME,
+    ATTR_START_DATE,
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
-    CARD_LOCAL_PATH,
-    CARD_RESOURCE_URL,
     CONF_BOILER_ENTITY,
     DOMAIN,
+    RECURRENCE_OPTIONS,
     SERVICE_CREATE_SCHEDULE,
     SERVICE_DELETE_SCHEDULE,
     SERVICE_RUN_TIMED,
@@ -42,7 +45,6 @@ PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.SENSOR]
 
 DATA_MANAGERS = "managers"
 DATA_SERVICES_REGISTERED = "services_registered"
-DATA_RESOURCE_START_LISTENER = "resource_start_listener"
 
 BASE_SERVICE_SCHEMA = {
     vol.Optional(ATTR_ENTRY_ID): cv.string,
@@ -65,6 +67,10 @@ CREATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Required(ATTR_START_TIME): cv.string,
         vol.Required(ATTR_END_TIME): cv.string,
         vol.Optional(ATTR_DAYS): [vol.Any(vol.In(list(range(7))), cv.string)],
+        vol.Optional(ATTR_MONTHS): [vol.Any(vol.In(list(range(1, 13))), cv.string)],
+        vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
+        vol.Optional(ATTR_START_DATE): cv.string,
+        vol.Optional(ATTR_END_DATE): cv.string,
         vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -78,6 +84,10 @@ UPDATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_START_TIME): cv.string,
         vol.Optional(ATTR_END_TIME): cv.string,
         vol.Optional(ATTR_DAYS): [vol.Any(vol.In(list(range(7))), cv.string)],
+        vol.Optional(ATTR_MONTHS): [vol.Any(vol.In(list(range(1, 13))), cv.string)],
+        vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
+        vol.Optional(ATTR_START_DATE): cv.string,
+        vol.Optional(ATTR_END_DATE): cv.string,
         vol.Optional(ATTR_ENABLED): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -97,17 +107,14 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(DATA_MANAGERS, {})
     hass.data[DOMAIN].setdefault(DATA_SERVICES_REGISTERED, False)
+    await _async_register_services(hass)
     await _async_install_frontend_card(hass)
-    await _async_ensure_lovelace_resource(hass)
-    _async_schedule_resource_retry_on_start(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Boiler Manager from config entry."""
     await _async_install_frontend_card(hass)
-    await _async_ensure_lovelace_resource(hass)
-    _async_schedule_resource_retry_on_start(hass)
 
     manager = BoilerManager(hass, entry)
     await manager.async_setup()
@@ -127,9 +134,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     manager = hass.data[DOMAIN][DATA_MANAGERS].pop(entry.entry_id, None)
     if manager:
         await manager.async_unload()
-
-    if not hass.data[DOMAIN][DATA_MANAGERS]:
-        _async_unregister_services(hass)
 
     return unload_ok
 
@@ -160,6 +164,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             start_time=call.data[ATTR_START_TIME],
             end_time=call.data[ATTR_END_TIME],
             days=call.data.get(ATTR_DAYS),
+            months=call.data.get(ATTR_MONTHS),
+            recurrence=call.data.get(ATTR_RECURRENCE),
+            start_date=call.data.get(ATTR_START_DATE),
+            end_date=call.data.get(ATTR_END_DATE),
             enabled=call.data.get(ATTR_ENABLED, True),
         )
 
@@ -168,7 +176,17 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         if not any(
             key in call.data
-            for key in (ATTR_TASK_NAME, ATTR_START_TIME, ATTR_END_TIME, ATTR_DAYS, ATTR_ENABLED)
+            for key in (
+                ATTR_TASK_NAME,
+                ATTR_START_TIME,
+                ATTR_END_TIME,
+                ATTR_DAYS,
+                ATTR_MONTHS,
+                ATTR_RECURRENCE,
+                ATTR_START_DATE,
+                ATTR_END_DATE,
+                ATTR_ENABLED,
+            )
         ):
             raise ServiceValidationError("No update fields provided")
 
@@ -178,6 +196,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             start_time=call.data.get(ATTR_START_TIME),
             end_time=call.data.get(ATTR_END_TIME),
             days=call.data.get(ATTR_DAYS),
+            months=call.data.get(ATTR_MONTHS),
+            recurrence=call.data.get(ATTR_RECURRENCE),
+            start_date=call.data.get(ATTR_START_DATE),
+            end_date=call.data.get(ATTR_END_DATE),
             enabled=call.data.get(ATTR_ENABLED),
         )
 
@@ -322,70 +344,3 @@ def _copy_frontend_assets(source_dir: Path, target_dir: Path) -> int:
         changed += 1
 
     return changed
-
-
-def _async_schedule_resource_retry_on_start(hass: HomeAssistant) -> None:
-    """Ensure we retry resource registration once HA is fully started."""
-    if hass.is_running:
-        hass.async_create_task(_async_ensure_lovelace_resource(hass))
-        return
-
-    if hass.data[DOMAIN].get(DATA_RESOURCE_START_LISTENER):
-        return
-
-    @callback
-    def _async_retry(_event) -> None:
-        """Retry resource registration after startup."""
-        hass.data[DOMAIN].pop(DATA_RESOURCE_START_LISTENER, None)
-        hass.async_create_task(_async_ensure_lovelace_resource(hass))
-
-    hass.data[DOMAIN][DATA_RESOURCE_START_LISTENER] = hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STARTED,
-        _async_retry,
-    )
-
-
-async def _async_ensure_lovelace_resource(hass: HomeAssistant) -> None:
-    """Automatically register the card JS as a Lovelace module resource."""
-    try:
-        from homeassistant.components.lovelace.const import (
-            CONF_RESOURCE_TYPE_WS,
-            LOVELACE_DATA,
-            MODE_STORAGE,
-        )
-    except ImportError:
-        _LOGGER.debug("Lovelace constants are unavailable, skipping resource registration")
-        return
-
-    lovelace_data = hass.data.get(LOVELACE_DATA)
-    if lovelace_data is None:
-        _LOGGER.debug("Lovelace data is not ready yet, resource registration deferred")
-        return
-
-    if getattr(lovelace_data, "resource_mode", None) != MODE_STORAGE:
-        _LOGGER.info(
-            "Lovelace is not in storage mode, skipping auto resource registration for %s",
-            CARD_LOCAL_PATH,
-        )
-        return
-
-    resources = getattr(lovelace_data, "resources", None)
-    if resources is None:
-        _LOGGER.debug("Lovelace resources collection is unavailable")
-        return
-
-    try:
-        items = list(resources.async_items() or [])
-        # Safety rule: never modify existing resources, only add if missing.
-        if any(str(item.get(CONF_URL, "")).split("?", 1)[0].strip() == CARD_LOCAL_PATH for item in items):
-            return
-
-        await resources.async_create_item(
-            {
-                CONF_RESOURCE_TYPE_WS: "module",
-                CONF_URL: CARD_RESOURCE_URL,
-            }
-        )
-        _LOGGER.info("Added Lovelace resource automatically: %s", CARD_RESOURCE_URL)
-    except Exception as err:  # noqa: BLE001
-        _LOGGER.warning("Automatic Lovelace resource registration failed: %s", err)

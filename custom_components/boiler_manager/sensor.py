@@ -6,11 +6,6 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_DEVICE_CLASS,
-    ATTR_STATE_CLASS,
-    ATTR_UNIT_OF_MEASUREMENT,
-)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -18,6 +13,10 @@ from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import DOMAIN, signal_state_updated
 from .manager import BoilerManager
+
+ATTR_UNIT_OF_MEASUREMENT = "unit_of_measurement"
+ATTR_DEVICE_CLASS = "device_class"
+ATTR_STATE_CLASS = "state_class"
 
 
 async def async_setup_entry(

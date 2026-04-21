@@ -6,9 +6,6 @@ from datetime import timedelta
 
 DOMAIN = "boiler_manager"
 
-CARD_LOCAL_PATH = "/local/boiler-card/boiler-card.js"
-CARD_RESOURCE_URL = CARD_LOCAL_PATH
-
 CONF_NAME = "name"
 CONF_BOILER_ENTITY = "boiler_entity"
 CONF_TEMPERATURE_SENSOR = "temperature_sensor"
@@ -30,9 +27,18 @@ ATTR_TASK_NAME = "name"
 ATTR_START_TIME = "start_time"
 ATTR_END_TIME = "end_time"
 ATTR_DAYS = "days"
+ATTR_MONTHS = "months"
+ATTR_RECURRENCE = "recurrence"
+ATTR_START_DATE = "start_date"
+ATTR_END_DATE = "end_date"
 ATTR_ENABLED = "enabled"
 ATTR_DURATION = "duration"
 ATTR_MINUTES = "minutes"
+
+RECURRENCE_FOREVER = "forever"
+RECURRENCE_ONCE = "once"
+RECURRENCE_RANGE = "range"
+RECURRENCE_OPTIONS = [RECURRENCE_FOREVER, RECURRENCE_ONCE, RECURRENCE_RANGE]
 
 STORAGE_VERSION = 1
 STORAGE_KEY = f"{DOMAIN}_{{entry_id}}"

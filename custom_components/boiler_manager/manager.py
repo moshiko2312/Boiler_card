@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 import uuid
 
@@ -21,8 +21,12 @@ from .const import (
     ATTR_DURATION,
     ATTR_ENABLED,
     ATTR_END_TIME,
+    ATTR_END_DATE,
     ATTR_MINUTES,
+    ATTR_MONTHS,
+    ATTR_RECURRENCE,
     ATTR_START_TIME,
+    ATTR_START_DATE,
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
     CONF_BOILER_ENTITY,
@@ -37,6 +41,9 @@ from .const import (
     MODE_MANUAL_TIMED,
     MODE_OFF,
     MODE_SCHEDULE,
+    RECURRENCE_FOREVER,
+    RECURRENCE_ONCE,
+    RECURRENCE_OPTIONS,
     SCHEDULER_INTERVAL,
     STORAGE_KEY,
     STORAGE_VERSION,
@@ -61,7 +68,12 @@ class BoilerTask:
     start_time: str
     end_time: str
     days: list[int]
+    months: list[int]
+    recurrence: str
+    start_date: str | None
+    end_date: str | None
     enabled: bool
+    once_started: bool = False
 
     def as_dict(self) -> dict:
         """Return serializable dict."""
@@ -71,7 +83,12 @@ class BoilerTask:
             ATTR_START_TIME: self.start_time,
             ATTR_END_TIME: self.end_time,
             ATTR_DAYS: self.days,
+            ATTR_MONTHS: self.months,
+            ATTR_RECURRENCE: self.recurrence,
+            ATTR_START_DATE: self.start_date,
+            ATTR_END_DATE: self.end_date,
             ATTR_ENABLED: self.enabled,
+            "once_started": self.once_started,
         }
 
 
@@ -200,12 +217,23 @@ class BoilerManager:
         start_time: str,
         end_time: str,
         days: list[int] | None,
+        months: list[int] | None = None,
+        recurrence: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         enabled: bool,
     ) -> BoilerTask:
         """Create a new schedule task."""
         normalized_start = _normalize_time_string(start_time)
         normalized_end = _normalize_time_string(end_time)
         normalized_days = _normalize_days(days)
+        normalized_months = _normalize_months(months)
+        normalized_recurrence = _normalize_recurrence(recurrence)
+        normalized_start_date, normalized_end_date = _normalize_date_bounds(
+            start_date,
+            end_date,
+            normalized_recurrence,
+        )
 
         task_name = str(name or "").strip() or f"Task {normalized_start}-{normalized_end}"
         task_id = uuid.uuid4().hex[:10]
@@ -216,7 +244,12 @@ class BoilerManager:
             start_time=normalized_start,
             end_time=normalized_end,
             days=normalized_days,
+            months=normalized_months,
+            recurrence=normalized_recurrence,
+            start_date=normalized_start_date,
+            end_date=normalized_end_date,
             enabled=bool(enabled),
+            once_started=False,
         )
 
         self._tasks[task_id] = task
@@ -269,6 +302,10 @@ class BoilerManager:
         start_time: str | None = None,
         end_time: str | None = None,
         days: list[int] | None = None,
+        months: list[int] | None = None,
+        recurrence: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         enabled: bool | None = None,
     ) -> BoilerTask:
         """Update task fields."""
@@ -286,6 +323,22 @@ class BoilerManager:
             task.end_time = _normalize_time_string(end_time)
         if days is not None:
             task.days = _normalize_days(days)
+        if months is not None:
+            task.months = _normalize_months(months)
+
+        next_recurrence = task.recurrence if recurrence is None else _normalize_recurrence(recurrence)
+        next_start_date, next_end_date = _normalize_date_bounds(
+            task.start_date if start_date is None else start_date,
+            task.end_date if end_date is None else end_date,
+            next_recurrence,
+        )
+        task.recurrence = next_recurrence
+        task.start_date = next_start_date
+        task.end_date = next_end_date
+        if recurrence is not None and next_recurrence == RECURRENCE_ONCE:
+            task.once_started = False
+        if recurrence is not None and next_recurrence != RECURRENCE_ONCE:
+            task.once_started = False
         if enabled is not None:
             task.enabled = bool(enabled)
 
@@ -374,8 +427,38 @@ class BoilerManager:
         if self._manual_until and now >= self._manual_until:
             self._manual_until = None
 
+        previous_active = set(self._active_task_ids)
         active_tasks = self._tasks_active_now(now)
         self._active_task_ids = {task.task_id for task in active_tasks}
+        storage_changed = False
+
+        for task in active_tasks:
+            if task.recurrence == RECURRENCE_ONCE and not task.once_started:
+                task.once_started = True
+                storage_changed = True
+
+        finished_once_ids = [
+            task.task_id
+            for task in self._tasks.values()
+            if task.recurrence == RECURRENCE_ONCE
+            and task.once_started
+            and task.task_id not in self._active_task_ids
+        ]
+
+        if finished_once_ids:
+            for task_id in finished_once_ids:
+                self._tasks.pop(task_id, None)
+                self._active_task_ids.discard(task_id)
+                self._async_remove_task_switch_entity(task_id)
+                async_dispatcher_send(
+                    self.hass,
+                    signal_tasks_updated(self.entry.entry_id),
+                    {"action": "remove", ATTR_TASK_ID: task_id},
+                )
+            storage_changed = True
+
+        if storage_changed:
+            await self._async_save()
 
         manual_active = self._manual_continuous or self._manual_until is not None
         if manual_active:
@@ -389,6 +472,8 @@ class BoilerManager:
         if self._schedule_driven:
             await self._async_turn_off_entity()
             self._schedule_driven = False
+        elif previous_active != self._active_task_ids:
+            self._schedule_driven = bool(self._active_task_ids)
 
     async def _async_turn_on_entity(self) -> None:
         """Turn on managed boiler entity."""
@@ -436,6 +521,8 @@ class BoilerManager:
         weekday = local_now.weekday()
         previous_weekday = (weekday - 1) % 7
         now_time = local_now.time().replace(second=0, microsecond=0)
+        current_date = local_now.date()
+        previous_date = current_date - timedelta(days=1)
 
         active: list[BoilerTask] = []
         for task in self._tasks.values():
@@ -450,17 +537,17 @@ class BoilerManager:
 
             # Same-day window, e.g. 10:00 -> 12:00.
             if start < end:
-                if weekday in task.days and start <= now_time < end:
+                if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
                     active.append(task)
                 continue
 
             # Cross-midnight window, e.g. 22:00 -> 02:00.
             if now_time >= start:
-                if weekday in task.days:
+                if _task_matches_schedule_day(task, weekday, current_date):
                     active.append(task)
                 continue
 
-            if now_time < end and previous_weekday in task.days:
+            if now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
                 active.append(task)
 
         return active
@@ -511,7 +598,15 @@ def _task_from_raw(raw: dict) -> BoilerTask:
     start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
     end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
     days = _normalize_days(raw.get(ATTR_DAYS))
+    months = _normalize_months(raw.get(ATTR_MONTHS))
+    recurrence = _normalize_recurrence(raw.get(ATTR_RECURRENCE))
+    start_date, end_date = _normalize_date_bounds(
+        raw.get(ATTR_START_DATE),
+        raw.get(ATTR_END_DATE),
+        recurrence,
+    )
     enabled = bool(raw.get(ATTR_ENABLED, True))
+    once_started = bool(raw.get("once_started", False))
 
     return BoilerTask(
         task_id=task_id,
@@ -519,7 +614,12 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         start_time=start_time,
         end_time=end_time,
         days=days,
+        months=months,
+        recurrence=recurrence,
+        start_date=start_date,
+        end_date=end_date,
         enabled=enabled,
+        once_started=once_started,
     )
 
 
@@ -569,6 +669,98 @@ def _normalize_days(value: list[int | str] | None) -> list[int]:
         raise BoilerManagerError("At least one day must be provided")
 
     return sorted(normalized)
+
+
+def _normalize_months(value: list[int | str] | None) -> list[int]:
+    """Normalize list of months to 1..12. Defaults to all months."""
+    if value is None:
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+    normalized: list[int] = []
+    for item in value:
+        if isinstance(item, int):
+            month = item
+        else:
+            text = str(item).strip()
+            if not text.isdigit():
+                raise BoilerManagerError(f"Unsupported month value: {item}")
+            month = int(text)
+
+        if month < 1 or month > 12:
+            raise BoilerManagerError(f"Month index out of range: {item}")
+        if month not in normalized:
+            normalized.append(month)
+
+    if not normalized:
+        raise BoilerManagerError("At least one month must be provided")
+
+    return sorted(normalized)
+
+
+def _normalize_recurrence(value: str | None) -> str:
+    """Normalize recurrence mode."""
+    if value is None:
+        return RECURRENCE_FOREVER
+
+    normalized = str(value).strip().lower()
+    if normalized not in RECURRENCE_OPTIONS:
+        raise BoilerManagerError(f"Unsupported recurrence: {value}")
+    return normalized
+
+
+def _normalize_date_bounds(
+    start_date: str | None,
+    end_date: str | None,
+    recurrence: str,
+) -> tuple[str | None, str | None]:
+    """Normalize optional date bounds for recurrence."""
+    if recurrence == RECURRENCE_FOREVER:
+        return None, None
+
+    start = _normalize_date_string(start_date)
+    end = _normalize_date_string(end_date)
+
+    if recurrence == RECURRENCE_ONCE:
+        if start and not end:
+            end = start
+        if end and not start:
+            start = end
+
+    if start and end and end < start:
+        raise BoilerManagerError("End date cannot be before start date")
+
+    return start, end
+
+
+def _normalize_date_string(value: str | None) -> str | None:
+    """Validate YYYY-MM-DD date and normalize."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+
+    try:
+        parsed = date.fromisoformat(text)
+    except ValueError as err:
+        raise BoilerManagerError(f"Invalid date format: {value}. Expected YYYY-MM-DD") from err
+
+    return parsed.isoformat()
+
+
+def _task_matches_schedule_day(task: BoilerTask, weekday: int, day_date: date) -> bool:
+    """Check if task is eligible for a given schedule day."""
+    if weekday not in task.days:
+        return False
+    if task.months and day_date.month not in task.months:
+        return False
+
+    start = _normalize_date_string(task.start_date)
+    end = _normalize_date_string(task.end_date)
+    if start and day_date < date.fromisoformat(start):
+        return False
+    if end and day_date > date.fromisoformat(end):
+        return False
+
+    return True
 
 
 def _duration_to_seconds(*, duration: str | None, minutes: int | None) -> int:

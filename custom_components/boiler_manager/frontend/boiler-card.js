@@ -582,14 +582,22 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .tasks-add-btn {
-          border: 1px solid rgba(150, 197, 228, 0.6);
-          border-radius: 9px;
-          background: linear-gradient(165deg, rgba(152, 225, 252, 0.35), rgba(89, 166, 217, 0.26));
-          color: #1d3f5e;
-          font-size: 0.8rem;
-          font-weight: 700;
-          padding: 6px 10px;
+          border: 1px solid rgba(122, 183, 230, 0.95);
+          border-radius: 10px;
+          background: linear-gradient(165deg, #63b7ec, #3f93cc);
+          color: #f7fbff;
+          text-shadow: 0 1px 1px rgba(14, 45, 70, 0.35);
+          font-size: 0.82rem;
+          font-weight: 800;
+          padding: 7px 12px;
           cursor: pointer;
+          box-shadow:
+            0 3px 8px rgba(34, 84, 120, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        }
+
+        .tasks-add-btn:hover {
+          filter: brightness(1.05);
         }
 
         .tasks-add-btn[disabled] {
@@ -642,28 +650,49 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .task-toggle-btn,
+        .task-edit-btn,
         .task-delete-btn {
-          border: 1px solid rgba(173, 196, 220, 0.55);
-          border-radius: 8px;
-          background: rgba(245, 251, 255, 0.75);
-          color: #21405d;
-          font-size: 0.7rem;
-          font-weight: 700;
-          min-height: 30px;
-          padding: 4px 8px;
+          border: 1px solid rgba(148, 170, 198, 0.78);
+          border-radius: 10px;
+          background: linear-gradient(165deg, rgba(250, 253, 255, 0.96), rgba(233, 242, 251, 0.92));
+          color: #15334f;
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+          font-size: 0.78rem;
+          font-weight: 800;
+          min-height: 34px;
+          padding: 5px 10px;
           cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(28, 53, 82, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
 
         .task-toggle-btn.on {
-          border-color: rgba(130, 219, 170, 0.8);
-          background: rgba(94, 209, 139, 0.22);
-          color: #145b33;
+          border-color: #68c78f;
+          background: linear-gradient(165deg, #46b975, #2f9460);
+          color: #ffffff;
+          text-shadow: 0 1px 1px rgba(8, 48, 28, 0.45);
+        }
+
+        .task-edit-btn {
+          border-color: #7ab6e6;
+          color: #113d63;
+          background: linear-gradient(165deg, #d8ecfb, #bdddf6);
         }
 
         .task-delete-btn {
-          border-color: rgba(245, 165, 165, 0.8);
-          color: #8d1d1d;
-          background: rgba(255, 227, 227, 0.84);
+          border-color: #de8b8b;
+          color: #781f1f;
+          text-shadow: none;
+          background: linear-gradient(165deg, #f7d8d8, #f1bebe);
+        }
+
+        .task-toggle-btn:focus-visible,
+        .task-edit-btn:focus-visible,
+        .task-delete-btn:focus-visible,
+        .tasks-add-btn:focus-visible {
+          outline: 2px solid rgba(170, 225, 255, 0.95);
+          outline-offset: 2px;
         }
 
         .tasks-empty {
@@ -1897,7 +1926,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    const name = String(this._elements.scheduleNameInput?.value || "").trim() || "Task";
+    const name = String(this._elements.scheduleNameInput?.value || "").trim();
     const startTime = String(this._elements.scheduleStartInput?.value || "").trim();
     const endTime = String(this._elements.scheduleEndInput?.value || "").trim();
     if (!startTime || !endTime) {
@@ -1972,7 +2001,7 @@ class BoilerWaterCard extends HTMLElement {
 
       const name = document.createElement("p");
       name.className = "task-name";
-      name.textContent = attrs.friendly_name || attrs.task_id || taskState.entity_id;
+      name.textContent = attrs.task_name || attrs.friendly_name || attrs.task_id || taskState.entity_id;
       main.appendChild(name);
 
       const meta = document.createElement("p");
@@ -2088,6 +2117,9 @@ class BoilerWaterCard extends HTMLElement {
     if (!domain || !service) {
       return false;
     }
+    if (!this._isServiceAvailable(serviceRef)) {
+      return false;
+    }
 
     this._hass.callService(domain, service, this._safeServiceData(data));
     return true;
@@ -2115,17 +2147,17 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _hasBuiltInControlServices() {
-    return this._isServiceRef(this._config.service_run_timed)
-      && this._isServiceRef(this._config.service_on_continuous)
-      && this._isServiceRef(this._config.service_off);
+    return this._isServiceAvailable(this._config.service_run_timed)
+      && this._isServiceAvailable(this._config.service_on_continuous)
+      && this._isServiceAvailable(this._config.service_off);
   }
 
   _hasScheduleCreateService() {
-    return this._isServiceRef(this._config.service_create_schedule);
+    return this._isServiceAvailable(this._config.service_create_schedule);
   }
 
   _hasScheduleDeleteService() {
-    return this._isServiceRef(this._config.service_delete_schedule);
+    return this._isServiceAvailable(this._config.service_delete_schedule);
   }
 
   _isServiceRef(value) {
@@ -2138,6 +2170,15 @@ class BoilerWaterCard extends HTMLElement {
     }
     const [domain, service] = normalized.split(".", 2);
     return !!domain && !!service;
+  }
+
+  _isServiceAvailable(serviceRef) {
+    if (!this._hass || !this._isServiceRef(serviceRef)) {
+      return false;
+    }
+    const normalized = String(serviceRef).trim().toLowerCase();
+    const [domain, service] = normalized.split(".", 2);
+    return !!(this._hass.services?.[domain]?.[service]);
   }
 
   _callEntityAction(action, entityId, data = null) {
