@@ -22,6 +22,16 @@ input_select:
     initial: "30m"
     icon: mdi:timer-outline
 
+input_text:
+  boiler_switch_entity:
+    name: Boiler Switch Entity
+    initial: switch.boiler
+    max: 128
+  boiler_active_entity:
+    name: Boiler Active Entity
+    initial: switch.boiler
+    max: 128
+
 timer:
   boiler_runtime:
     name: Boiler Runtime
@@ -33,6 +43,13 @@ script:
     mode: restart
     sequence:
       - variables:
+          boiler_target: >-
+            {% if boiler_entity is defined and boiler_entity %}
+              {{ boiler_entity }}
+            {% else %}
+              {% set configured = states('input_text.boiler_switch_entity') %}
+              {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
+            {% endif %}
           picked_option: "{{ duration_option if duration_option is defined else states('input_select.boiler_duration') }}"
           picked_minutes: >-
             {% set raw = picked_option | regex_replace(find='[^0-9]', replace='') %}
@@ -43,9 +60,14 @@ script:
             {% else %}
               {{ '%02d:%02d:00' | format((picked_minutes // 60) | int, (picked_minutes % 60) | int) }}
             {% endif %}
-      - action: switch.turn_on
+      - action: homeassistant.turn_on
         target:
-          entity_id: switch.boiler
+          entity_id: "{{ boiler_target }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.boiler_active_entity
+        data:
+          value: "{{ boiler_target }}"
       - action: timer.start
         target:
           entity_id: timer.boiler_runtime
@@ -56,23 +78,54 @@ script:
     alias: Boiler - Turn On Continuous
     mode: single
     sequence:
+      - variables:
+          boiler_target: >-
+            {% if boiler_entity is defined and boiler_entity %}
+              {{ boiler_entity }}
+            {% else %}
+              {% set configured = states('input_text.boiler_switch_entity') %}
+              {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
+            {% endif %}
       - action: timer.cancel
         target:
           entity_id: timer.boiler_runtime
-      - action: switch.turn_on
+      - action: homeassistant.turn_on
         target:
-          entity_id: switch.boiler
+          entity_id: "{{ boiler_target }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.boiler_active_entity
+        data:
+          value: "{{ boiler_target }}"
 
   boiler_turn_off:
     alias: Boiler - Turn Off
     mode: single
     sequence:
-      - action: switch.turn_off
+      - variables:
+          boiler_target: >-
+            {% if boiler_entity is defined and boiler_entity %}
+              {{ boiler_entity }}
+            {% else %}
+              {% set active = states('input_text.boiler_active_entity') %}
+              {% if active not in ['unknown', 'unavailable', ''] %}
+                {{ active }}
+              {% else %}
+                {% set configured = states('input_text.boiler_switch_entity') %}
+                {{ configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' }}
+              {% endif %}
+            {% endif %}
+      - action: homeassistant.turn_off
         target:
-          entity_id: switch.boiler
+          entity_id: "{{ boiler_target }}"
       - action: timer.cancel
         target:
           entity_id: timer.boiler_runtime
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.boiler_active_entity
+        data:
+          value: ""
 
 automation:
   - id: boiler_turn_off_on_timer_finished
@@ -84,21 +137,36 @@ automation:
         event_data:
           entity_id: timer.boiler_runtime
     action:
-      - action: switch.turn_off
+      - action: script.turn_on
         target:
-          entity_id: switch.boiler
+          entity_id: script.boiler_turn_off
 
   - id: boiler_cancel_timer_when_manually_off
     alias: Boiler - Cancel Timer On Manual Off
     mode: single
     trigger:
-      - platform: state
-        entity_id: switch.boiler
-        to: "off"
+      - platform: event
+        event_type: state_changed
     condition:
-      - condition: state
-        entity_id: timer.boiler_runtime
-        state: "active"
+      - condition: template
+        value_template: >-
+          {% set active = states('input_text.boiler_active_entity') %}
+          {% set configured = states('input_text.boiler_switch_entity') %}
+          {% if active not in ['unknown', 'unavailable', ''] %}
+            {% set target = active %}
+          {% else %}
+            {% set target = configured if configured not in ['unknown', 'unavailable', ''] else 'switch.boiler' %}
+          {% endif %}
+          {% set old_state = trigger.event.data.old_state %}
+          {% set new_state = trigger.event.data.new_state %}
+          {{
+            trigger.event.data.entity_id == target
+            and old_state is not none
+            and new_state is not none
+            and old_state.state == 'on'
+            and new_state.state == 'off'
+            and is_state('timer.boiler_runtime', 'active')
+          }}
     action:
       - action: timer.cancel
         target:

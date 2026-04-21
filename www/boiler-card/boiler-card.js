@@ -322,13 +322,14 @@ class BoilerWaterCard extends HTMLElement {
     const boiler = this._hass.states[cfg.boiler_entity];
     const duration = this._hass.states[cfg.duration_entity];
     const timer = this._hass.states[cfg.timer_entity];
+    const scripts = this._scriptEntities();
 
     this._elements.title.textContent = cfg.title;
     this._syncDurationOptions(duration);
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
-    this._syncError(boiler, duration, timer);
-    this._syncButtons();
+    this._syncError(boiler, duration, timer, scripts);
+    this._syncButtons(boiler, duration, timer, scripts);
   }
 
   _syncDurationOptions(durationEntity) {
@@ -353,10 +354,28 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const selected = durationEntity?.state || "30m";
-    select.value = options.includes(selected) ? selected : "30m";
+    if (options.includes(selected)) {
+      select.value = selected;
+      return;
+    }
+
+    if (options.includes("30m")) {
+      select.value = "30m";
+      return;
+    }
+
+    select.value = options[0] || "";
   }
 
   _syncStatus(boiler, timer) {
+    if (!boiler) {
+      this._elements.statusChip.textContent = "Unavailable / לא זמין";
+      this._elements.statusChip.classList.remove("on");
+      this._elements.statusChip.classList.add("off");
+      this._elements.subtitle.textContent = "Check boiler entity / בדוק ישות דוד";
+      return;
+    }
+
     const isOn = boiler?.state === "on";
 
     this._elements.statusChip.textContent = isOn ? "ON / דולק" : "OFF / כבוי";
@@ -393,7 +412,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.countdownValue.textContent = "--:--";
   }
 
-  _syncError(boiler, duration, timer) {
+  _syncError(boiler, duration, timer, scripts) {
     const missing = [];
 
     if (!boiler) {
@@ -404,6 +423,15 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (!timer) {
       missing.push(this._config.timer_entity);
+    }
+    if (!scripts.onTimed) {
+      missing.push(this._config.script_on_timed);
+    }
+    if (!scripts.onContinuous) {
+      missing.push(this._config.script_on_continuous);
+    }
+    if (!scripts.off) {
+      missing.push(this._config.script_off);
     }
 
     if (missing.length === 0) {
@@ -416,14 +444,12 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.error.textContent = `Missing entity / ישות חסרה: ${missing.join(", ")}`;
   }
 
-  _syncButtons() {
+  _syncButtons(boiler, duration, timer, scripts) {
     const hasHass = !!this._hass;
-    const hasScripts =
-      !!this._config.script_on_timed &&
-      !!this._config.script_on_continuous &&
-      !!this._config.script_off;
+    const hasCoreEntities = !!boiler && !!duration && !!timer;
+    const hasScripts = !!scripts.onTimed && !!scripts.onContinuous && !!scripts.off;
 
-    const disabled = !hasHass || !hasScripts;
+    const disabled = !hasHass || !hasCoreEntities || !hasScripts;
     this._elements.onBtn.disabled = disabled;
     this._elements.offBtn.disabled = disabled;
   }
@@ -486,18 +512,23 @@ class BoilerWaterCard extends HTMLElement {
     const durationState = this._hass.states[this._config.duration_entity]?.state || "30m";
 
     if (this._isNoTimerOption(durationState)) {
-      this._runScript(this._config.script_on_continuous);
+      this._runScript(this._config.script_on_continuous, {
+        boiler_entity: this._config.boiler_entity,
+      });
       return;
     }
 
     this._runScript(this._config.script_on_timed, {
       duration_option: durationState,
       duration: this._optionToHhMmSs(durationState) || "00:30:00",
+      boiler_entity: this._config.boiler_entity,
     });
   }
 
   _handleTurnOff() {
-    this._runScript(this._config.script_off);
+    this._runScript(this._config.script_off, {
+      boiler_entity: this._config.boiler_entity,
+    });
   }
 
   _runScript(entityId, variables = null) {
@@ -609,13 +640,29 @@ class BoilerWaterCard extends HTMLElement {
     const minutes = totalMinutes % 60;
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
   }
+
+  _scriptEntities() {
+    if (!this._hass) {
+      return { onTimed: null, onContinuous: null, off: null };
+    }
+
+    return {
+      onTimed: this._hass.states[this._config.script_on_timed],
+      onContinuous: this._hass.states[this._config.script_on_continuous],
+      off: this._hass.states[this._config.script_off],
+    };
+  }
 }
 
-customElements.define("boiler-water-card", BoilerWaterCard);
+if (!customElements.get("boiler-water-card")) {
+  customElements.define("boiler-water-card", BoilerWaterCard);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "boiler-water-card",
-  name: "Boiler Water Card",
-  description: "Styled control card for boiler On/Off and timer selection.",
-});
+if (!window.customCards.some((card) => card.type === "boiler-water-card")) {
+  window.customCards.push({
+    type: "boiler-water-card",
+    name: "Boiler Water Card",
+    description: "Styled control card for boiler On/Off and timer selection.",
+  });
+}

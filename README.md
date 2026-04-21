@@ -52,6 +52,8 @@ script_off: script.boiler_turn_off
 
 ## Important
 
-- Replace `switch.boiler` with your real boiler switch entity if needed.
+- The package includes `input_text.boiler_switch_entity` (default target) and `input_text.boiler_active_entity` (runtime target).
+- Set `input_text.boiler_switch_entity` to your real boiler entity (example: `switch.shelly_boiler`) if you do not use `switch.boiler`.
+- The card also passes `boiler_entity` to scripts, so timer-based shutoff remains aligned with the card target.
 - If entities do not exist yet, import the package file first and restart HA.
 - Auto shutoff is handled by automation `boiler_turn_off_on_timer_finished`.
