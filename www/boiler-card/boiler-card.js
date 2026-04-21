@@ -225,16 +225,42 @@ class BoilerWaterCard extends HTMLElement {
           background: linear-gradient(
             90deg,
             #2351ff 0%,
-            #2351ff 4%,
-            #2f8626 20%,
-            #2f8626 33%,
-            #f2ad3d 57%,
-            #f2ad3d 70%,
-            #ff342c 88%,
+            #2351ff 24%,
+            #f5d24a 24%,
+            #f5d24a 50%,
+            #f08a2d 50%,
+            #f08a2d 76%,
+            #ff342c 76%,
             #ff2a23 100%
           );
           box-shadow: 0 0 6px rgba(255, 84, 61, 0.35);
           transition: width 420ms ease;
+        }
+
+        .boiler-visual.off .boiler-icon {
+          border-color: #6f7e93;
+          background: linear-gradient(180deg, #eef2f7 0%, #d4dbe6 100%);
+          box-shadow: none;
+          animation: none;
+        }
+
+        .boiler-visual.off .boiler-icon::before {
+          background: #7b8798;
+        }
+
+        .boiler-visual.off .boiler-water {
+          background: linear-gradient(180deg, #d3dbe6 0%, #bec8d6 100%);
+        }
+
+        .boiler-visual.off .boiler-progress-track {
+          background: #2a2f38;
+          border-color: rgba(255, 255, 255, 0.04);
+        }
+
+        .boiler-visual.off .boiler-progress-fill {
+          width: 0 !important;
+          background: transparent;
+          box-shadow: none;
         }
 
         .chip {
@@ -313,7 +339,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .actions {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
           gap: 8px;
         }
 
@@ -616,8 +642,7 @@ class BoilerWaterCard extends HTMLElement {
           <button type="button" class="timer-picker-btn" id="timer-picker-btn">Select Timer / בחר טיימר</button>
 
           <div class="actions">
-            <button class="on-btn" id="on-btn">הדלק / Turn On</button>
-            <button class="off-btn" id="off-btn">כיבוי / Turn Off</button>
+            <button class="on-btn" id="power-btn">הדלק / Turn On</button>
           </div>
 
           <p class="error" id="error" hidden></p>
@@ -647,8 +672,7 @@ class BoilerWaterCard extends HTMLElement {
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       statusChip: this.shadowRoot.getElementById("status-chip"),
       timerPickerBtn: this.shadowRoot.getElementById("timer-picker-btn"),
-      onBtn: this.shadowRoot.getElementById("on-btn"),
-      offBtn: this.shadowRoot.getElementById("off-btn"),
+      powerBtn: this.shadowRoot.getElementById("power-btn"),
       error: this.shadowRoot.getElementById("error"),
       timerModal: this.shadowRoot.getElementById("timer-modal"),
       timerModalBackdrop: this.shadowRoot.getElementById("timer-modal-backdrop"),
@@ -659,8 +683,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.timerPickerBtn.addEventListener("click", () => this._openTimerModal());
     this._elements.timerCloseBtn.addEventListener("click", () => this._closeTimerModal());
     this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
-    this._elements.onBtn.addEventListener("click", () => this._handleTurnOn());
-    this._elements.offBtn.addEventListener("click", () => this._handleTurnOff());
+    this._elements.powerBtn.addEventListener("click", () => this._handlePowerToggle());
   }
 
   _sync() {
@@ -807,10 +830,13 @@ class BoilerWaterCard extends HTMLElement {
     const hasCoreEntities = !!boiler && !!duration && !!timer;
     const hasScripts = !!scripts.onTimed && !!scripts.onContinuous && !!scripts.off;
     const hasDuration = !!duration;
+    const isOn = this._isEntityOn(boiler);
 
     const disabled = !hasHass || !hasCoreEntities || !hasScripts;
-    this._elements.onBtn.disabled = disabled;
-    this._elements.offBtn.disabled = disabled;
+    this._elements.powerBtn.disabled = disabled;
+    this._elements.powerBtn.textContent = isOn ? "כיבוי / Turn Off" : "הדלק / Turn On";
+    this._elements.powerBtn.classList.toggle("off-btn", isOn);
+    this._elements.powerBtn.classList.toggle("on-btn", !isOn);
     this._elements.timerPickerBtn.disabled = !hasHass || !hasDuration;
     if (this._elements.timerPickerBtn.disabled) {
       this._closeTimerModal();
@@ -834,7 +860,9 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    const isOn = this._isEntityOn(boiler);
     const profile = this._heatingProfile(boiler, timer, durationEntity);
+    this._elements.boilerVisual.classList.toggle("off", !isOn);
     this._elements.boilerVisual.style.setProperty("--heat-primary", profile.primaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-secondary", profile.secondaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-glow", profile.glowColor);
@@ -848,7 +876,14 @@ class BoilerWaterCard extends HTMLElement {
     const timerActive = timer?.state === "active" || timer?.state === "paused";
 
     if (!isOn) {
-      return this._buildHeatingProfile(0, "Cool Start / התחלה קרה", "0% warmed / 0% התחממות");
+      return {
+        progress: 0,
+        label: "Off / כבוי",
+        subLabel: "No heating / ללא חימום",
+        primaryColor: "#c7d0dd",
+        secondaryColor: "#dde4ee",
+        glowColor: "rgba(0, 0, 0, 0)",
+      };
     }
 
     if (!timerActive) {
@@ -1014,6 +1049,20 @@ class BoilerWaterCard extends HTMLElement {
       turn_off_action: this._config.turn_off_action,
       turn_off_data: this._safeServiceData(this._config.turn_off_data),
     });
+  }
+
+  _handlePowerToggle() {
+    if (!this._hass) {
+      return;
+    }
+
+    const boiler = this._hass.states[this._config.boiler_entity];
+    if (this._isEntityOn(boiler)) {
+      this._handleTurnOff();
+      return;
+    }
+
+    this._handleTurnOn();
   }
 
   _runScript(entityId, variables = null) {
