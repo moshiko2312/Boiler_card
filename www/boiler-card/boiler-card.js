@@ -136,6 +136,91 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.92rem;
         }
 
+        .boiler-visual {
+          --heat-primary: #38bdf8;
+          --heat-secondary: #93c5fd;
+          --heat-glow: rgba(56, 189, 248, 0.35);
+          --heat-progress: 0%;
+          display: grid;
+          grid-template-columns: 88px 1fr;
+          align-items: center;
+          gap: 12px;
+          border-radius: 14px;
+          padding: 10px 12px;
+          border: 1px solid rgba(50, 88, 128, 0.12);
+          background: rgba(255, 255, 255, 0.78);
+        }
+
+        .boiler-icon {
+          position: relative;
+          width: 56px;
+          height: 74px;
+          margin: 0 auto;
+          border-radius: 16px;
+          border: 2px solid #264160;
+          background: linear-gradient(180deg, #f8fcff 0%, #dbe7f3 100%);
+          overflow: hidden;
+          box-shadow: 0 0 0 0 var(--heat-glow);
+          animation: boiler-glow 1.8s ease-in-out infinite;
+        }
+
+        .boiler-icon::before {
+          content: "";
+          position: absolute;
+          top: -7px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 20px;
+          height: 6px;
+          border-radius: 8px;
+          background: #27405f;
+        }
+
+        .boiler-water {
+          position: absolute;
+          left: 4px;
+          right: 4px;
+          bottom: 4px;
+          height: calc(18% + var(--heat-progress));
+          max-height: calc(100% - 8px);
+          border-radius: 10px 10px 12px 12px;
+          background: linear-gradient(180deg, var(--heat-secondary) 0%, var(--heat-primary) 100%);
+          transition: height 420ms ease, background 420ms ease;
+        }
+
+        .boiler-meta {
+          display: grid;
+          gap: 6px;
+        }
+
+        .boiler-stage {
+          margin: 0;
+          font-size: 0.9rem;
+          font-weight: 800;
+          color: #1d3048;
+        }
+
+        .boiler-stage-sub {
+          margin: 0;
+          font-size: 0.79rem;
+          color: #5a6880;
+        }
+
+        .boiler-progress-track {
+          height: 9px;
+          border-radius: 999px;
+          background: #dbe6f1;
+          overflow: hidden;
+        }
+
+        .boiler-progress-fill {
+          height: 100%;
+          width: var(--heat-progress);
+          border-radius: 999px;
+          background: linear-gradient(90deg, var(--heat-secondary) 0%, var(--heat-primary) 100%);
+          transition: width 420ms ease, background 420ms ease;
+        }
+
         .chip {
           border-radius: 999px;
           padding: 6px 12px;
@@ -357,6 +442,11 @@ class BoilerWaterCard extends HTMLElement {
           .timer-grid {
             grid-template-columns: repeat(3, minmax(80px, 1fr));
           }
+
+          .boiler-visual {
+            grid-template-columns: 76px 1fr;
+            gap: 10px;
+          }
         }
 
         @keyframes pulse {
@@ -378,6 +468,15 @@ class BoilerWaterCard extends HTMLElement {
             opacity: 1;
           }
         }
+
+        @keyframes boiler-glow {
+          0%, 100% {
+            box-shadow: 0 0 0 0 var(--heat-glow);
+          }
+          50% {
+            box-shadow: 0 0 0 8px rgba(0, 0, 0, 0);
+          }
+        }
       </style>
 
       <ha-card>
@@ -388,6 +487,19 @@ class BoilerWaterCard extends HTMLElement {
           </div>
 
           <p class="subtitle" id="subtitle">Ready / מוכן להפעלה</p>
+
+          <div class="boiler-visual" id="boiler-visual">
+            <div class="boiler-icon" id="boiler-icon">
+              <div class="boiler-water" id="boiler-water"></div>
+            </div>
+            <div class="boiler-meta">
+              <p class="boiler-stage" id="boiler-stage">Cool Start / התחלה קרה</p>
+              <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed / 0% התחממות</p>
+              <div class="boiler-progress-track">
+                <div class="boiler-progress-fill" id="boiler-progress-fill"></div>
+              </div>
+            </div>
+          </div>
 
           <div class="countdown">
             <span class="countdown-label" id="countdown-label">Remaining / זמן נותר</span>
@@ -421,6 +533,10 @@ class BoilerWaterCard extends HTMLElement {
     this._elements = {
       title: this.shadowRoot.getElementById("title"),
       subtitle: this.shadowRoot.getElementById("subtitle"),
+      boilerVisual: this.shadowRoot.getElementById("boiler-visual"),
+      boilerStage: this.shadowRoot.getElementById("boiler-stage"),
+      boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
+      boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       statusChip: this.shadowRoot.getElementById("status-chip"),
@@ -454,6 +570,7 @@ class BoilerWaterCard extends HTMLElement {
 
     this._elements.title.textContent = cfg.title;
     this._syncTimerPicker(duration);
+    this._syncHeatingVisual(boiler, timer, duration);
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
     this._syncError(boiler, duration, timer, scripts);
@@ -601,7 +718,96 @@ class BoilerWaterCard extends HTMLElement {
 
     const timer = this._hass.states[this._config.timer_entity];
     const boiler = this._hass.states[this._config.boiler_entity];
+    const duration = this._hass.states[this._config.duration_entity];
     this._syncCountdown(timer, boiler);
+    this._syncHeatingVisual(boiler, timer, duration);
+  }
+
+  _syncHeatingVisual(boiler, timer, durationEntity) {
+    if (!this._elements.boilerVisual) {
+      return;
+    }
+
+    const profile = this._heatingProfile(boiler, timer, durationEntity);
+    this._elements.boilerVisual.style.setProperty("--heat-primary", profile.primaryColor);
+    this._elements.boilerVisual.style.setProperty("--heat-secondary", profile.secondaryColor);
+    this._elements.boilerVisual.style.setProperty("--heat-glow", profile.glowColor);
+    this._elements.boilerVisual.style.setProperty("--heat-progress", `${Math.round(profile.progress * 100)}%`);
+    this._elements.boilerStage.textContent = profile.label;
+    this._elements.boilerStageSub.textContent = profile.subLabel;
+  }
+
+  _heatingProfile(boiler, timer, durationEntity) {
+    const isOn = this._isEntityOn(boiler);
+    const timerActive = timer?.state === "active" || timer?.state === "paused";
+
+    if (!isOn) {
+      return this._buildHeatingProfile(0, "Cool Start / התחלה קרה", "0% warmed / 0% התחממות");
+    }
+
+    if (!timerActive) {
+      return this._buildHeatingProfile(
+        0.72,
+        "Continuous Heat / חימום רציף",
+        "No timer mode / מצב ללא טיימר"
+      );
+    }
+
+    const remaining = this._remainingSeconds(timer);
+    const total = this._timerTotalSeconds(timer, durationEntity);
+    const progress = total > 0 && remaining !== null ? this._clamp(1 - remaining / total, 0, 1) : 0;
+    const percent = Math.round(progress * 100);
+
+    if (progress < 0.34) {
+      return this._buildHeatingProfile(
+        progress,
+        "Stage 1 Cool / שלב 1 כחול",
+        `${percent}% warmed / ${percent}% התחממות`
+      );
+    }
+    if (progress < 0.67) {
+      return this._buildHeatingProfile(
+        progress,
+        "Stage 2 Warm / שלב 2 כתום",
+        `${percent}% warmed / ${percent}% התחממות`
+      );
+    }
+    return this._buildHeatingProfile(
+      progress,
+      "Stage 3 Hot / שלב 3 אדום",
+      `${percent}% warmed / ${percent}% התחממות`
+    );
+  }
+
+  _buildHeatingProfile(progress, label, subLabel) {
+    const clamped = this._clamp(progress, 0, 1);
+    const primary = this._colorByHeat(clamped);
+    const secondary = this._mixColors(primary, "#e2f4ff", 0.35);
+    const glow = this._hexToRgba(primary, 0.33);
+
+    return {
+      progress: clamped,
+      label,
+      subLabel,
+      primaryColor: primary,
+      secondaryColor: secondary,
+      glowColor: glow,
+    };
+  }
+
+  _timerTotalSeconds(timer, durationEntity) {
+    const fromTimer = this._parseDurationString(timer?.attributes?.duration);
+    if (fromTimer !== null && fromTimer > 0) {
+      return fromTimer;
+    }
+
+    const selected = durationEntity?.state || "30m";
+    const minutes = this._optionToMinutes(selected);
+    if (minutes !== null && minutes > 0) {
+      return minutes * 60;
+    }
+
+    return 0;
   }
 
   _durationOptions(durationEntity) {
@@ -803,6 +1009,58 @@ class BoilerWaterCard extends HTMLElement {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+  }
+
+  _clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  _colorByHeat(progress) {
+    const cool = "#2b7fff";
+    const warm = "#f97316";
+    const hot = "#dc2626";
+
+    if (progress <= 0.5) {
+      return this._mixColors(cool, warm, progress / 0.5);
+    }
+    return this._mixColors(warm, hot, (progress - 0.5) / 0.5);
+  }
+
+  _mixColors(hexA, hexB, weight) {
+    const a = this._hexToRgb(hexA);
+    const b = this._hexToRgb(hexB);
+    const t = this._clamp(weight, 0, 1);
+
+    const mix = {
+      r: Math.round(a.r + (b.r - a.r) * t),
+      g: Math.round(a.g + (b.g - a.g) * t),
+      b: Math.round(a.b + (b.b - a.b) * t),
+    };
+    return this._rgbToHex(mix.r, mix.g, mix.b);
+  }
+
+  _hexToRgb(hex) {
+    const normalized = String(hex).replace("#", "").trim();
+    const full = normalized.length === 3
+      ? normalized.split("").map((char) => `${char}${char}`).join("")
+      : normalized;
+
+    const num = Number.parseInt(full, 16);
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255,
+    };
+  }
+
+  _hexToRgba(hex, alpha) {
+    const rgb = this._hexToRgb(hex);
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this._clamp(alpha, 0, 1)})`;
+  }
+
+  _rgbToHex(r, g, b) {
+    const toHex = (value) => this._clamp(value, 0, 255).toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
   _safeServiceData(value) {
