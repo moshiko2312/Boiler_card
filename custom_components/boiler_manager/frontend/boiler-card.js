@@ -51,6 +51,25 @@ const I18N = {
     stage_off: "כבוי",
     minutes_short: "דק׳",
     hours_short: "ש׳",
+    tasks_title: "משימות",
+    tasks_add: "הוספה",
+    tasks_empty: "אין משימות",
+    task_name: "שם משימה",
+    task_start: "התחלה",
+    task_end: "סיום",
+    task_days: "ימים",
+    task_cancel: "ביטול",
+    task_save: "שמירה",
+    task_delete: "מחיקה",
+    task_enabled: "פעיל",
+    task_disabled: "כבוי",
+    day_mon: "ב׳",
+    day_tue: "ג׳",
+    day_wed: "ד׳",
+    day_thu: "ה׳",
+    day_fri: "ו׳",
+    day_sat: "ש׳",
+    day_sun: "א׳",
   },
   en: {
     default_title: "Boiler",
@@ -82,6 +101,25 @@ const I18N = {
     stage_off: "Off",
     minutes_short: "m",
     hours_short: "h",
+    tasks_title: "Tasks",
+    tasks_add: "Add",
+    tasks_empty: "No tasks yet",
+    task_name: "Task Name",
+    task_start: "Start",
+    task_end: "End",
+    task_days: "Days",
+    task_cancel: "Cancel",
+    task_save: "Save",
+    task_delete: "Delete",
+    task_enabled: "Enabled",
+    task_disabled: "Disabled",
+    day_mon: "Mon",
+    day_tue: "Tue",
+    day_wed: "Wed",
+    day_thu: "Thu",
+    day_fri: "Fri",
+    day_sat: "Sat",
+    day_sun: "Sun",
   },
   ru: {
     default_title: "Бойлер",
@@ -113,6 +151,25 @@ const I18N = {
     stage_off: "Выключено",
     minutes_short: "мин",
     hours_short: "ч",
+    tasks_title: "Задачи",
+    tasks_add: "Добавить",
+    tasks_empty: "Задач пока нет",
+    task_name: "Название задачи",
+    task_start: "Начало",
+    task_end: "Окончание",
+    task_days: "Дни",
+    task_cancel: "Отмена",
+    task_save: "Сохранить",
+    task_delete: "Удалить",
+    task_enabled: "Включено",
+    task_disabled: "Выключено",
+    day_mon: "Пн",
+    day_tue: "Вт",
+    day_wed: "Ср",
+    day_thu: "Чт",
+    day_fri: "Пт",
+    day_sat: "Сб",
+    day_sun: "Вс",
   },
 };
 
@@ -120,6 +177,9 @@ const DEFAULT_CONFIG = {
   title: "דוד מים חמים",
   language: "he",
   boiler_entity: "switch.boiler",
+  temperature_sensor: "",
+  current_sensor: "",
+  voltage_sensor: "",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "input_select.boiler_duration",
   timer_entity: "timer.boiler_runtime",
@@ -130,6 +190,8 @@ const DEFAULT_CONFIG = {
   service_run_timed: "boiler_manager.run_timed",
   service_on_continuous: "boiler_manager.turn_on_continuous",
   service_off: "boiler_manager.turn_off",
+  service_create_schedule: "boiler_manager.create_schedule",
+  service_delete_schedule: "boiler_manager.delete_schedule",
   turn_on_action: "homeassistant.turn_on",
   turn_off_action: "homeassistant.turn_off",
   turn_on_data: {},
@@ -152,6 +214,7 @@ class BoilerWaterCard extends HTMLElement {
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
+        this._closeScheduleModal();
       }
     };
   }
@@ -493,6 +556,202 @@ class BoilerWaterCard extends HTMLElement {
           cursor: not-allowed;
           opacity: 0.56;
           transform: none;
+        }
+
+        .tasks-card {
+          border: 1px solid rgba(165, 188, 214, 0.3);
+          border-radius: 12px;
+          padding: 8px;
+          background: rgba(255, 255, 255, 0.12);
+          display: grid;
+          gap: 8px;
+        }
+
+        .tasks-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .tasks-title {
+          margin: 0;
+          font-size: 0.84rem;
+          font-weight: 700;
+          color: var(--boiler-muted);
+        }
+
+        .tasks-add-btn {
+          border: 1px solid rgba(150, 197, 228, 0.6);
+          border-radius: 9px;
+          background: linear-gradient(165deg, rgba(152, 225, 252, 0.35), rgba(89, 166, 217, 0.26));
+          color: #1d3f5e;
+          font-size: 0.8rem;
+          font-weight: 700;
+          padding: 6px 10px;
+          cursor: pointer;
+        }
+
+        .tasks-add-btn[disabled] {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .tasks-list {
+          display: grid;
+          gap: 6px;
+        }
+
+        .task-item {
+          border: 1px solid rgba(176, 197, 219, 0.28);
+          border-radius: 10px;
+          padding: 7px 8px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 6px;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        .task-main {
+          min-width: 0;
+        }
+
+        .task-name {
+          margin: 0;
+          font-size: 0.8rem;
+          font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .task-meta {
+          margin: 0;
+          font-size: 0.72rem;
+          color: var(--boiler-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .task-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .task-toggle-btn,
+        .task-delete-btn {
+          border: 1px solid rgba(173, 196, 220, 0.55);
+          border-radius: 8px;
+          background: rgba(245, 251, 255, 0.75);
+          color: #21405d;
+          font-size: 0.7rem;
+          font-weight: 700;
+          min-height: 30px;
+          padding: 4px 8px;
+          cursor: pointer;
+        }
+
+        .task-toggle-btn.on {
+          border-color: rgba(130, 219, 170, 0.8);
+          background: rgba(94, 209, 139, 0.22);
+          color: #145b33;
+        }
+
+        .task-delete-btn {
+          border-color: rgba(245, 165, 165, 0.8);
+          color: #8d1d1d;
+          background: rgba(255, 227, 227, 0.84);
+        }
+
+        .tasks-empty {
+          margin: 0;
+          font-size: 0.76rem;
+          color: var(--boiler-muted);
+        }
+
+        .schedule-form {
+          display: grid;
+          gap: 10px;
+        }
+
+        .schedule-field {
+          display: grid;
+          gap: 4px;
+        }
+
+        .schedule-label {
+          font-size: 0.77rem;
+          color: var(--boiler-muted);
+          font-weight: 700;
+        }
+
+        .schedule-input {
+          border: 1px solid rgba(154, 184, 219, 0.7);
+          border-radius: 10px;
+          background: rgba(248, 252, 255, 0.95);
+          color: #1f2e44;
+          min-height: 38px;
+          padding: 8px 10px;
+          font-size: 0.9rem;
+          box-sizing: border-box;
+        }
+
+        .schedule-time-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .schedule-days {
+          display: grid;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 5px;
+        }
+
+        .schedule-day {
+          border: 1px solid rgba(173, 196, 220, 0.55);
+          border-radius: 8px;
+          background: rgba(245, 251, 255, 0.75);
+          color: #21405d;
+          min-height: 30px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .schedule-day.selected {
+          border-color: rgba(165, 232, 255, 0.95);
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+          color: #fff;
+        }
+
+        .schedule-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 2px;
+        }
+
+        .schedule-action-btn {
+          border: 1px solid rgba(173, 196, 220, 0.65);
+          border-radius: 10px;
+          min-height: 36px;
+          padding: 6px 12px;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          background: rgba(245, 251, 255, 0.9);
+          color: #21405d;
+        }
+
+        .schedule-action-btn.primary {
+          border-color: rgba(165, 232, 255, 0.95);
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
+          color: #fff;
         }
 
         .error {
@@ -882,6 +1141,14 @@ class BoilerWaterCard extends HTMLElement {
             <button type="button" class="quick-timer-btn off-action" id="quick-off-btn" data-action="off">Off</button>
           </div>
 
+          <div class="tasks-card" id="tasks-card">
+            <div class="tasks-head">
+              <p class="tasks-title" id="tasks-title">Tasks</p>
+              <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
+            </div>
+            <div class="tasks-list" id="tasks-list"></div>
+          </div>
+
           <p class="error" id="error" hidden></p>
         </div>
       </ha-card>
@@ -903,6 +1170,40 @@ class BoilerWaterCard extends HTMLElement {
           <div class="timer-grid" id="timer-grid"></div>
         </div>
       </div>
+
+      <div class="timer-modal" id="schedule-modal" hidden>
+        <div class="timer-modal-backdrop" id="schedule-modal-backdrop"></div>
+        <div class="timer-modal-panel" id="schedule-modal-panel" role="dialog" aria-modal="true" aria-label="Task Creator">
+          <div class="timer-modal-head">
+            <h3 class="timer-modal-title" id="schedule-modal-title">Add Task</h3>
+            <button type="button" class="timer-close-btn" id="schedule-close-btn">✕</button>
+          </div>
+          <form class="schedule-form" id="schedule-form">
+            <div class="schedule-field">
+              <label class="schedule-label" for="schedule-name-input" id="schedule-name-label">Task Name</label>
+              <input class="schedule-input" id="schedule-name-input" type="text" maxlength="80" />
+            </div>
+            <div class="schedule-time-row">
+              <div class="schedule-field">
+                <label class="schedule-label" for="schedule-start-input" id="schedule-start-label">Start</label>
+                <input class="schedule-input" id="schedule-start-input" type="time" />
+              </div>
+              <div class="schedule-field">
+                <label class="schedule-label" for="schedule-end-input" id="schedule-end-label">End</label>
+                <input class="schedule-input" id="schedule-end-input" type="time" />
+              </div>
+            </div>
+            <div class="schedule-field">
+              <span class="schedule-label" id="schedule-days-label">Days</span>
+              <div class="schedule-days" id="schedule-days"></div>
+            </div>
+            <div class="schedule-modal-actions">
+              <button type="button" class="schedule-action-btn" id="schedule-cancel-btn">Cancel</button>
+              <button type="submit" class="schedule-action-btn primary" id="schedule-save-btn">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
     `;
 
     this._elements = {
@@ -917,6 +1218,9 @@ class BoilerWaterCard extends HTMLElement {
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       quickTimerBtns: Array.from(this.shadowRoot.querySelectorAll(".quick-timer-btn")),
       quickOffBtn: this.shadowRoot.getElementById("quick-off-btn"),
+      tasksTitle: this.shadowRoot.getElementById("tasks-title"),
+      tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
+      tasksList: this.shadowRoot.getElementById("tasks-list"),
       timerMenuBtn: this.shadowRoot.getElementById("timer-menu-btn"),
       error: this.shadowRoot.getElementById("error"),
       timerModal: this.shadowRoot.getElementById("timer-modal"),
@@ -929,6 +1233,22 @@ class BoilerWaterCard extends HTMLElement {
       timerPageNextBtn: this.shadowRoot.getElementById("timer-page-next-btn"),
       timerPageIndicator: this.shadowRoot.getElementById("timer-page-indicator"),
       timerGrid: this.shadowRoot.getElementById("timer-grid"),
+      scheduleModal: this.shadowRoot.getElementById("schedule-modal"),
+      scheduleModalBackdrop: this.shadowRoot.getElementById("schedule-modal-backdrop"),
+      scheduleModalPanel: this.shadowRoot.getElementById("schedule-modal-panel"),
+      scheduleModalTitle: this.shadowRoot.getElementById("schedule-modal-title"),
+      scheduleCloseBtn: this.shadowRoot.getElementById("schedule-close-btn"),
+      scheduleForm: this.shadowRoot.getElementById("schedule-form"),
+      scheduleNameLabel: this.shadowRoot.getElementById("schedule-name-label"),
+      scheduleStartLabel: this.shadowRoot.getElementById("schedule-start-label"),
+      scheduleEndLabel: this.shadowRoot.getElementById("schedule-end-label"),
+      scheduleDaysLabel: this.shadowRoot.getElementById("schedule-days-label"),
+      scheduleNameInput: this.shadowRoot.getElementById("schedule-name-input"),
+      scheduleStartInput: this.shadowRoot.getElementById("schedule-start-input"),
+      scheduleEndInput: this.shadowRoot.getElementById("schedule-end-input"),
+      scheduleDays: this.shadowRoot.getElementById("schedule-days"),
+      scheduleCancelBtn: this.shadowRoot.getElementById("schedule-cancel-btn"),
+      scheduleSaveBtn: this.shadowRoot.getElementById("schedule-save-btn"),
     };
 
     this._elements.timerMenuBtn.addEventListener("click", () => this._openTimerModal());
@@ -936,9 +1256,18 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
     this._elements.timerPagePrevBtn.addEventListener("click", () => this._changeTimerPage(-1));
     this._elements.timerPageNextBtn.addEventListener("click", () => this._changeTimerPage(1));
+    this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
+    this._elements.scheduleCloseBtn.addEventListener("click", () => this._closeScheduleModal());
+    this._elements.scheduleCancelBtn.addEventListener("click", () => this._closeScheduleModal());
+    this._elements.scheduleModalBackdrop.addEventListener("click", () => this._closeScheduleModal());
+    this._elements.scheduleForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      this._submitScheduleTask();
+    });
     this._elements.quickTimerBtns.forEach((button) => {
       button.addEventListener("click", () => this._handleQuickTimerClick(button));
     });
+    this._renderScheduleDayButtons();
   }
 
   _sync() {
@@ -975,6 +1304,38 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.timerMenuBtn.setAttribute("aria-label", this._t("timer_menu"));
       this._elements.timerMenuBtn.setAttribute("title", this._t("timer_menu"));
     }
+    if (this._elements.tasksTitle) {
+      this._elements.tasksTitle.textContent = this._t("tasks_title");
+    }
+    if (this._elements.tasksAddBtn) {
+      this._elements.tasksAddBtn.textContent = this._t("tasks_add");
+      this._elements.tasksAddBtn.disabled = !this._hasScheduleCreateService();
+    }
+    if (this._elements.scheduleModalPanel) {
+      this._elements.scheduleModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
+    }
+    if (this._elements.scheduleModalTitle) {
+      this._elements.scheduleModalTitle.textContent = this._t("tasks_add");
+    }
+    if (this._elements.scheduleNameLabel) {
+      this._elements.scheduleNameLabel.textContent = this._t("task_name");
+    }
+    if (this._elements.scheduleStartLabel) {
+      this._elements.scheduleStartLabel.textContent = this._t("task_start");
+    }
+    if (this._elements.scheduleEndLabel) {
+      this._elements.scheduleEndLabel.textContent = this._t("task_end");
+    }
+    if (this._elements.scheduleDaysLabel) {
+      this._elements.scheduleDaysLabel.textContent = this._t("task_days");
+    }
+    if (this._elements.scheduleCancelBtn) {
+      this._elements.scheduleCancelBtn.textContent = this._t("task_cancel");
+    }
+    if (this._elements.scheduleSaveBtn) {
+      this._elements.scheduleSaveBtn.textContent = this._t("task_save");
+    }
+    this._updateScheduleDayLabels();
     const flowImage = cfg.boiler_flow_image || "/local/boiler-card/boiler-flow.png";
     if (this._elements.boilerMainImage?.getAttribute("src") !== flowImage) {
       this._elements.boilerMainImage.setAttribute("src", flowImage);
@@ -985,6 +1346,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncCountdown(timer, boiler);
     this._syncError(boiler, duration, timer, scripts);
     this._syncControls(boiler, duration, timer, scripts);
+    this._syncScheduleList();
   }
 
   _syncTimerPicker(durationEntity, boilerEntity, timerEntity) {
@@ -1382,7 +1744,7 @@ class BoilerWaterCard extends HTMLElement {
     this._setTimerPageToOption(options, selected);
     this._renderTimerGrid(options, selected);
     this._elements.timerModal.hidden = false;
-    window.addEventListener("keydown", this._handleEscapeKey);
+    this._attachEscapeListener();
   }
 
   _changeTimerPage(direction) {
@@ -1443,7 +1805,218 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     this._elements.timerModal.hidden = true;
+    if (!this._isAnyModalOpen()) {
+      window.removeEventListener("keydown", this._handleEscapeKey);
+    }
+  }
+
+  _openScheduleModal() {
+    if (!this._elements.scheduleModal || !this._hasScheduleCreateService()) {
+      return;
+    }
+
+    this._resetScheduleForm();
+    this._elements.scheduleModal.hidden = false;
+    this._attachEscapeListener();
+  }
+
+  _closeScheduleModal() {
+    if (!this._elements.scheduleModal) {
+      return;
+    }
+    this._elements.scheduleModal.hidden = true;
+    if (!this._isAnyModalOpen()) {
+      window.removeEventListener("keydown", this._handleEscapeKey);
+    }
+  }
+
+  _isAnyModalOpen() {
+    return !!(
+      (this._elements.timerModal && !this._elements.timerModal.hidden)
+      || (this._elements.scheduleModal && !this._elements.scheduleModal.hidden)
+    );
+  }
+
+  _attachEscapeListener() {
     window.removeEventListener("keydown", this._handleEscapeKey);
+    window.addEventListener("keydown", this._handleEscapeKey);
+  }
+
+  _renderScheduleDayButtons() {
+    const container = this._elements.scheduleDays;
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+    for (let day = 0; day <= 6; day += 1) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "schedule-day";
+      button.dataset.day = String(day);
+      button.addEventListener("click", () => button.classList.toggle("selected"));
+      container.appendChild(button);
+    }
+    this._updateScheduleDayLabels();
+  }
+
+  _updateScheduleDayLabels() {
+    const map = [
+      this._t("day_mon"),
+      this._t("day_tue"),
+      this._t("day_wed"),
+      this._t("day_thu"),
+      this._t("day_fri"),
+      this._t("day_sat"),
+      this._t("day_sun"),
+    ];
+    const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
+    dayButtons.forEach((button, index) => {
+      button.textContent = map[index] || String(index + 1);
+    });
+  }
+
+  _resetScheduleForm() {
+    if (this._elements.scheduleNameInput) {
+      this._elements.scheduleNameInput.value = "";
+    }
+    if (this._elements.scheduleStartInput) {
+      this._elements.scheduleStartInput.value = "10:00";
+    }
+    if (this._elements.scheduleEndInput) {
+      this._elements.scheduleEndInput.value = "12:00";
+    }
+    const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
+    dayButtons.forEach((button, index) => {
+      button.classList.toggle("selected", index >= 0 && index <= 4);
+    });
+  }
+
+  _submitScheduleTask() {
+    if (!this._hass || !this._hasScheduleCreateService()) {
+      return;
+    }
+
+    const name = String(this._elements.scheduleNameInput?.value || "").trim() || "Task";
+    const startTime = String(this._elements.scheduleStartInput?.value || "").trim();
+    const endTime = String(this._elements.scheduleEndInput?.value || "").trim();
+    if (!startTime || !endTime) {
+      return;
+    }
+
+    const days = Array.from(this.shadowRoot.querySelectorAll(".schedule-day.selected"))
+      .map((button) => Number.parseInt(button.dataset.day || "", 10))
+      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+
+    this._callConfiguredService(this._config.service_create_schedule, {
+      ...this._builtInServiceBaseData(),
+      name,
+      start_time: startTime,
+      end_time: endTime,
+      days,
+      enabled: true,
+    });
+    this._closeScheduleModal();
+  }
+
+  _taskSwitchEntities() {
+    if (!this._hass?.states) {
+      return [];
+    }
+
+    const desiredEntryId = String(this._config.integration_entry_id || "").trim();
+    const desiredBoiler = String(this._config.boiler_entity || "").trim().toLowerCase();
+
+    const entities = Object.values(this._hass.states)
+      .filter((state) => state?.entity_id?.startsWith("switch."))
+      .filter((state) => state?.attributes?.task_id)
+      .filter((state) => {
+        const attrs = state.attributes || {};
+        if (desiredEntryId && attrs.entry_id === desiredEntryId) {
+          return true;
+        }
+        if (desiredBoiler && String(attrs.boiler_entity || "").trim().toLowerCase() === desiredBoiler) {
+          return true;
+        }
+        return !desiredEntryId && !desiredBoiler;
+      })
+      .sort((a, b) => String(a.attributes?.start_time || "").localeCompare(String(b.attributes?.start_time || "")));
+
+    return entities;
+  }
+
+  _syncScheduleList() {
+    const list = this._elements.tasksList;
+    if (!list) {
+      return;
+    }
+
+    const tasks = this._taskSwitchEntities();
+    list.innerHTML = "";
+
+    if (tasks.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "tasks-empty";
+      empty.textContent = this._t("tasks_empty");
+      list.appendChild(empty);
+      return;
+    }
+
+    tasks.forEach((taskState) => {
+      const attrs = taskState.attributes || {};
+      const item = document.createElement("div");
+      item.className = "task-item";
+
+      const main = document.createElement("div");
+      main.className = "task-main";
+
+      const name = document.createElement("p");
+      name.className = "task-name";
+      name.textContent = attrs.friendly_name || attrs.task_id || taskState.entity_id;
+      main.appendChild(name);
+
+      const meta = document.createElement("p");
+      meta.className = "task-meta";
+      const daysLabel = attrs.days_label ? ` · ${attrs.days_label}` : "";
+      meta.textContent = `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${daysLabel}`;
+      main.appendChild(meta);
+
+      const actions = document.createElement("div");
+      actions.className = "task-actions";
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "task-toggle-btn";
+      const isOn = String(taskState.state || "").toLowerCase() === "on";
+      toggle.classList.toggle("on", isOn);
+      toggle.textContent = isOn ? this._t("task_enabled") : this._t("task_disabled");
+      toggle.addEventListener("click", () => {
+        const [domain] = taskState.entity_id.split(".", 1);
+        const service = isOn ? "turn_off" : "turn_on";
+        this._hass?.callService(domain || "homeassistant", service, { entity_id: taskState.entity_id });
+      });
+      actions.appendChild(toggle);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "task-delete-btn";
+      del.textContent = this._t("task_delete");
+      del.addEventListener("click", () => {
+        const taskId = attrs.task_id;
+        if (!taskId || !this._hasScheduleDeleteService()) {
+          return;
+        }
+        this._callConfiguredService(this._config.service_delete_schedule, {
+          ...this._builtInServiceBaseData(),
+          task_id: taskId,
+        });
+      });
+      actions.appendChild(del);
+
+      item.appendChild(main);
+      item.appendChild(actions);
+      list.appendChild(item);
+    });
   }
 
   _handleTurnOff() {
@@ -1460,22 +2033,8 @@ class BoilerWaterCard extends HTMLElement {
     offButton?.focus({ preventScroll: true });
     this._sync();
 
-    if (this._hasScriptOffService()) {
-      this._runScript(this._config.script_off, {
-        boiler_entity: this._config.boiler_entity,
-        turn_off_action: this._config.turn_off_action,
-        turn_off_data: this._safeServiceData(this._config.turn_off_data),
-      });
-      return;
-    }
-
-    const called = this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
-    if (called) {
-      return;
-    }
-
     const entityDomain = String(this._config.boiler_entity || "").split(".")[0];
-    // Send direct OFF to the entity domain (works for switch/light/etc).
+    // Always send direct OFF to the entity domain first (works for switch/light/etc).
     if (entityDomain) {
       this._callEntityAction(
         `${entityDomain}.turn_off`,
@@ -1488,6 +2047,16 @@ class BoilerWaterCard extends HTMLElement {
       this._config.boiler_entity,
       null
     );
+
+    // Then call integration/script off flows (for mode cleanup, timers, etc).
+    this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
+    if (this._hasScriptOffService()) {
+      this._runScript(this._config.script_off, {
+        boiler_entity: this._config.boiler_entity,
+        turn_off_action: this._config.turn_off_action,
+        turn_off_data: this._safeServiceData(this._config.turn_off_data),
+      });
+    }
 
     if (this._config.timer_entity) {
       this._hass?.callService("timer", "cancel", {
@@ -1549,6 +2118,14 @@ class BoilerWaterCard extends HTMLElement {
     return this._isServiceRef(this._config.service_run_timed)
       && this._isServiceRef(this._config.service_on_continuous)
       && this._isServiceRef(this._config.service_off);
+  }
+
+  _hasScheduleCreateService() {
+    return this._isServiceRef(this._config.service_create_schedule);
+  }
+
+  _hasScheduleDeleteService() {
+    return this._isServiceRef(this._config.service_delete_schedule);
   }
 
   _isServiceRef(value) {
@@ -1879,49 +2456,19 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { entity: {} },
       },
       {
-        name: "duration_entity",
-        label: labels.duration_entity,
-        selector: { entity: { domain: "input_select" } },
+        name: "temperature_sensor",
+        label: labels.temperature_sensor,
+        selector: { entity: { domain: "sensor" } },
       },
       {
-        name: "timer_entity",
-        label: labels.timer_entity,
-        selector: { entity: { domain: "timer" } },
+        name: "current_sensor",
+        label: labels.current_sensor,
+        selector: { entity: { domain: "sensor" } },
       },
       {
-        name: "script_on_timed",
-        label: labels.script_on_timed,
-        selector: { entity: { domain: "script" } },
-      },
-      {
-        name: "script_on_continuous",
-        label: labels.script_on_continuous,
-        selector: { entity: { domain: "script" } },
-      },
-      {
-        name: "script_off",
-        label: labels.script_off,
-        selector: { entity: { domain: "script" } },
-      },
-      {
-        name: "integration_entry_id",
-        label: labels.integration_entry_id,
-        selector: { text: {} },
-      },
-      {
-        name: "service_run_timed",
-        label: labels.service_run_timed,
-        selector: { text: {} },
-      },
-      {
-        name: "service_on_continuous",
-        label: labels.service_on_continuous,
-        selector: { text: {} },
-      },
-      {
-        name: "service_off",
-        label: labels.service_off,
-        selector: { text: {} },
+        name: "voltage_sensor",
+        label: labels.voltage_sensor,
+        selector: { entity: { domain: "sensor" } },
       },
       {
         name: "boiler_flow_image",
@@ -1954,45 +2501,27 @@ class BoilerWaterCardEditor extends HTMLElement {
         language: "שפה",
         title: "כותרת",
         boiler_entity: "ישות דוד",
-        duration_entity: "ישות משך זמן",
-        timer_entity: "ישות טיימר",
-        script_on_timed: "סקריפט הדלקה עם טיימר",
-        script_on_continuous: "סקריפט הדלקה רציפה",
-        script_off: "סקריפט כיבוי",
-        integration_entry_id: "מזהה אינטגרציה (entry_id)",
-        service_run_timed: "שירות הדלקה מתוזמנת (domain.service)",
-        service_on_continuous: "שירות הדלקה רציפה (domain.service)",
-        service_off: "שירות כיבוי (domain.service)",
+        temperature_sensor: "סנסור טמפרטורה",
+        current_sensor: "סנסור זרם",
+        voltage_sensor: "סנסור מתח",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
       },
       en: {
         language: "Language",
         title: "Title",
         boiler_entity: "Boiler Entity",
-        duration_entity: "Duration Entity",
-        timer_entity: "Timer Entity",
-        script_on_timed: "Timed On Script",
-        script_on_continuous: "Continuous On Script",
-        script_off: "Off Script",
-        integration_entry_id: "Integration Entry ID",
-        service_run_timed: "Run Timed Service (domain.service)",
-        service_on_continuous: "Continuous On Service (domain.service)",
-        service_off: "Off Service (domain.service)",
+        temperature_sensor: "Temperature Sensor",
+        current_sensor: "Current Sensor",
+        voltage_sensor: "Voltage Sensor",
         boiler_flow_image: "Water Flow Image (path / URL)",
       },
       ru: {
         language: "Язык",
         title: "Заголовок",
         boiler_entity: "Сущность бойлера",
-        duration_entity: "Сущность длительности",
-        timer_entity: "Сущность таймера",
-        script_on_timed: "Скрипт включения с таймером",
-        script_on_continuous: "Скрипт непрерывного включения",
-        script_off: "Скрипт выключения",
-        integration_entry_id: "ID интеграции (entry_id)",
-        service_run_timed: "Сервис включения по таймеру (domain.service)",
-        service_on_continuous: "Сервис непрерывного включения (domain.service)",
-        service_off: "Сервис выключения (domain.service)",
+        temperature_sensor: "Датчик температуры",
+        current_sensor: "Датчик тока",
+        voltage_sensor: "Датчик напряжения",
         boiler_flow_image: "Изображение потока (путь / URL)",
       },
     };

@@ -117,6 +117,8 @@ class BoilerTaskSwitch(SwitchEntity):
             "days": task.days,
             "days_label": format_days_for_display(task.days),
             "active_now": task.task_id in self._manager.active_task_ids,
+            "entry_id": self._manager.entry.entry_id,
+            "boiler_entity": self._manager.boiler_entity,
         }
 
     @property

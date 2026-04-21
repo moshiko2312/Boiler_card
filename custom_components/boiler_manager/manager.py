@@ -10,6 +10,7 @@ import uuid
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
@@ -29,6 +30,7 @@ from .const import (
     CONF_NAME,
     CONF_POWER_SENSOR,
     CONF_TEMPERATURE_SENSOR,
+    DOMAIN,
     DAY_NAME_TO_INDEX,
     DEFAULT_NAME,
     MODE_MANUAL_CONTINUOUS,
@@ -237,6 +239,7 @@ class BoilerManager:
             return False
 
         self._tasks.pop(key)
+        self._async_remove_task_switch_entity(key)
         await self._async_save()
 
         async_dispatcher_send(
@@ -248,6 +251,15 @@ class BoilerManager:
         await self._async_apply_schedule_state()
         self._async_notify_state()
         return True
+
+    @callback
+    def _async_remove_task_switch_entity(self, task_id: str) -> None:
+        """Remove the task switch entity from registry for permanent deletion."""
+        registry = er.async_get(self.hass)
+        unique_id = f"{self.entry.entry_id}_task_{task_id}"
+        entity_id = registry.async_get_entity_id("switch", DOMAIN, unique_id)
+        if entity_id:
+            registry.async_remove(entity_id)
 
     async def async_update_task(
         self,
