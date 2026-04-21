@@ -20,10 +20,11 @@ from .const import (
 )
 
 
-class BoilerManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class BoilerManagerConfigFlow(config_entries.ConfigFlow):
     """Handle Boiler Manager config flow."""
 
     VERSION = 1
+    domain = DOMAIN
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle initial setup step."""
@@ -65,17 +66,19 @@ class BoilerManagerOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         current = {**self._config_entry.data, **self._config_entry.options}
-        schema = self.add_suggested_values_to_schema(
-            vol.Schema(
-                {
-                    vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
-                    vol.Required(CONF_BOILER_ENTITY): cv.entity_id,
-                    vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
-                    vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
-                    vol.Optional(CONF_CURRENT_SENSOR): cv.entity_id,
-                }
-            ),
-            current,
+        base_schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
+                vol.Required(CONF_BOILER_ENTITY): cv.entity_id,
+                vol.Optional(CONF_TEMPERATURE_SENSOR): cv.entity_id,
+                vol.Optional(CONF_POWER_SENSOR): cv.entity_id,
+                vol.Optional(CONF_CURRENT_SENSOR): cv.entity_id,
+            }
         )
+        # Compatibility fallback for older HA versions.
+        if hasattr(self, "add_suggested_values_to_schema"):
+            schema = self.add_suggested_values_to_schema(base_schema, current)
+        else:
+            schema = base_schema
 
         return self.async_show_form(step_id="init", data_schema=schema)
