@@ -122,6 +122,8 @@ class BoilerTaskSwitch(SwitchEntity):
             "recurrence": task.recurrence,
             "start_date": task.start_date,
             "end_date": task.end_date,
+            "condition_entity": task.condition_entity,
+            "skip_if_state": task.skip_if_state,
             "timeline_points": [point.as_dict() for point in task.timeline_points],
             "timeline_label": format_timeline_for_display(task.timeline_points),
             "active_now": task.task_id in self._manager.active_task_ids,

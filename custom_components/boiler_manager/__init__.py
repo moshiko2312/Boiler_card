@@ -17,6 +17,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    ATTR_CONDITION_ENTITY,
     ATTR_DAYS,
     ATTR_DURATION,
     ATTR_ENABLED,
@@ -38,6 +39,7 @@ from .const import (
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
     ATTR_TIMELINE_POINTS,
+    ATTR_SKIP_IF_STATE,
     CONF_BOILER_ENTITY,
     DOMAIN,
     IMPORT_MODE_MERGE,
@@ -91,6 +93,8 @@ CREATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
         vol.Optional(ATTR_START_DATE): cv.string,
         vol.Optional(ATTR_END_DATE): cv.string,
+        vol.Optional(ATTR_CONDITION_ENTITY): cv.string,
+        vol.Optional(ATTR_SKIP_IF_STATE): cv.string,
         vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -115,6 +119,8 @@ CREATE_TIMELINE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
         vol.Optional(ATTR_START_DATE): cv.string,
         vol.Optional(ATTR_END_DATE): cv.string,
+        vol.Optional(ATTR_CONDITION_ENTITY): cv.string,
+        vol.Optional(ATTR_SKIP_IF_STATE): cv.string,
         vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -134,6 +140,8 @@ UPDATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_RECURRENCE): vol.In(RECURRENCE_OPTIONS),
         vol.Optional(ATTR_START_DATE): cv.string,
         vol.Optional(ATTR_END_DATE): cv.string,
+        vol.Optional(ATTR_CONDITION_ENTITY): cv.string,
+        vol.Optional(ATTR_SKIP_IF_STATE): cv.string,
         vol.Optional(ATTR_ENABLED): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -232,6 +240,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             recurrence=call.data.get(ATTR_RECURRENCE),
             start_date=call.data.get(ATTR_START_DATE),
             end_date=call.data.get(ATTR_END_DATE),
+            condition_entity=call.data.get(ATTR_CONDITION_ENTITY),
+            skip_if_state=call.data.get(ATTR_SKIP_IF_STATE),
             enabled=call.data.get(ATTR_ENABLED, True),
         )
 
@@ -245,6 +255,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             recurrence=call.data.get(ATTR_RECURRENCE),
             start_date=call.data.get(ATTR_START_DATE),
             end_date=call.data.get(ATTR_END_DATE),
+            condition_entity=call.data.get(ATTR_CONDITION_ENTITY),
+            skip_if_state=call.data.get(ATTR_SKIP_IF_STATE),
             enabled=call.data.get(ATTR_ENABLED, True),
         )
 
@@ -264,6 +276,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                 ATTR_RECURRENCE,
                 ATTR_START_DATE,
                 ATTR_END_DATE,
+                ATTR_CONDITION_ENTITY,
+                ATTR_SKIP_IF_STATE,
                 ATTR_ENABLED,
             )
         ):
@@ -281,6 +295,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             recurrence=call.data.get(ATTR_RECURRENCE),
             start_date=call.data.get(ATTR_START_DATE),
             end_date=call.data.get(ATTR_END_DATE),
+            condition_entity=call.data.get(ATTR_CONDITION_ENTITY),
+            skip_if_state=call.data.get(ATTR_SKIP_IF_STATE),
             enabled=call.data.get(ATTR_ENABLED),
         )
 

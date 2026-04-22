@@ -92,6 +92,14 @@ create_schedule:
       name: End Date
       description: Optional upper date bound in YYYY-MM-DD.
       example: "2026-12-31"
+    condition_entity:
+      name: Condition Entity
+      description: Optional entity to check before running this task.
+      example: "input_boolean.boiler_block"
+    skip_if_state:
+      name: Skip If State
+      description: Skip execution when condition entity state equals this value. Defaults to "on" when condition_entity is set.
+      example: "on"
     enabled:
       name: Enabled
       description: Enable task on creation.
@@ -145,6 +153,14 @@ create_timeline:
       name: End Date
       description: Optional upper date bound in YYYY-MM-DD.
       example: "2026-12-31"
+    condition_entity:
+      name: Condition Entity
+      description: Optional entity to check before running this timeline.
+      example: "input_boolean.boiler_block"
+    skip_if_state:
+      name: Skip If State
+      description: Skip execution when condition entity state equals this value. Defaults to "on" when condition_entity is set.
+      example: "on"
     enabled:
       name: Enabled
       description: Enable timeline on creation.
@@ -213,6 +229,14 @@ update_schedule:
       name: End Date
       description: Optional upper date bound in YYYY-MM-DD.
       example: "2026-06-30"
+    condition_entity:
+      name: Condition Entity
+      description: Optional entity to check before running this task (set empty to clear condition).
+      example: "input_boolean.boiler_block"
+    skip_if_state:
+      name: Skip If State
+      description: Skip execution when condition entity state equals this value (defaults to "on" when condition_entity is set).
+      example: "on"
     enabled:
       name: Enabled
       description: Enable/disable this task.

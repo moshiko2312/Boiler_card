@@ -8,6 +8,7 @@ Custom boiler control solution for Home Assistant with:
 - Optional card sensors (temperature / current / voltage)
 - Mobile-friendly popups (Safari + Chrome)
 - In-card task backup/restore (Import/Export)
+- Per-task conditional execution by external entity state
 
 ## What You Get
 
@@ -17,6 +18,9 @@ Custom boiler control solution for Home Assistant with:
 - Create, edit, enable/disable, and delete tasks from card UI
 - Import/Export tasks directly from Tasks view in hamburger popup
   - Import mode buttons: `merge` / `replace`
+- Per-task condition in card UI:
+  - `Condition Entity` (for example `input_boolean.some_flag`)
+  - `Skip If State` (for example `on`)
 - Sensor chips shown only when configured in the card
 - Custom display name per sensor in card editor
 - Heat bar can run from real temperature sensor (with threshold colors)
@@ -32,6 +36,10 @@ Custom boiler control solution for Home Assistant with:
   - Overlap behavior: extends until latest end time (max end wins)
 - Tasks list sorted by the **next upcoming event** (chronological order)
 - Scheduler tick every second for near-immediate start/stop transitions
+- Mobile-first schedule/task modals:
+  - touch-friendly controls
+  - no horizontal scrolling
+  - centered/stable dialogs for Safari + Chrome
 
 ## Project Structure
 
@@ -122,6 +130,7 @@ Notes:
 3. For automation, create a task and set:
    - Type (`Time Window` / `Timeline`)
    - Recurrence (`forever` / `once` / `range`)
+   - Optional condition (`Condition Entity` + `Skip If State`)
    - Days + months filters
 4. Save
 5. Verify in Tasks list:
@@ -159,6 +168,7 @@ Import confirmation:
 
 - Select `Type = Time Window`
 - Set `Start` and `End`
+- Optional: set `Condition Entity` + `Skip If State`
 - Select days
 - Select months
 - Set recurrence via 3 buttons (`forever / once / range`)
@@ -171,6 +181,7 @@ Import confirmation:
 - For each point:
   - choose time (`HH:MM`)
   - choose timer option from existing options (15m..)
+- Optional: set `Condition Entity` + `Skip If State`
 - Select days
 - Select months
 - Set recurrence via 3 buttons (`forever / once / range`)
@@ -213,6 +224,21 @@ Import confirmation:
 - Validation is enforced both:
   - In frontend card UI (before save)
   - In backend integration manager (service/API level)
+
+### Task Conditions (Skip Logic)
+
+- Each task can include:
+  - `condition_entity`
+  - `skip_if_state`
+- Runtime behavior:
+  - During each scheduler tick, condition is checked before task activation.
+  - If `condition_entity.state == skip_if_state` (case-insensitive), the task is skipped for that check cycle.
+  - If the condition entity is missing/unavailable, task is not blocked by this condition.
+- Defaults:
+  - If `condition_entity` is set and `skip_if_state` is empty, backend defaults `skip_if_state` to `on`.
+- Import/Export:
+  - Condition fields are included in exported JSON.
+  - Condition fields are restored on import (`merge` and `replace`).
 
 ### Task Order In List
 
@@ -309,6 +335,24 @@ data:
   days: [0, 1, 2, 3, 4]
   months: [1, 2, 3, 10, 11, 12]
   recurrence: "forever"
+  condition_entity: input_boolean.skip_morning_boiler
+  skip_if_state: "on"
+  enabled: true
+```
+
+### create_schedule example (with condition)
+
+```yaml
+service: boiler_manager.create_schedule
+data:
+  boiler_entity: switch.boiler
+  name: "Morning Window"
+  start_time: "10:00"
+  end_time: "12:00"
+  days: [0, 1, 2, 3, 4]
+  recurrence: "forever"
+  condition_entity: input_boolean.skip_morning_boiler
+  skip_if_state: "on"
   enabled: true
 ```
 
@@ -331,6 +375,8 @@ data:
   recurrence: "range"
   start_date: "2026-05-01"
   end_date: "2026-08-31"
+  condition_entity: input_boolean.skip_morning_boiler
+  skip_if_state: "on"
 ```
 
 ## Entity Behavior
@@ -340,6 +386,7 @@ data:
 - Extra attributes include:
   - `task_type`
   - `days`, `months`, `recurrence`, `start_date`, `end_date`
+  - `condition_entity`, `skip_if_state`
   - `timeline_points`, `timeline_label` for timeline tasks
   - `active_now`
 - `active_now` represents the task being active by schedule window/timeline timing

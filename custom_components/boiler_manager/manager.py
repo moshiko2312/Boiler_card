@@ -18,6 +18,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ATTR_CONDITION_ENTITY,
     ATTR_DAYS,
     ATTR_DURATION,
     ATTR_DURATION_MINUTES,
@@ -35,6 +36,7 @@ from .const import (
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
     ATTR_TIMELINE_POINTS,
+    ATTR_SKIP_IF_STATE,
     CONF_BOILER_ENTITY,
     CONF_CURRENT_SENSOR,
     CONF_NAME,
@@ -101,6 +103,8 @@ class BoilerTask:
     recurrence: str
     start_date: str | None
     end_date: str | None
+    condition_entity: str | None
+    skip_if_state: str | None
     enabled: bool
     timeline_points: list[BoilerTimelinePoint] = field(default_factory=list)
     once_started: bool = False
@@ -119,6 +123,8 @@ class BoilerTask:
             ATTR_RECURRENCE: self.recurrence,
             ATTR_START_DATE: self.start_date,
             ATTR_END_DATE: self.end_date,
+            ATTR_CONDITION_ENTITY: self.condition_entity,
+            ATTR_SKIP_IF_STATE: self.skip_if_state,
             ATTR_ENABLED: self.enabled,
             "once_started": self.once_started,
         }
@@ -256,6 +262,8 @@ class BoilerManager:
         recurrence: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        condition_entity: str | None = None,
+        skip_if_state: str | None = None,
         enabled: bool,
     ) -> BoilerTask:
         """Create a new schedule task."""
@@ -268,6 +276,10 @@ class BoilerManager:
             start_date,
             end_date,
             normalized_recurrence,
+        )
+        normalized_condition_entity, normalized_skip_if_state = _normalize_task_condition(
+            condition_entity,
+            skip_if_state,
         )
 
         task_name = str(name or "").strip() or f"Task {normalized_start}-{normalized_end}"
@@ -285,6 +297,8 @@ class BoilerManager:
             recurrence=normalized_recurrence,
             start_date=normalized_start_date,
             end_date=normalized_end_date,
+            condition_entity=normalized_condition_entity,
+            skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
             once_started=False,
         )
@@ -313,6 +327,8 @@ class BoilerManager:
         recurrence: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        condition_entity: str | None = None,
+        skip_if_state: str | None = None,
         enabled: bool,
     ) -> BoilerTask:
         """Create a new timeline task (multiple points on same day pattern)."""
@@ -323,6 +339,10 @@ class BoilerManager:
             start_date,
             end_date,
             normalized_recurrence,
+        )
+        normalized_condition_entity, normalized_skip_if_state = _normalize_task_condition(
+            condition_entity,
+            skip_if_state,
         )
         timeline_points = _normalize_timeline_points(points)
         first_start, last_end = _timeline_time_bounds(timeline_points)
@@ -342,6 +362,8 @@ class BoilerManager:
             recurrence=normalized_recurrence,
             start_date=normalized_start_date,
             end_date=normalized_end_date,
+            condition_entity=normalized_condition_entity,
+            skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
             once_started=False,
         )
@@ -404,6 +426,8 @@ class BoilerManager:
         recurrence: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        condition_entity: str | None = None,
+        skip_if_state: str | None = None,
         enabled: bool | None = None,
     ) -> BoilerTask:
         """Update task fields."""
@@ -467,6 +491,13 @@ class BoilerManager:
                 task.once_started = False
             if recurrence is not None and next_recurrence != RECURRENCE_ONCE:
                 task.once_started = False
+            if condition_entity is not None or skip_if_state is not None:
+                next_condition_entity = task.condition_entity if condition_entity is None else condition_entity
+                next_skip_if_state = task.skip_if_state if skip_if_state is None else skip_if_state
+                task.condition_entity, task.skip_if_state = _normalize_task_condition(
+                    next_condition_entity,
+                    next_skip_if_state,
+                )
             if enabled is not None:
                 task.enabled = bool(enabled)
 
@@ -765,6 +796,8 @@ class BoilerManager:
         for task in self._tasks.values():
             if not task.enabled:
                 continue
+            if self._task_is_blocked_by_condition(task):
+                continue
             snoozed_until = self._snoozed_task_until.get(task.task_id)
             if snoozed_until:
                 if now < snoozed_until:
@@ -795,6 +828,20 @@ class BoilerManager:
                     break
 
         return active
+
+    def _task_is_blocked_by_condition(self, task: BoilerTask) -> bool:
+        """Return True when task should be skipped due to external entity condition."""
+        condition_entity = str(task.condition_entity or "").strip()
+        skip_if_state = str(task.skip_if_state or "").strip().lower()
+        if not condition_entity or not skip_if_state:
+            return False
+
+        condition_state = self.hass.states.get(condition_entity)
+        if condition_state is None:
+            return False
+
+        current_state = str(condition_state.state or "").strip().lower()
+        return current_state == skip_if_state
 
     def _async_snooze_active_tasks_until_segment_end(self, now: datetime) -> None:
         """Skip currently active task segments until they naturally end."""
@@ -912,6 +959,10 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_END_DATE),
         recurrence,
     )
+    condition_entity, skip_if_state = _normalize_task_condition(
+        raw.get(ATTR_CONDITION_ENTITY),
+        raw.get(ATTR_SKIP_IF_STATE),
+    )
     enabled = bool(raw.get(ATTR_ENABLED, True))
     once_started = bool(raw.get("once_started", False))
 
@@ -927,6 +978,8 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         recurrence=recurrence,
         start_date=start_date,
         end_date=end_date,
+        condition_entity=condition_entity,
+        skip_if_state=skip_if_state,
         enabled=enabled,
         once_started=once_started,
     )
@@ -945,6 +998,8 @@ def _task_to_export_dict(task: BoilerTask) -> dict:
         ATTR_RECURRENCE: task.recurrence,
         ATTR_START_DATE: task.start_date,
         ATTR_END_DATE: task.end_date,
+        ATTR_CONDITION_ENTITY: task.condition_entity,
+        ATTR_SKIP_IF_STATE: task.skip_if_state,
         ATTR_ENABLED: bool(task.enabled),
     }
 
@@ -966,6 +1021,10 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_START_DATE),
         raw.get(ATTR_END_DATE),
         recurrence,
+    )
+    condition_entity, skip_if_state = _normalize_task_condition(
+        raw.get(ATTR_CONDITION_ENTITY),
+        raw.get(ATTR_SKIP_IF_STATE),
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
 
@@ -1004,6 +1063,8 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         recurrence=recurrence,
         start_date=start_date,
         end_date=end_date,
+        condition_entity=condition_entity,
+        skip_if_state=skip_if_state,
         enabled=enabled,
         once_started=False,
     )
@@ -1103,6 +1164,24 @@ def _normalize_task_type(value: str | None) -> str:
     if normalized not in TASK_TYPES:
         raise BoilerManagerError(f"Unsupported task type: {value}")
     return normalized
+
+
+def _normalize_task_condition(
+    condition_entity: str | None,
+    skip_if_state: str | None,
+) -> tuple[str | None, str | None]:
+    """Normalize optional skip condition fields."""
+    entity = str(condition_entity or "").strip()
+    state = str(skip_if_state or "").strip()
+
+    if not entity:
+        return None, None
+    if "." not in entity:
+        raise BoilerManagerError(f"Invalid condition entity id: {condition_entity}")
+    if not state:
+        state = "on"
+
+    return entity, state
 
 
 def _normalize_timeline_points(value: list[dict] | None) -> list[BoilerTimelinePoint]:
