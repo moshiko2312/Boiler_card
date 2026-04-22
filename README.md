@@ -21,6 +21,7 @@ Custom boiler control solution for Home Assistant with:
 - Per-task condition in card UI:
   - `Condition Entity` (for example `input_boolean.some_flag`)
   - `Skip If State` (for example `on`)
+  - Smart state suggestions by selected entity domain (for example `light` => `on/off`)
 - Sensor chips shown only when configured in the card
 - Custom display name per sensor in card editor
 - Heat bar can run from real temperature sensor (with threshold colors)
@@ -169,6 +170,7 @@ Import confirmation:
 - Select `Type = Time Window`
 - Set `Start` and `End`
 - Optional: set `Condition Entity` + `Skip If State`
+  - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
 - Select months
 - Set recurrence via 3 buttons (`forever / once / range`)
@@ -182,6 +184,7 @@ Import confirmation:
   - choose time (`HH:MM`)
   - choose timer option from existing options (15m..)
 - Optional: set `Condition Entity` + `Skip If State`
+  - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
 - Select months
 - Set recurrence via 3 buttons (`forever / once / range`)
@@ -236,9 +239,18 @@ Import confirmation:
   - If the condition entity is missing/unavailable, task is not blocked by this condition.
 - Defaults:
   - If `condition_entity` is set and `skip_if_state` is empty, backend defaults `skip_if_state` to `on`.
+- UX:
+  - Card suggests likely values for `skip_if_state` based on selected entity domain.
+  - Current entity state and relevant attribute option lists are included in suggestions when available.
 - Import/Export:
   - Condition fields are included in exported JSON.
   - Condition fields are restored on import (`merge` and `replace`).
+
+### Immediate Activation On Save
+
+- When you create or update a task, integration checks whether the task is already active **right now**.
+- If task is currently inside its allowed window (time/day/month/date and condition passes), boiler turns on immediately.
+- No need to wait for next scheduler tick.
 
 ### Task Order In List
 
