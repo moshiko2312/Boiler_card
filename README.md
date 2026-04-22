@@ -27,6 +27,8 @@ Custom boiler control solution for Home Assistant with:
   - Multiple points per day
   - Each point uses existing timer options (same as timer picker)
   - Overlap behavior: extends until latest end time (max end wins)
+- Tasks list sorted by the **next upcoming event** (chronological order)
+- Scheduler tick every second for near-immediate start/stop transitions
 
 ## Project Structure
 
@@ -102,6 +104,19 @@ Notes:
 
 ## Card Usage Guide
 
+### Quick Daily Flow
+
+1. Open hamburger menu (`☰`)
+2. Choose `Timer` for immediate heat, or `Tasks` for automation
+3. For automation, create a task and set:
+   - Type (`Time Window` / `Timeline`)
+   - Recurrence (`forever` / `once` / `range`)
+   - Days + months filters
+4. Save
+5. Verify in Tasks list:
+   - Task appears as switch entity
+   - List order is by next event (closest first)
+
 ### Timer Mode
 
 - Open hamburger menu (`☰`)
@@ -155,6 +170,12 @@ Notes:
 - In Tasks list click `Delete`
 - Task is removed permanently
 - Task switch entity is removed from entity registry
+
+### Task Order In List
+
+- Tasks window always sorts by the next real execution time
+- The closest upcoming task is first
+- Tasks with no upcoming execution (for now) are pushed lower
 
 ## Sensor Display (Card Only)
 
@@ -248,6 +269,12 @@ data:
   - `timeline_points`, `timeline_label` for timeline tasks
   - `active_now`
 - `active_now` represents the task being active by schedule window/timeline timing
+
+## Timing Accuracy
+
+- Scheduler runs every second (`SCHEDULER_INTERVAL = 1s`)
+- This minimizes delay between planned event time and actual entity `turn_on/turn_off`
+- Minor runtime jitter (system load/network) may still happen, but should be very small
 
 ## Troubleshooting
 

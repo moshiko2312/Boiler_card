@@ -53,7 +53,8 @@ RECURRENCE_OPTIONS = [RECURRENCE_FOREVER, RECURRENCE_ONCE, RECURRENCE_RANGE]
 STORAGE_VERSION = 1
 STORAGE_KEY = f"{DOMAIN}_{{entry_id}}"
 
-SCHEDULER_INTERVAL = timedelta(minutes=1)
+# Run scheduler every second so schedule transitions happen almost immediately.
+SCHEDULER_INTERVAL = timedelta(seconds=1)
 
 MODE_OFF = "off"
 MODE_MANUAL_CONTINUOUS = "manual_continuous"
