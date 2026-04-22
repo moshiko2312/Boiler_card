@@ -314,6 +314,7 @@ class BoilerManager:
         )
 
         await self._async_apply_schedule_state()
+        await self._async_activate_task_immediately_if_active(task_id)
         self._async_notify_state()
         return task
 
@@ -379,6 +380,7 @@ class BoilerManager:
         )
 
         await self._async_apply_schedule_state()
+        await self._async_activate_task_immediately_if_active(task_id)
         self._async_notify_state()
         return task
 
@@ -515,6 +517,7 @@ class BoilerManager:
         )
 
         await self._async_apply_schedule_state()
+        await self._async_activate_task_immediately_if_active(key)
         self._async_notify_state()
         return task
 
@@ -782,6 +785,30 @@ class BoilerManager:
             await self.hass.services.async_call("homeassistant", service, data, blocking=True)
         except Exception as err:  # noqa: BLE001
             _LOGGER.error("Failed to call %s on %s: %s", service, entity_id, err)
+
+    async def _async_activate_task_immediately_if_active(self, task_id: str) -> None:
+        """Turn on boiler immediately when a just-saved task is active right now."""
+        key = str(task_id or "").strip()
+        if not key:
+            return
+
+        task = self._tasks.get(key)
+        if not task or not task.enabled:
+            return
+
+        now = dt_util.now()
+        active_now = self._tasks_active_now(now)
+        active_ids = {item.task_id for item in active_now}
+        if key not in active_ids:
+            return
+
+        self._active_task_ids = active_ids
+
+        if self._manual_continuous or self._manual_until is not None:
+            return
+
+        self._schedule_driven = True
+        await self._async_turn_on_entity()
 
     def _tasks_active_now(self, now: datetime) -> list[BoilerTask]:
         """Return tasks active for provided timestamp."""

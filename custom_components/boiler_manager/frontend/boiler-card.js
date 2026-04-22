@@ -2258,9 +2258,11 @@ class BoilerWaterCard extends HTMLElement {
                     class="schedule-input"
                     id="schedule-condition-state-input"
                     type="text"
+                    list="schedule-condition-state-list"
                     placeholder="on"
                     autocomplete="off"
                   />
+                  <datalist id="schedule-condition-state-list"></datalist>
                 </div>
               </div>
             </div>
@@ -2380,6 +2382,7 @@ class BoilerWaterCard extends HTMLElement {
       scheduleConditionEntityInput: this.shadowRoot.getElementById("schedule-condition-entity-input"),
       scheduleConditionStateInput: this.shadowRoot.getElementById("schedule-condition-state-input"),
       scheduleConditionEntityList: this.shadowRoot.getElementById("schedule-condition-entity-list"),
+      scheduleConditionStateList: this.shadowRoot.getElementById("schedule-condition-state-list"),
       scheduleDays: this.shadowRoot.getElementById("schedule-days"),
       scheduleMonths: this.shadowRoot.getElementById("schedule-months"),
       timelinePoints: this.shadowRoot.getElementById("timeline-points"),
@@ -2422,6 +2425,8 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.scheduleRecurrenceForeverBtn?.addEventListener("click", () => this._setScheduleRecurrence("forever"));
     this._elements.scheduleRecurrenceOnceBtn?.addEventListener("click", () => this._setScheduleRecurrence("once"));
     this._elements.scheduleRecurrenceRangeBtn?.addEventListener("click", () => this._setScheduleRecurrence("range"));
+    this._elements.scheduleConditionEntityInput?.addEventListener("input", () => this._onConditionEntityChanged());
+    this._elements.scheduleConditionEntityInput?.addEventListener("change", () => this._onConditionEntityChanged());
     this._elements.timelinePointAddBtn?.addEventListener("click", () => this._addTimelinePointRow());
     this._elements.scheduleForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -3606,6 +3611,7 @@ class BoilerWaterCard extends HTMLElement {
     this._editingTaskId = null;
     this._resetScheduleForm();
     this._refreshConditionEntityOptions();
+    this._refreshConditionStateOptions("");
     if (this._elements.scheduleModalTitle) {
       this._elements.scheduleModalTitle.textContent = this._t("task_add_title");
     }
@@ -3798,6 +3804,113 @@ class BoilerWaterCard extends HTMLElement {
     });
   }
 
+  _onConditionEntityChanged() {
+    const entityId = String(this._elements.scheduleConditionEntityInput?.value || "").trim();
+    const suggestions = this._conditionStateSuggestionsForEntity(entityId);
+    this._refreshConditionStateOptions(entityId);
+    const stateInput = this._elements.scheduleConditionStateInput;
+    if (!stateInput) {
+      return;
+    }
+
+    const hasEntity = entityId.includes(".");
+    const currentState = String(stateInput.value || "").trim();
+    if (hasEntity && !currentState) {
+      stateInput.value = suggestions[0] || "on";
+    }
+  }
+
+  _refreshConditionStateOptions(entityId = null) {
+    const list = this._elements.scheduleConditionStateList;
+    if (!list) {
+      return;
+    }
+
+    const resolvedEntityId = String(
+      entityId ?? this._elements.scheduleConditionEntityInput?.value ?? ""
+    ).trim();
+    const suggestions = this._conditionStateSuggestionsForEntity(resolvedEntityId);
+
+    list.innerHTML = "";
+    suggestions.forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      list.appendChild(option);
+    });
+  }
+
+  _conditionStateSuggestionsForEntity(entityId) {
+    const normalizedEntityId = String(entityId || "").trim();
+    if (!normalizedEntityId || !normalizedEntityId.includes(".")) {
+      return [];
+    }
+
+    const [domain] = normalizedEntityId.split(".", 1);
+    const normalizedDomain = String(domain || "").toLowerCase();
+    const entity = this._hass?.states?.[normalizedEntityId] || null;
+    const attrs = entity?.attributes || {};
+    const suggestions = [];
+    const seen = new Set();
+    const add = (value) => {
+      const normalizedValue = String(value || "").trim();
+      if (!normalizedValue || seen.has(normalizedValue)) {
+        return;
+      }
+      seen.add(normalizedValue);
+      suggestions.push(normalizedValue);
+    };
+
+    const domainDefaults = {
+      light: ["on", "off"],
+      switch: ["on", "off"],
+      input_boolean: ["on", "off"],
+      binary_sensor: ["on", "off"],
+      fan: ["on", "off"],
+      humidifier: ["on", "off"],
+      timer: ["active", "paused", "idle"],
+      cover: ["open", "closed", "opening", "closing"],
+      lock: ["locked", "unlocked", "locking", "unlocking"],
+      person: ["home", "not_home"],
+      device_tracker: ["home", "not_home"],
+      sun: ["above_horizon", "below_horizon"],
+      media_player: ["on", "off", "playing", "paused", "idle", "standby"],
+      vacuum: ["cleaning", "docked", "idle", "paused", "error", "returning"],
+      climate: ["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"],
+      alarm_control_panel: [
+        "disarmed",
+        "armed_home",
+        "armed_away",
+        "armed_night",
+        "armed_vacation",
+        "arming",
+        "pending",
+        "triggered",
+      ],
+    };
+    (domainDefaults[normalizedDomain] || []).forEach(add);
+
+    add(entity?.state);
+
+    [
+      "options",
+      "hvac_modes",
+      "preset_modes",
+      "fan_modes",
+      "swing_modes",
+      "operation_list",
+      "effect_list",
+      "source_list",
+    ].forEach((attrKey) => {
+      const values = attrs?.[attrKey];
+      if (!Array.isArray(values)) {
+        return;
+      }
+      values.forEach(add);
+    });
+
+    return suggestions;
+  }
+
   _availableTimelineDurationOptions() {
     const durationEntity = this._hass?.states?.[this._config.duration_entity];
     return this._durationOptions(durationEntity)
@@ -3982,6 +4095,7 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleConditionStateInput) {
       this._elements.scheduleConditionStateInput.value = String(attrs.skip_if_state || "").trim();
     }
+    this._refreshConditionStateOptions(String(attrs.condition_entity || "").trim());
 
     this._setSelectedScheduleDays(attrs.days);
     this._setSelectedScheduleMonths(attrs.months);
@@ -4117,6 +4231,7 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleConditionStateInput.value = "";
       this._elements.scheduleConditionStateInput.placeholder = this._t("condition_state_placeholder");
     }
+    this._refreshConditionStateOptions("");
     const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
     dayButtons.forEach((button) => {
       button.classList.add("selected");
