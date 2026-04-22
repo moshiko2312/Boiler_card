@@ -11,10 +11,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BOILER_ENTITY,
-    CONF_CURRENT_SENSOR,
     CONF_NAME,
-    CONF_POWER_SENSOR,
-    CONF_TEMPERATURE_SENSOR,
     DEFAULT_NAME,
     DOMAIN,
 )
@@ -42,15 +39,6 @@ class BoilerManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Required(CONF_BOILER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig()
-                ),
-                vol.Optional(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(CONF_CURRENT_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
                 ),
             }
         )
@@ -82,15 +70,6 @@ class BoilerManagerOptionsFlow(config_entries.OptionsFlow):
                 ),
                 vol.Required(CONF_BOILER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig()
-                ),
-                vol.Optional(CONF_TEMPERATURE_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(CONF_POWER_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(CONF_CURRENT_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
                 ),
             }
         )

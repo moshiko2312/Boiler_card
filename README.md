@@ -5,7 +5,8 @@ Custom boiler control solution for Home Assistant with:
 - Built-in custom integration (`boiler_manager`)
 - Timer control, recurring tasks, and timeline tasks
 - Task entities as real `switch` entities
-- Optional sensor mirror support (temperature / power / current)
+- Optional card sensors (temperature / current / voltage)
+- Mobile-friendly popups (Safari + Chrome)
 
 ## What You Get
 
@@ -13,6 +14,9 @@ Custom boiler control solution for Home Assistant with:
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
 - Create, edit, enable/disable, and delete tasks from card UI
+- Sensor chips shown only when configured in the card
+- Custom display name per sensor in card editor
+- Heat bar can run from real temperature sensor (with threshold colors)
 - Task recurrence options:
   - `forever`
   - `once` (auto-removes after first completed run)
@@ -46,10 +50,9 @@ Add integration:
 
 Configure:
 - Boiler entity (`switch.*` or `light.*`)
-- Optional sensors:
-  - temperature sensor
-  - power sensor
-  - current sensor
+
+Note:
+- Sensors are now configured only in the **card editor UI**, not in integration setup/options.
 
 ### 2) Frontend Card File
 
@@ -83,6 +86,14 @@ service_create_schedule: boiler_manager.create_schedule
 service_create_timeline: boiler_manager.create_timeline
 service_update_schedule: boiler_manager.update_schedule
 service_delete_schedule: boiler_manager.delete_schedule
+
+# Optional card sensors (card-only configuration)
+temperature_sensor: sensor.boiler_temperature
+temperature_sensor_name: טמפרטורת דוד
+current_sensor: sensor.boiler_current
+current_sensor_name: זרם נוכחי
+voltage_sensor: sensor.boiler_voltage
+voltage_sensor_name: מתח קו
 ```
 
 Notes:
@@ -97,7 +108,7 @@ Notes:
 - Choose `Timer`
 - Pick duration option
 - Boiler starts immediately via integration service
-- If a schedule/timeline is currently active, timed buttons are blocked until that active segment ends
+- Timed buttons remain usable even when a task exists (subject to normal entity/service availability)
 
 ### Tasks Mode
 
@@ -144,6 +155,32 @@ Notes:
 - In Tasks list click `Delete`
 - Task is removed permanently
 - Task switch entity is removed from entity registry
+
+## Sensor Display (Card Only)
+
+- Sensor fields are configured in the card editor:
+  - `temperature_sensor`, `current_sensor`, `voltage_sensor`
+  - Optional custom names:
+    - `temperature_sensor_name`
+    - `current_sensor_name`
+    - `voltage_sensor_name`
+- If no sensors are configured, sensor UI is hidden completely.
+- If configured, chips appear below the boiler visual.
+
+## Temperature-Driven Heat Bar
+
+When `temperature_sensor` is configured and has a live numeric state:
+- Heat progress/color is driven by the **real sensor value**
+- Timer-based progress logic is ignored
+
+Color thresholds:
+- Blue: up to `30°C`
+- Yellow: `30–40°C`
+- Orange: `40–50°C`
+- Red: `50°C+`
+
+Fallback:
+- If no valid live temperature is available, card automatically falls back to timer-based heat calculation.
 
 ## Services
 
@@ -216,12 +253,16 @@ data:
 
 - If new UI changes are not visible:
   - Hard refresh browser: `Ctrl/Cmd + Shift + R`
+- On mobile app/webview:
+  - Close and reopen dashboard view after update (to clear frontend cache)
 - If services are missing:
   - Restart Home Assistant
 - If card says missing entities:
   - Verify integration loaded successfully in `Settings -> Devices & Services`
 - If you changed frontend JS manually:
   - Ensure latest file exists at `/config/www/boiler-card/boiler-card.js`
+- If popup buttons are not clickable on mobile:
+  - Make sure you run the latest `boiler-card.js` from this repo (includes Safari/Chrome touch fixes)
 
 ## Legacy Package Mode (Optional)
 

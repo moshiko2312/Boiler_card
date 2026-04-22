@@ -83,6 +83,11 @@ const I18N = {
     timeline_remove_point: "הסר",
     timeline_time: "שעה",
     timeline_timer: "טיימר",
+    upcoming_task_starts_in: "מתחיל בעוד",
+    sensor_temperature: "טמפרטורה",
+    sensor_current: "זרם",
+    sensor_voltage: "מתח",
+    sensor_unavailable: "לא זמין",
     day_mon: "ב׳",
     day_tue: "ג׳",
     day_wed: "ד׳",
@@ -153,6 +158,11 @@ const I18N = {
     timeline_remove_point: "Remove",
     timeline_time: "Time",
     timeline_timer: "Timer",
+    upcoming_task_starts_in: "Starts in",
+    sensor_temperature: "Temperature",
+    sensor_current: "Current",
+    sensor_voltage: "Voltage",
+    sensor_unavailable: "Unavailable",
     day_mon: "Mon",
     day_tue: "Tue",
     day_wed: "Wed",
@@ -223,6 +233,11 @@ const I18N = {
     timeline_remove_point: "Удалить",
     timeline_time: "Время",
     timeline_timer: "Таймер",
+    upcoming_task_starts_in: "Запуск через",
+    sensor_temperature: "Температура",
+    sensor_current: "Ток",
+    sensor_voltage: "Напряжение",
+    sensor_unavailable: "Недоступно",
     day_mon: "Пн",
     day_tue: "Вт",
     day_wed: "Ср",
@@ -238,8 +253,11 @@ const DEFAULT_CONFIG = {
   language: "he",
   boiler_entity: "switch.boiler",
   temperature_sensor: "",
+  temperature_sensor_name: "",
   current_sensor: "",
+  current_sensor_name: "",
   voltage_sensor: "",
+  voltage_sensor_name: "",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "input_select.boiler_duration",
   timer_entity: "timer.boiler_runtime",
@@ -272,6 +290,8 @@ class BoilerWaterCard extends HTMLElement {
     this._ticker = null;
     this._timerPageIndex = 0;
     this._timerPageSize = 6;
+    this._timerGridRenderKey = "";
+    this._tasksListRenderKey = "";
     this._menuMode = "timer";
     this._editingTaskId = null;
     this._offPendingUntil = 0;
@@ -328,6 +348,8 @@ class BoilerWaterCard extends HTMLElement {
 
   _renderShell() {
     window.removeEventListener("keydown", this._handleEscapeKey);
+    this._timerGridRenderKey = "";
+    this._tasksListRenderKey = "";
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -433,21 +455,37 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .boiler-stage-sub {
+          grid-area: stage;
           margin: 0;
           font-size: 0.72rem;
           font-weight: 800;
           color: #ffffff;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
-          display: block;
-          margin-bottom: 2px;
+          justify-self: stretch;
+          align-self: end;
+          margin-bottom: 1px;
           text-align: center;
+        }
+
+        .upcoming-task-notice {
+          margin: 0 0 4px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          border: 1px solid rgba(165, 232, 255, 0.52);
+          background: linear-gradient(165deg, rgba(69, 157, 212, 0.3), rgba(33, 107, 158, 0.26));
+          color: #eef8ff;
+          font-size: 0.72rem;
+          font-weight: 800;
+          text-align: center;
+          text-shadow: 0 1px 1px rgba(8, 28, 48, 0.5);
         }
 
         .boiler-progress-row {
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto auto;
-          grid-template-rows: auto auto;
+          grid-template-rows: auto auto auto;
           grid-template-areas:
+            "stage value menu"
             "track value menu"
             "track label menu";
           align-items: center;
@@ -515,6 +553,26 @@ class BoilerWaterCard extends HTMLElement {
           box-shadow: none;
         }
 
+        .boiler-visual.off.temp-driven .boiler-progress-track {
+          background: linear-gradient(
+            90deg,
+            rgba(245, 248, 252, 0.34),
+            rgba(226, 233, 244, 0.2)
+          );
+          border-color: rgba(196, 210, 228, 0.45);
+        }
+
+        .boiler-visual.off.temp-driven .boiler-progress-fill {
+          width: var(--heat-progress) !important;
+          background: linear-gradient(90deg, var(--heat-secondary), var(--heat-primary));
+          box-shadow: 0 0 8px var(--heat-glow);
+        }
+
+        .boiler-visual.temp-driven .boiler-progress-fill {
+          background: linear-gradient(90deg, var(--heat-secondary), var(--heat-primary));
+          box-shadow: 0 0 8px var(--heat-glow);
+        }
+
         .countdown-label {
           color: var(--boiler-muted);
           font-size: 0.7rem;
@@ -539,6 +597,39 @@ class BoilerWaterCard extends HTMLElement {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 6px;
+        }
+
+        .sensors-row {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 6px;
+        }
+
+        .sensor-pill {
+          border: 1px solid rgba(168, 189, 214, 0.45);
+          border-radius: 10px;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.25), rgba(229, 240, 251, 0.18));
+          padding: 6px 7px;
+          display: grid;
+          gap: 2px;
+          min-height: 38px;
+        }
+
+        .sensor-label {
+          font-size: 0.66rem;
+          font-weight: 700;
+          color: var(--boiler-muted);
+          line-height: 1.1;
+        }
+
+        .sensor-value {
+          font-size: 0.82rem;
+          font-weight: 800;
+          color: var(--boiler-text);
+          line-height: 1.15;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .quick-timer-btn {
@@ -985,6 +1076,8 @@ class BoilerWaterCard extends HTMLElement {
           align-items: center;
           justify-content: center;
           z-index: 1000;
+          isolation: isolate;
+          pointer-events: none;
         }
 
         .timer-modal[hidden] {
@@ -996,6 +1089,8 @@ class BoilerWaterCard extends HTMLElement {
           inset: 0;
           background: rgba(10, 20, 35, 0.5);
           backdrop-filter: blur(2px);
+          z-index: 0;
+          pointer-events: auto;
         }
 
         .timer-modal-panel {
@@ -1011,6 +1106,16 @@ class BoilerWaterCard extends HTMLElement {
           animation: card-enter 180ms ease;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
+          z-index: 1;
+          pointer-events: auto;
+          touch-action: pan-y;
+        }
+
+        .timer-modal button,
+        .timer-modal input,
+        .timer-modal select {
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
         }
 
         .timer-modal-head {
@@ -1079,47 +1184,72 @@ class BoilerWaterCard extends HTMLElement {
         .timer-page-controls {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: 8px;
         }
 
-        .timer-page-btn {
-          border: 1px solid #ced8e6;
-          border-radius: 8px;
-          width: 30px;
-          height: 30px;
-          background: #f4f8fd;
-          color: #2b3f5a;
-          font-size: 1rem;
+        .timer-page-btn,
+        .timer-close-btn {
+          border: 1px solid #9bb5d3;
+          border-radius: 12px;
+          background: linear-gradient(165deg, rgba(244, 248, 253, 0.96), rgba(215, 228, 244, 0.94));
+          color: #243a55;
+          box-shadow:
+            0 4px 10px rgba(13, 27, 47, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.75);
           line-height: 1;
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           padding: 0;
+          font-weight: 900;
+          transition:
+            transform 120ms ease,
+            filter 140ms ease,
+            border-color 140ms ease,
+            box-shadow 140ms ease;
         }
 
-        .timer-page-btn:hover {
-          background: #ebf3fb;
-          border-color: #9ab8db;
+        .timer-page-btn {
+          width: 44px;
+          height: 44px;
+          font-size: 1.35rem;
         }
 
         .timer-page-indicator {
-          min-width: 38px;
+          min-width: 48px;
           text-align: center;
-          font-size: 0.72rem;
+          font-size: 0.96rem;
           color: var(--boiler-muted);
           font-weight: 700;
         }
 
         .timer-close-btn {
-          border: 0;
-          border-radius: 10px;
-          width: 34px;
-          height: 34px;
-          font-size: 1rem;
-          color: var(--primary-text-color, #2f3b4f);
-          background: var(--secondary-background-color, #edf3f8);
-          cursor: pointer;
+          width: 46px;
+          height: 46px;
+          font-size: 1.2rem;
+        }
+
+        .timer-page-btn:hover,
+        .timer-close-btn:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.06);
+          border-color: #86a8cf;
+          box-shadow:
+            0 6px 14px rgba(13, 27, 47, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        }
+
+        .timer-page-btn:active,
+        .timer-close-btn:active {
+          transform: translateY(0);
+          filter: brightness(0.98);
+        }
+
+        .timer-page-btn:focus-visible,
+        .timer-close-btn:focus-visible {
+          outline: 2px solid rgba(165, 232, 255, 0.95);
+          outline-offset: 2px;
         }
 
         .timer-grid {
@@ -1220,6 +1350,10 @@ class BoilerWaterCard extends HTMLElement {
             gap: 6px;
           }
 
+          .sensors-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
           .timer-modal {
             align-items: flex-end;
           }
@@ -1241,6 +1375,28 @@ class BoilerWaterCard extends HTMLElement {
             background: var(--ha-card-background, var(--card-background-color, #ffffff));
             z-index: 1;
             padding-bottom: 6px;
+            flex-wrap: wrap;
+            row-gap: 8px;
+          }
+
+          .timer-modal-title {
+            flex: 1 1 auto;
+          }
+
+          .menu-mode-toggle {
+            flex: 1 1 100%;
+            justify-content: stretch;
+          }
+
+          .menu-mode-btn {
+            flex: 1 1 0;
+            min-width: 0;
+          }
+
+          .timer-modal-actions {
+            width: 100%;
+            margin-inline-start: 0;
+            justify-content: space-between;
           }
 
           .timer-grid {
@@ -1335,13 +1491,34 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-page-btn {
-            width: 32px;
-            height: 32px;
+            width: 44px;
+            height: 44px;
+            font-size: 1.35rem;
+          }
+
+          .timer-close-btn {
+            width: 46px;
+            height: 46px;
+            font-size: 1.2rem;
           }
 
           .quick-timers {
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 5px;
+          }
+
+          .sensors-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 5px;
+          }
+
+          .sensor-pill {
+            min-height: 36px;
+            padding: 5px 6px;
+          }
+
+          .sensor-value {
+            font-size: 0.78rem;
           }
 
           .boiler-icon {
@@ -1434,8 +1611,9 @@ class BoilerWaterCard extends HTMLElement {
             </div>
             <div class="boiler-meta">
               <p class="boiler-stage" id="boiler-stage">Cool Stage</p>
-              <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed</p>
+              <p class="upcoming-task-notice" id="upcoming-task-notice" hidden></p>
               <div class="boiler-progress-row">
+                <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed</p>
                 <div class="boiler-progress-track">
                   <div class="boiler-progress-fill" id="boiler-progress-fill"></div>
                 </div>
@@ -1445,6 +1623,8 @@ class BoilerWaterCard extends HTMLElement {
               </div>
             </div>
           </div>
+
+          <div class="sensors-row" id="sensors-row" hidden></div>
 
           <div class="quick-timers" id="quick-timers">
             <button type="button" class="quick-timer-btn" data-minutes="15">15</button>
@@ -1571,10 +1751,12 @@ class BoilerWaterCard extends HTMLElement {
       boilerVisual: this.shadowRoot.getElementById("boiler-visual"),
       boilerMainImage: this.shadowRoot.getElementById("boiler-main-image"),
       boilerStage: this.shadowRoot.getElementById("boiler-stage"),
+      upcomingTaskNotice: this.shadowRoot.getElementById("upcoming-task-notice"),
       boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
       boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
+      sensorsRow: this.shadowRoot.getElementById("sensors-row"),
       quickTimerBtns: Array.from(this.shadowRoot.querySelectorAll(".quick-timer-btn")),
       quickOffBtn: this.shadowRoot.getElementById("quick-off-btn"),
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
@@ -1790,6 +1972,8 @@ class BoilerWaterCard extends HTMLElement {
     this._syncHeatingVisual(boiler, timer, duration);
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
+    this._syncSensors();
+    this._syncUpcomingTaskNotice();
     this._syncError(boiler, duration, timer, scripts);
     this._syncControls(boiler, duration, timer, scripts);
     this._syncScheduleList();
@@ -1854,6 +2038,18 @@ class BoilerWaterCard extends HTMLElement {
     const start = this._timerPageIndex * this._timerPageSize;
     const end = start + this._timerPageSize;
     const pageOptions = options.slice(start, end);
+    const renderKey = JSON.stringify({
+      lang: this._lang(),
+      page: this._timerPageIndex,
+      selected,
+      options: pageOptions,
+    });
+
+    if (renderKey === this._timerGridRenderKey) {
+      this._syncTimerPagerControls(pageCount);
+      return;
+    }
+    this._timerGridRenderKey = renderKey;
 
     grid.innerHTML = "";
     pageOptions.forEach((option) => {
@@ -1912,6 +2108,96 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.countdownValue.textContent = "--:--";
   }
 
+  _syncSensors() {
+    const row = this._elements.sensorsRow;
+    if (!row || !this._hass) {
+      return;
+    }
+
+    const sensors = this._configuredSensors();
+    if (sensors.length === 0) {
+      row.hidden = true;
+      row.innerHTML = "";
+      return;
+    }
+
+    row.hidden = false;
+    row.innerHTML = "";
+    sensors.forEach(({ label, entityId }) => {
+      const entity = this._hass.states[entityId];
+      const pill = document.createElement("div");
+      pill.className = "sensor-pill";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "sensor-label";
+      labelEl.textContent = label;
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "sensor-value";
+      valueEl.textContent = this._formatSensorValue(entity);
+      valueEl.title = valueEl.textContent;
+
+      pill.appendChild(labelEl);
+      pill.appendChild(valueEl);
+      row.appendChild(pill);
+    });
+  }
+
+  _configuredSensors() {
+    const defs = [
+      {
+        key: "temperature_sensor",
+        nameKey: "temperature_sensor_name",
+        fallbackLabel: this._t("sensor_temperature"),
+      },
+      {
+        key: "current_sensor",
+        nameKey: "current_sensor_name",
+        fallbackLabel: this._t("sensor_current"),
+      },
+      {
+        key: "voltage_sensor",
+        nameKey: "voltage_sensor_name",
+        fallbackLabel: this._t("sensor_voltage"),
+      },
+    ];
+
+    return defs
+      .map(({ key, nameKey, fallbackLabel }) => {
+        const entityId = String(this._config?.[key] || "").trim();
+        const customName = String(this._config?.[nameKey] || "").trim();
+        return { label: customName || fallbackLabel, entityId };
+      })
+      .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
+  }
+
+  _isConfiguredSensorEntity(entityId) {
+    if (!entityId || typeof entityId !== "string") {
+      return false;
+    }
+
+    const normalized = entityId.trim().toLowerCase();
+    if (!normalized || normalized === "none" || normalized === "null" || normalized === "undefined") {
+      return false;
+    }
+
+    return normalized.includes(".");
+  }
+
+  _formatSensorValue(entity) {
+    const rawState = String(entity?.state || "").trim();
+    if (!rawState || rawState === "unknown" || rawState === "unavailable" || rawState === "none") {
+      return this._t("sensor_unavailable");
+    }
+
+    const unit = String(entity?.attributes?.unit_of_measurement || "").trim();
+    if (!unit) {
+      return rawState;
+    }
+
+    return `${rawState} ${unit}`;
+  }
+
   _syncError(boiler, duration, timer, scripts) {
     const missing = [];
     const hasBuiltIn = this._hasBuiltInControlServices();
@@ -1950,9 +2236,6 @@ class BoilerWaterCard extends HTMLElement {
     const canUseScripts = hasCoreEntities && hasOnScripts;
     const canUseBuiltIn = hasBuiltIn && !!boiler;
     const hasDuration = !!duration || hasBuiltIn;
-    const hasActiveTask = this._taskSwitchEntities().some(
-      (entity) => !!entity?.attributes?.active_now
-    );
 
     const timedButtonsDisabled = !hasHass || (!canUseScripts && !canUseBuiltIn);
     const offButtonDisabled = !hasHass || !boiler;
@@ -1964,7 +2247,7 @@ class BoilerWaterCard extends HTMLElement {
         button.disabled = offButtonDisabled;
         return;
       }
-      button.disabled = timedButtonsDisabled || hasActiveTask || !hasOption;
+      button.disabled = timedButtonsDisabled || !hasOption;
     });
     if (this._elements.timerMenuBtn.disabled) {
       this._closeTimerModal();
@@ -1980,6 +2263,7 @@ class BoilerWaterCard extends HTMLElement {
     const boiler = this._hass.states[this._config.boiler_entity];
     const duration = this._hass.states[this._config.duration_entity];
     this._syncCountdown(timer, boiler);
+    this._syncUpcomingTaskNotice();
     this._syncHeatingVisual(boiler, timer, duration);
   }
 
@@ -1991,6 +2275,7 @@ class BoilerWaterCard extends HTMLElement {
     const isOn = this._isEntityOn(boiler);
     const profile = this._heatingProfile(boiler, timer, durationEntity);
     this._elements.boilerVisual.classList.toggle("off", !isOn);
+    this._elements.boilerVisual.classList.toggle("temp-driven", !!profile.isTemperatureDriven);
     this._elements.boilerVisual.style.setProperty("--heat-primary", profile.primaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-secondary", profile.secondaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-glow", profile.glowColor);
@@ -2002,6 +2287,11 @@ class BoilerWaterCard extends HTMLElement {
   _heatingProfile(boiler, timer, durationEntity) {
     const isOn = this._isEntityOn(boiler);
     const timerActive = timer?.state === "active" || timer?.state === "paused";
+    const liveTemp = this._liveTemperatureReading();
+
+    if (liveTemp) {
+      return this._temperatureDrivenProfile(liveTemp);
+    }
 
     if (!isOn) {
       return {
@@ -2011,15 +2301,18 @@ class BoilerWaterCard extends HTMLElement {
         primaryColor: "#c7d0dd",
         secondaryColor: "#dde4ee",
         glowColor: "rgba(0, 0, 0, 0)",
+        isTemperatureDriven: false,
       };
     }
 
     if (!timerActive) {
-      return this._buildHeatingProfile(
+      const profile = this._buildHeatingProfile(
         0.72,
         this._t("stage_continuous"),
         this._t("no_timer_mode")
       );
+      profile.isTemperatureDriven = false;
+      return profile;
     }
 
     const remaining = this._remainingSeconds(timer);
@@ -2028,24 +2321,30 @@ class BoilerWaterCard extends HTMLElement {
     const percent = Math.round(progress * 100);
 
     if (progress < 0.34) {
-      return this._buildHeatingProfile(
+      const profile = this._buildHeatingProfile(
         progress,
         this._t("stage_cool"),
         this._formatWarmedPercent(percent)
       );
+      profile.isTemperatureDriven = false;
+      return profile;
     }
     if (progress < 0.67) {
-      return this._buildHeatingProfile(
+      const profile = this._buildHeatingProfile(
         progress,
         this._t("stage_warm"),
         this._formatWarmedPercent(percent)
       );
+      profile.isTemperatureDriven = false;
+      return profile;
     }
-    return this._buildHeatingProfile(
+    const profile = this._buildHeatingProfile(
       progress,
       this._t("stage_hot"),
       this._formatWarmedPercent(percent)
     );
+    profile.isTemperatureDriven = false;
+    return profile;
   }
 
   _buildHeatingProfile(progress, label, subLabel) {
@@ -2061,7 +2360,183 @@ class BoilerWaterCard extends HTMLElement {
       primaryColor: primary,
       secondaryColor: secondary,
       glowColor: glow,
+      isTemperatureDriven: false,
     };
+  }
+
+  _temperatureDrivenProfile(liveTemp) {
+    const band = this._temperatureColorBand(liveTemp.celsiusValue);
+    return {
+      progress: this._clamp(liveTemp.progress, 0, 1),
+      label: band.label,
+      subLabel: liveTemp.displayLabel,
+      primaryColor: band.primaryColor,
+      secondaryColor: band.secondaryColor,
+      glowColor: band.glowColor,
+      isTemperatureDriven: true,
+    };
+  }
+
+  _temperatureColorBand(celsiusValue) {
+    if (celsiusValue <= 30) {
+      const primary = "#2b7fff";
+      return {
+        label: this._t("stage_cool"),
+        primaryColor: primary,
+        secondaryColor: this._mixColors(primary, "#e2f4ff", 0.35),
+        glowColor: this._hexToRgba(primary, 0.33),
+      };
+    }
+
+    if (celsiusValue <= 40) {
+      const primary = "#f3d34f";
+      return {
+        label: this._t("stage_warm"),
+        primaryColor: primary,
+        secondaryColor: this._mixColors(primary, "#fff6cf", 0.35),
+        glowColor: this._hexToRgba(primary, 0.33),
+      };
+    }
+
+    if (celsiusValue < 50) {
+      const primary = "#f97316";
+      return {
+        label: this._t("stage_hot"),
+        primaryColor: primary,
+        secondaryColor: this._mixColors(primary, "#ffe2c7", 0.35),
+        glowColor: this._hexToRgba(primary, 0.33),
+      };
+    }
+
+    const primary = "#dc2626";
+    return {
+      label: this._t("stage_hot"),
+      primaryColor: primary,
+      secondaryColor: this._mixColors(primary, "#ffd7d7", 0.35),
+      glowColor: this._hexToRgba(primary, 0.33),
+    };
+  }
+
+  _liveTemperatureReading() {
+    if (!this._hass) {
+      return null;
+    }
+
+    const sensorEntityId = String(this._config?.temperature_sensor || "").trim();
+    if (!this._isConfiguredSensorEntity(sensorEntityId)) {
+      return null;
+    }
+
+    const sensor = this._hass.states[sensorEntityId];
+    const parsed = this._parseNumericEntityState(sensor);
+    if (!parsed) {
+      return null;
+    }
+
+    const celsiusValue = this._toCelsius(parsed.value, parsed.unit);
+    if (!Number.isFinite(celsiusValue)) {
+      return null;
+    }
+
+    const minCelsius = this._temperatureScaleMinC(sensor);
+    const maxCelsius = this._temperatureScaleMaxC(sensor, minCelsius);
+    const progress = this._clamp((celsiusValue - minCelsius) / (maxCelsius - minCelsius), 0, 1);
+
+    return {
+      progress,
+      celsiusValue,
+      displayLabel: this._formatTemperatureDisplay(parsed.rawState, parsed.unit, celsiusValue),
+    };
+  }
+
+  _parseNumericEntityState(entity) {
+    const rawState = String(entity?.state || "").trim();
+    if (!rawState) {
+      return null;
+    }
+
+    const normalized = rawState.toLowerCase();
+    if (normalized === "unknown" || normalized === "unavailable" || normalized === "none") {
+      return null;
+    }
+
+    const value = Number.parseFloat(rawState.replace(",", "."));
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+
+    const unit = String(entity?.attributes?.unit_of_measurement || "").trim();
+    return { rawState, value, unit };
+  }
+
+  _temperatureScaleMinC(sensorEntity) {
+    const rawMin = this._firstFiniteNumber([
+      sensorEntity?.attributes?.min_temp,
+      sensorEntity?.attributes?.min_temperature,
+      sensorEntity?.attributes?.min,
+      25,
+    ]);
+    return this._toCelsius(rawMin, sensorEntity?.attributes?.unit_of_measurement);
+  }
+
+  _temperatureScaleMaxC(sensorEntity, minCelsius) {
+    const rawMax = this._firstFiniteNumber([
+      sensorEntity?.attributes?.max_temp,
+      sensorEntity?.attributes?.max_temperature,
+      sensorEntity?.attributes?.max,
+      70,
+    ]);
+    const maxCelsius = this._toCelsius(rawMax, sensorEntity?.attributes?.unit_of_measurement);
+    if (!Number.isFinite(maxCelsius) || maxCelsius <= minCelsius + 0.5) {
+      return minCelsius + 0.5;
+    }
+    return maxCelsius;
+  }
+
+  _firstFiniteNumber(values) {
+    for (const value of values) {
+      const num = Number.parseFloat(String(value).replace(",", "."));
+      if (Number.isFinite(num)) {
+        return num;
+      }
+    }
+    return 0;
+  }
+
+  _toCelsius(value, unit) {
+    const temp = Number.parseFloat(String(value).replace(",", "."));
+    if (!Number.isFinite(temp)) {
+      return NaN;
+    }
+
+    const normalizedUnit = String(unit || "").trim().toLowerCase();
+    if (normalizedUnit === "k" || normalizedUnit.includes("kelvin")) {
+      return temp - 273.15;
+    }
+    if (
+      normalizedUnit === "f"
+      || normalizedUnit === "°f"
+      || normalizedUnit.includes("fahrenheit")
+      || normalizedUnit.includes("°f")
+    ) {
+      return (temp - 32) * (5 / 9);
+    }
+    return temp;
+  }
+
+  _formatTemperatureDisplay(rawState, unit, celsiusValue) {
+    const cleanRaw = String(rawState || "").trim();
+    const cleanUnit = String(unit || "").trim();
+    if (cleanRaw && cleanUnit) {
+      return `${cleanRaw} ${cleanUnit}`;
+    }
+    if (cleanRaw) {
+      return cleanRaw;
+    }
+    if (Number.isFinite(celsiusValue)) {
+      return `${Math.round(celsiusValue * 10) / 10} °C`;
+    }
+    return this._t("sensor_unavailable");
   }
 
   _timerTotalSeconds(timer, durationEntity) {
@@ -2511,7 +2986,7 @@ class BoilerWaterCard extends HTMLElement {
         ? days
             .map((day) => Number.parseInt(day, 10))
             .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
-        : [0, 1, 2, 3, 4]
+        : [0, 1, 2, 3, 4, 5, 6]
     );
     const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
     dayButtons.forEach((button) => {
@@ -2672,8 +3147,8 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleEndDateInput.value = "";
     }
     const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
-    dayButtons.forEach((button, index) => {
-      button.classList.toggle("selected", index >= 0 && index <= 4);
+    dayButtons.forEach((button) => {
+      button.classList.add("selected");
     });
     const monthButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-month"));
     monthButtons.forEach((button) => button.classList.add("selected"));
@@ -2792,6 +3267,179 @@ class BoilerWaterCard extends HTMLElement {
     return entities;
   }
 
+  _syncUpcomingTaskNotice() {
+    const notice = this._elements.upcomingTaskNotice;
+    if (!notice) {
+      return;
+    }
+
+    const upcoming = this._nextUpcomingTask(300);
+    if (!upcoming) {
+      notice.hidden = true;
+      notice.textContent = "";
+      return;
+    }
+
+    const label = upcoming.name || this._t("tasks_title");
+    notice.textContent = `${label} • ${this._t("upcoming_task_starts_in")} ${this._formatSeconds(upcoming.secondsLeft)}`;
+    notice.hidden = false;
+  }
+
+  _nextUpcomingTask(withinSeconds = 300) {
+    const nowTs = Date.now();
+    const maxSeconds = Math.max(0, Number.parseInt(withinSeconds, 10) || 0);
+    let nearest = null;
+
+    this._taskSwitchEntities().forEach((taskState) => {
+      const enabled = String(taskState?.state || "").toLowerCase() === "on";
+      if (!enabled) {
+        return;
+      }
+      const attrs = taskState?.attributes || {};
+      if (this._asTruthy(attrs.active_now)) {
+        return;
+      }
+
+      const startTs = this._nextTaskStartTimestamp(attrs, nowTs);
+      if (startTs === null) {
+        return;
+      }
+      const secondsLeft = Math.ceil((startTs - nowTs) / 1000);
+      if (secondsLeft < 0 || secondsLeft > maxSeconds) {
+        return;
+      }
+
+      if (!nearest || secondsLeft < nearest.secondsLeft) {
+        nearest = {
+          secondsLeft,
+          name: String(attrs.task_name || attrs.friendly_name || attrs.task_id || "").trim(),
+        };
+      }
+    });
+
+    return nearest;
+  }
+
+  _nextTaskStartTimestamp(attrs, nowTs) {
+    const startMinutes = this._taskStartMinutes(attrs);
+    if (startMinutes.length === 0) {
+      return null;
+    }
+
+    const now = new Date(nowTs);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let nearest = null;
+    [today, tomorrow].forEach((dayDate) => {
+      if (!this._taskMatchesDate(attrs, dayDate)) {
+        return;
+      }
+      startMinutes.forEach((minutes) => {
+        const candidate = new Date(dayDate);
+        candidate.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+        const ts = candidate.getTime();
+        if (ts < nowTs) {
+          return;
+        }
+        if (nearest === null || ts < nearest) {
+          nearest = ts;
+        }
+      });
+    });
+
+    return nearest;
+  }
+
+  _taskStartMinutes(attrs) {
+    const taskType = String(attrs?.task_type || "window").toLowerCase();
+    if (taskType === "timeline" && Array.isArray(attrs?.timeline_points)) {
+      return attrs.timeline_points
+        .map((point) => this._timeToMinutes(point?.at))
+        .filter((value) => value !== null);
+    }
+
+    const single = this._timeToMinutes(attrs?.start_time);
+    return single === null ? [] : [single];
+  }
+
+  _timeToMinutes(value) {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return null;
+    }
+    const hh = Number.parseInt(match[1], 10);
+    const mm = Number.parseInt(match[2], 10);
+    if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+      return null;
+    }
+    return (hh * 60) + mm;
+  }
+
+  _taskMatchesDate(attrs, dateObj) {
+    const weekday = (dateObj.getDay() + 6) % 7;
+    const month = dateObj.getMonth() + 1;
+    const days = Array.isArray(attrs?.days)
+      ? attrs.days.map((item) => Number.parseInt(item, 10)).filter((item) => Number.isInteger(item) && item >= 0 && item <= 6)
+      : [0, 1, 2, 3, 4, 5, 6];
+    const months = Array.isArray(attrs?.months)
+      ? attrs.months.map((item) => Number.parseInt(item, 10)).filter((item) => Number.isInteger(item) && item >= 1 && item <= 12)
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    if (!days.includes(weekday) || !months.includes(month)) {
+      return false;
+    }
+
+    const recurrence = String(attrs?.recurrence || "forever").toLowerCase();
+    const key = this._dateToKey(dateObj);
+    const startDate = this._validDateKey(attrs?.start_date);
+    const endDate = this._validDateKey(attrs?.end_date);
+
+    if (recurrence === "once") {
+      if (startDate && key < startDate) {
+        return false;
+      }
+      if (endDate && key > endDate) {
+        return false;
+      }
+      return true;
+    }
+
+    if (startDate && key < startDate) {
+      return false;
+    }
+    if (endDate && key > endDate) {
+      return false;
+    }
+    return true;
+  }
+
+  _validDateKey(value) {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const normalized = value.trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : null;
+  }
+
+  _dateToKey(dateObj) {
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const dd = String(dateObj.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  _asTruthy(value) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["1", "true", "yes", "on", "active"].includes(normalized);
+  }
+
   _syncScheduleList() {
     const list = this._elements.tasksList;
     if (!list) {
@@ -2799,6 +3447,25 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const tasks = this._taskSwitchEntities();
+    const renderKey = JSON.stringify({
+      lang: this._lang(),
+      tasks: tasks.map((taskState) => ({
+        entity_id: taskState.entity_id,
+        state: taskState.state,
+        task_id: taskState.attributes?.task_id || "",
+        task_name: taskState.attributes?.task_name || "",
+        start_time: taskState.attributes?.start_time || "",
+        end_time: taskState.attributes?.end_time || "",
+        task_type: taskState.attributes?.task_type || "",
+        timeline_label: taskState.attributes?.timeline_label || "",
+        days: Array.isArray(taskState.attributes?.days) ? taskState.attributes.days : [],
+      })),
+    });
+    if (renderKey === this._tasksListRenderKey) {
+      return;
+    }
+    this._tasksListRenderKey = renderKey;
+
     list.innerHTML = "";
 
     if (tasks.length === 0) {
@@ -3348,14 +4015,29 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { entity: { domain: "sensor" } },
       },
       {
+        name: "temperature_sensor_name",
+        label: labels.temperature_sensor_name,
+        selector: { text: {} },
+      },
+      {
         name: "current_sensor",
         label: labels.current_sensor,
         selector: { entity: { domain: "sensor" } },
       },
       {
+        name: "current_sensor_name",
+        label: labels.current_sensor_name,
+        selector: { text: {} },
+      },
+      {
         name: "voltage_sensor",
         label: labels.voltage_sensor,
         selector: { entity: { domain: "sensor" } },
+      },
+      {
+        name: "voltage_sensor_name",
+        label: labels.voltage_sensor_name,
+        selector: { text: {} },
       },
       {
         name: "boiler_flow_image",
@@ -3389,8 +4071,11 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "כותרת",
         boiler_entity: "ישות דוד",
         temperature_sensor: "סנסור טמפרטורה",
+        temperature_sensor_name: "שם תצוגה לסנסור טמפרטורה",
         current_sensor: "סנסור זרם",
+        current_sensor_name: "שם תצוגה לסנסור זרם",
         voltage_sensor: "סנסור מתח",
+        voltage_sensor_name: "שם תצוגה לסנסור מתח",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
       },
       en: {
@@ -3398,8 +4083,11 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Title",
         boiler_entity: "Boiler Entity",
         temperature_sensor: "Temperature Sensor",
+        temperature_sensor_name: "Temperature Sensor Display Name",
         current_sensor: "Current Sensor",
+        current_sensor_name: "Current Sensor Display Name",
         voltage_sensor: "Voltage Sensor",
+        voltage_sensor_name: "Voltage Sensor Display Name",
         boiler_flow_image: "Water Flow Image (path / URL)",
       },
       ru: {
@@ -3407,8 +4095,11 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Заголовок",
         boiler_entity: "Сущность бойлера",
         temperature_sensor: "Датчик температуры",
+        temperature_sensor_name: "Отображаемое имя датчика температуры",
         current_sensor: "Датчик тока",
+        current_sensor_name: "Отображаемое имя датчика тока",
         voltage_sensor: "Датчик напряжения",
+        voltage_sensor_name: "Отображаемое имя датчика напряжения",
         boiler_flow_image: "Изображение потока (путь / URL)",
       },
     };
