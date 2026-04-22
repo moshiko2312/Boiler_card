@@ -738,6 +738,8 @@ class BoilerWaterCard extends HTMLElement {
           background: linear-gradient(165deg, #3f4a5d, #374255);
           display: grid;
           gap: 8px;
+          min-width: 0;
+          overflow-x: hidden;
         }
 
         .tasks-head {
@@ -781,6 +783,8 @@ class BoilerWaterCard extends HTMLElement {
         .tasks-list {
           display: grid;
           gap: 6px;
+          min-width: 0;
+          overflow-x: hidden;
         }
 
         .task-item {
@@ -792,6 +796,7 @@ class BoilerWaterCard extends HTMLElement {
           gap: 6px;
           align-items: center;
           background: linear-gradient(165deg, #586377, #4d586b);
+          min-width: 0;
         }
 
         .task-main {
@@ -821,6 +826,9 @@ class BoilerWaterCard extends HTMLElement {
           display: inline-flex;
           align-items: center;
           gap: 6px;
+          max-width: 100%;
+          flex-wrap: wrap;
+          justify-content: flex-end;
         }
 
         .task-toggle-btn,
@@ -878,11 +886,15 @@ class BoilerWaterCard extends HTMLElement {
         .schedule-form {
           display: grid;
           gap: 10px;
+          min-width: 0;
+          padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+          box-sizing: border-box;
         }
 
         .schedule-field {
           display: grid;
           gap: 4px;
+          min-width: 0;
         }
 
         .schedule-label {
@@ -919,12 +931,14 @@ class BoilerWaterCard extends HTMLElement {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 6px;
+          min-width: 0;
         }
 
         .schedule-recurrence-toggle {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 6px;
+          min-width: 0;
         }
 
         .schedule-type-btn {
@@ -950,6 +964,7 @@ class BoilerWaterCard extends HTMLElement {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 6px;
+          min-width: 0;
         }
 
         .schedule-section-btn {
@@ -978,6 +993,7 @@ class BoilerWaterCard extends HTMLElement {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 8px;
+          min-width: 0;
         }
 
         .schedule-window-fields[hidden],
@@ -993,13 +1009,23 @@ class BoilerWaterCard extends HTMLElement {
         .timeline-points {
           display: grid;
           gap: 7px;
+          min-width: 0;
         }
 
         .timeline-point-row {
           display: grid;
-          grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(86px, 96px);
           gap: 6px;
           align-items: center;
+          min-width: 0;
+        }
+
+        .timeline-point-time,
+        .timeline-point-duration,
+        .timeline-point-remove {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
         }
 
         .timeline-point-remove {
@@ -1088,6 +1114,7 @@ class BoilerWaterCard extends HTMLElement {
           );
           padding-top: 10px;
           padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+          box-sizing: border-box;
         }
 
         .schedule-action-btn {
@@ -1164,6 +1191,7 @@ class BoilerWaterCard extends HTMLElement {
           width: min(560px, calc(100vw - 28px));
           max-height: min(80dvh, 620px);
           overflow: auto;
+          overflow-x: hidden;
           border-radius: 18px;
           border: 1px solid rgba(80, 108, 140, 0.25);
           background: var(--ha-card-background, var(--card-background-color, #ffffff));
@@ -1175,10 +1203,12 @@ class BoilerWaterCard extends HTMLElement {
           z-index: 1;
           pointer-events: auto;
           touch-action: pan-y;
+          box-sizing: border-box;
         }
 
         #schedule-modal-panel {
           width: min(500px, calc(100vw - 34px));
+          overflow-x: hidden;
         }
 
         .timer-modal button,
@@ -1531,12 +1561,22 @@ class BoilerWaterCard extends HTMLElement {
             flex-direction: row;
             justify-content: center;
             gap: 10px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
           }
 
           .schedule-action-btn {
             width: min(48%, 220px);
             min-height: 50px;
             font-size: 0.95rem;
+          }
+
+          .task-item {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+          }
+
+          .task-actions {
+            justify-content: flex-start;
           }
         }
 
@@ -1569,10 +1609,60 @@ class BoilerWaterCard extends HTMLElement {
 
           .timeline-point-row {
             grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
           }
 
           .timeline-point-remove {
             grid-column: auto;
+            width: 100%;
+          }
+
+          #schedule-modal-panel {
+            width: calc(100vw - 10px);
+            max-height: min(90dvh, 860px);
+            padding: 12px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+          }
+
+          .schedule-section-switch {
+            gap: 5px;
+          }
+
+          .schedule-section-btn {
+            min-height: 38px;
+            font-size: 0.78rem;
+            padding: 5px 6px;
+          }
+
+          .schedule-recurrence-toggle {
+            gap: 5px;
+          }
+
+          .schedule-type-btn {
+            min-height: 42px;
+            font-size: 0.84rem;
+            padding: 6px 8px;
+          }
+
+          .schedule-days,
+          .schedule-months {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+          }
+
+          .schedule-form {
+            padding-bottom: calc(98px + env(safe-area-inset-bottom, 0px));
+          }
+
+          .schedule-modal-actions {
+            gap: 8px;
+          }
+
+          .schedule-action-btn {
+            width: min(49%, 180px);
+            min-width: 0;
+            min-height: 52px;
+            font-size: 0.92rem;
+            padding: 8px 10px;
           }
 
           .timer-page-btn {
@@ -2119,6 +2209,7 @@ class BoilerWaterCard extends HTMLElement {
     const timerActive = timerEntity?.state === "active" || timerEntity?.state === "paused";
     const pendingOff = this._offPendingUntil > Date.now();
     const offSelected = pendingOff || (!isBoilerOn && !timerActive);
+    const noTimerSelected = this._isNoTimerOption(selected);
     const allowSelectedState = this._isEntityOn(boilerEntity)
       || timerEntity?.state === "active"
       || timerEntity?.state === "paused";
@@ -2132,7 +2223,10 @@ class BoilerWaterCard extends HTMLElement {
       const minutes = Number.parseInt(button.dataset.minutes || "", 10);
       const option = this._optionByMinutes(minutes, options);
       button.dataset.option = option || "";
-      button.classList.toggle("selected", !offSelected && allowSelectedState && !!option && option === selected);
+      button.classList.toggle(
+        "selected",
+        !offSelected && !noTimerSelected && allowSelectedState && !!option && option === selected
+      );
     });
   }
 
