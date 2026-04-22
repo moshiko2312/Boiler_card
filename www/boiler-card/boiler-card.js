@@ -53,6 +53,14 @@ const I18N = {
     hours_short: "ש׳",
     tasks_title: "משימות",
     tasks_add: "הוספה",
+    tasks_import: "ייבוא",
+    tasks_export: "ייצוא",
+    import_mode_merge: "מיזוג",
+    import_mode_replace: "החלפה",
+    import_replace_confirm: "לייבא במצב החלפה? זה ימחק את כל המשימות הקיימות לפני הייבוא.",
+    import_invalid_file: "קובץ ייבוא לא תקין",
+    dialog_title: "אישור פעולה",
+    dialog_ok: "אישור",
     tasks_empty: "אין משימות",
     task_name: "שם משימה",
     task_start: "התחלה",
@@ -128,6 +136,14 @@ const I18N = {
     hours_short: "h",
     tasks_title: "Tasks",
     tasks_add: "Add",
+    tasks_import: "Import",
+    tasks_export: "Export",
+    import_mode_merge: "Merge",
+    import_mode_replace: "Replace",
+    import_replace_confirm: "Import in replace mode? This will remove all existing tasks before import.",
+    import_invalid_file: "Invalid import file",
+    dialog_title: "Confirm Action",
+    dialog_ok: "OK",
     tasks_empty: "No tasks yet",
     task_name: "Task Name",
     task_start: "Start",
@@ -203,6 +219,14 @@ const I18N = {
     hours_short: "ч",
     tasks_title: "Задачи",
     tasks_add: "Добавить",
+    tasks_import: "Импорт",
+    tasks_export: "Экспорт",
+    import_mode_merge: "Слияние",
+    import_mode_replace: "Замена",
+    import_replace_confirm: "Импорт в режиме замены? Все текущие задачи будут удалены перед импортом.",
+    import_invalid_file: "Некорректный файл импорта",
+    dialog_title: "Подтверждение",
+    dialog_ok: "ОК",
     tasks_empty: "Задач пока нет",
     task_name: "Название задачи",
     task_start: "Начало",
@@ -272,6 +296,8 @@ const DEFAULT_CONFIG = {
   service_create_timeline: "boiler_manager.create_timeline",
   service_update_schedule: "boiler_manager.update_schedule",
   service_delete_schedule: "boiler_manager.delete_schedule",
+  service_import_tasks: "boiler_manager.import_tasks",
+  service_export_tasks: "boiler_manager.export_tasks",
   turn_on_action: "homeassistant.turn_on",
   turn_off_action: "homeassistant.turn_off",
   turn_on_data: {},
@@ -293,6 +319,8 @@ class BoilerWaterCard extends HTMLElement {
     this._timerGridRenderKey = "";
     this._tasksListRenderKey = "";
     this._menuMode = "timer";
+    this._importMode = "merge";
+    this._confirmResolver = null;
     this._schedulePanel = "recurrence";
     this._editingTaskId = null;
     this._offPendingUntil = 0;
@@ -300,6 +328,7 @@ class BoilerWaterCard extends HTMLElement {
       if (event.key === "Escape") {
         this._closeTimerModal();
         this._closeScheduleModal();
+        this._closeConfirmModal(false);
       }
     };
   }
@@ -315,6 +344,7 @@ class BoilerWaterCard extends HTMLElement {
       window.clearInterval(this._ticker);
       this._ticker = null;
     }
+    this._resolveConfirmDialog(false);
     window.removeEventListener("keydown", this._handleEscapeKey);
   }
 
@@ -763,6 +793,7 @@ class BoilerWaterCard extends HTMLElement {
           align-items: center;
           justify-content: space-between;
           gap: 8px;
+          flex-wrap: wrap;
         }
 
         .tasks-title {
@@ -770,6 +801,50 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.84rem;
           font-weight: 700;
           color: #edf4ff;
+        }
+
+        .tasks-head-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .tasks-import-mode {
+          display: inline-grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 4px;
+          padding: 3px;
+          border-radius: 10px;
+          border: 1px solid rgba(152, 175, 201, 0.45);
+          background: linear-gradient(165deg, rgba(217, 228, 241, 0.22), rgba(151, 171, 196, 0.16));
+        }
+
+        .tasks-mode-btn {
+          border: 1px solid rgba(148, 170, 198, 0.78);
+          border-radius: 8px;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(234, 242, 251, 0.92));
+          color: #1e3957;
+          font-size: 0.73rem;
+          font-weight: 800;
+          min-height: 30px;
+          padding: 4px 8px;
+          cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(28, 53, 82, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .tasks-mode-btn.active {
+          border-color: rgba(245, 175, 52, 0.98);
+          background: linear-gradient(165deg, #f7c56a, #dd8e12);
+          color: #3d2400;
+          text-shadow: 0 1px 0 rgba(255, 238, 201, 0.55);
+          box-shadow:
+            0 3px 10px rgba(181, 111, 11, 0.32),
+            0 0 0 1px rgba(255, 205, 112, 0.4),
+            inset 0 1px 0 rgba(255, 247, 224, 0.6);
         }
 
         .tasks-add-btn {
@@ -787,11 +862,30 @@ class BoilerWaterCard extends HTMLElement {
             inset 0 1px 0 rgba(255, 255, 255, 0.28);
         }
 
+        .tasks-import-btn,
+        .tasks-export-btn {
+          border: 1px solid rgba(148, 170, 198, 0.78);
+          border-radius: 10px;
+          background: linear-gradient(165deg, rgba(250, 253, 255, 0.96), rgba(233, 242, 251, 0.92));
+          color: #15334f;
+          font-size: 0.78rem;
+          font-weight: 800;
+          min-height: 34px;
+          padding: 6px 11px;
+          cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(28, 53, 82, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
         .tasks-add-btn:hover {
           filter: brightness(1.05);
         }
 
-        .tasks-add-btn[disabled] {
+        .tasks-add-btn[disabled],
+        .tasks-import-btn[disabled],
+        .tasks-export-btn[disabled],
+        .tasks-mode-btn[disabled] {
           opacity: 0.55;
           cursor: not-allowed;
         }
@@ -888,7 +982,10 @@ class BoilerWaterCard extends HTMLElement {
         .task-toggle-btn:focus-visible,
         .task-edit-btn:focus-visible,
         .task-delete-btn:focus-visible,
-        .tasks-add-btn:focus-visible {
+        .tasks-add-btn:focus-visible,
+        .tasks-import-btn:focus-visible,
+        .tasks-export-btn:focus-visible,
+        .tasks-mode-btn:focus-visible {
           outline: 2px solid rgba(170, 225, 255, 0.95);
           outline-offset: 2px;
         }
@@ -1438,6 +1535,76 @@ class BoilerWaterCard extends HTMLElement {
           margin-inline-end: auto;
         }
 
+        .confirm-modal-panel {
+          position: relative;
+          z-index: 1;
+          pointer-events: auto;
+          width: min(460px, calc(100vw - 24px));
+          max-height: min(78dvh, 420px);
+          overflow: auto;
+          border-radius: 18px;
+          border: 1px solid rgba(80, 108, 140, 0.3);
+          background: linear-gradient(165deg, #4c5a71, #3f4d62);
+          box-shadow:
+            0 26px 60px rgba(14, 27, 51, 0.42),
+            inset 0 1px 0 rgba(255, 255, 255, 0.12);
+          color: #eef5ff;
+          padding: 16px;
+          animation: card-enter 180ms ease;
+        }
+
+        .confirm-modal-title {
+          margin: 0 0 8px;
+          font-size: 1rem;
+          font-weight: 800;
+          color: #ffffff;
+        }
+
+        .confirm-modal-message {
+          margin: 0;
+          font-size: 0.95rem;
+          line-height: 1.5;
+          color: #e4eeff;
+          white-space: pre-wrap;
+        }
+
+        .confirm-modal-actions {
+          margin-top: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .confirm-action-btn {
+          border: 1px solid rgba(148, 170, 198, 0.78);
+          border-radius: 12px;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.96), rgba(233, 242, 251, 0.92));
+          color: #163553;
+          font-size: 0.9rem;
+          font-weight: 800;
+          min-height: 42px;
+          min-width: 112px;
+          padding: 8px 14px;
+          cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(28, 53, 82, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .confirm-action-btn.primary {
+          border-color: rgba(122, 183, 230, 0.95);
+          background: linear-gradient(165deg, #63b7ec, #3f93cc);
+          color: #f7fbff;
+          text-shadow: 0 1px 1px rgba(14, 45, 70, 0.35);
+        }
+
+        .confirm-action-btn:focus-visible {
+          outline: 2px solid rgba(170, 225, 255, 0.95);
+          outline-offset: 2px;
+        }
+
         @media (max-width: 760px) {
           .boiler-visual {
             grid-template-columns: minmax(92px, 26vw) minmax(0, 1fr);
@@ -1485,6 +1652,11 @@ class BoilerWaterCard extends HTMLElement {
             padding: 6px;
           }
 
+          #confirm-modal {
+            align-items: center;
+            padding: 10px;
+          }
+
           .timer-modal-panel {
             width: calc(100vw - 12px);
             max-height: min(88dvh, 760px);
@@ -1502,6 +1674,10 @@ class BoilerWaterCard extends HTMLElement {
 
           #schedule-modal-panel {
             width: calc(100vw - 12px);
+          }
+
+          .confirm-modal-panel {
+            width: min(460px, calc(100vw - 20px));
           }
 
           .timer-modal-head {
@@ -1618,6 +1794,42 @@ class BoilerWaterCard extends HTMLElement {
           .task-actions {
             justify-content: flex-start;
           }
+
+          .tasks-head {
+            align-items: flex-start;
+          }
+
+          .tasks-head-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+            justify-content: stretch;
+            align-items: stretch;
+            gap: 6px;
+          }
+
+          .tasks-import-mode {
+            width: 100%;
+            grid-column: 1 / -1;
+          }
+
+          .tasks-mode-btn {
+            min-height: 40px;
+            font-size: 0.82rem;
+          }
+
+          .tasks-import-btn,
+          .tasks-export-btn,
+          .tasks-add-btn {
+            min-height: 42px;
+            font-size: 0.82rem;
+            width: 100%;
+            padding: 6px 10px;
+          }
+
+          .tasks-head-actions .tasks-add-btn {
+            grid-column: 1 / -1;
+          }
         }
 
         @media (max-width: 520px) {
@@ -1663,6 +1875,23 @@ class BoilerWaterCard extends HTMLElement {
             padding: 12px 10px calc(14px + env(safe-area-inset-bottom, 0px));
           }
 
+          .confirm-modal-panel {
+            width: calc(100vw - 16px);
+            max-width: 420px;
+            padding: 14px 12px;
+            border-radius: 16px;
+          }
+
+          .confirm-modal-actions {
+            justify-content: center;
+          }
+
+          .confirm-action-btn {
+            min-width: min(46vw, 170px);
+            min-height: 44px;
+            font-size: 0.92rem;
+          }
+
           .schedule-section-switch {
             gap: 5px;
           }
@@ -1703,6 +1932,18 @@ class BoilerWaterCard extends HTMLElement {
             min-height: 52px;
             font-size: 0.92rem;
             padding: 8px 10px;
+          }
+
+          .tasks-head-actions {
+            gap: 5px;
+          }
+
+          .tasks-import-btn,
+          .tasks-export-btn,
+          .tasks-add-btn {
+            padding: 5px 8px;
+            min-height: 44px;
+            font-size: 0.84rem;
           }
 
           .timer-page-btn {
@@ -1893,8 +2134,17 @@ class BoilerWaterCard extends HTMLElement {
             <div class="tasks-card">
               <div class="tasks-head">
                 <p class="tasks-title" id="tasks-title">Tasks</p>
-                <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
+                <div class="tasks-head-actions">
+                  <div class="tasks-import-mode" id="tasks-import-mode">
+                    <button type="button" class="tasks-mode-btn" id="tasks-mode-merge-btn" data-import-mode="merge">Merge</button>
+                    <button type="button" class="tasks-mode-btn" id="tasks-mode-replace-btn" data-import-mode="replace">Replace</button>
+                  </div>
+                  <button type="button" class="tasks-import-btn" id="tasks-import-btn">Import</button>
+                  <button type="button" class="tasks-export-btn" id="tasks-export-btn">Export</button>
+                  <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
+                </div>
               </div>
+              <input type="file" id="tasks-import-file" accept="application/json,.json" hidden />
               <div class="tasks-list" id="tasks-list"></div>
             </div>
           </div>
@@ -1985,6 +2235,18 @@ class BoilerWaterCard extends HTMLElement {
           </form>
         </div>
       </div>
+
+      <div class="timer-modal" id="confirm-modal" hidden>
+        <div class="timer-modal-backdrop" id="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-panel" id="confirm-modal-panel" role="dialog" aria-modal="true" aria-label="Confirm">
+          <h3 class="confirm-modal-title" id="confirm-modal-title">Confirm</h3>
+          <p class="confirm-modal-message" id="confirm-modal-message"></p>
+          <div class="confirm-modal-actions">
+            <button type="button" class="confirm-action-btn" id="confirm-cancel-btn">Cancel</button>
+            <button type="button" class="confirm-action-btn primary" id="confirm-ok-btn">OK</button>
+          </div>
+        </div>
+      </div>
     `;
 
     this._elements = {
@@ -2003,6 +2265,12 @@ class BoilerWaterCard extends HTMLElement {
       quickOffBtn: this.shadowRoot.getElementById("quick-off-btn"),
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
+      tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
+      tasksExportBtn: this.shadowRoot.getElementById("tasks-export-btn"),
+      tasksImportMode: this.shadowRoot.getElementById("tasks-import-mode"),
+      tasksModeMergeBtn: this.shadowRoot.getElementById("tasks-mode-merge-btn"),
+      tasksModeReplaceBtn: this.shadowRoot.getElementById("tasks-mode-replace-btn"),
+      tasksImportFile: this.shadowRoot.getElementById("tasks-import-file"),
       tasksList: this.shadowRoot.getElementById("tasks-list"),
       timerMenuBtn: this.shadowRoot.getElementById("timer-menu-btn"),
       error: this.shadowRoot.getElementById("error"),
@@ -2065,6 +2333,13 @@ class BoilerWaterCard extends HTMLElement {
       timelinePointAddBtn: this.shadowRoot.getElementById("timeline-point-add-btn"),
       scheduleCancelBtn: this.shadowRoot.getElementById("schedule-cancel-btn"),
       scheduleSaveBtn: this.shadowRoot.getElementById("schedule-save-btn"),
+      confirmModal: this.shadowRoot.getElementById("confirm-modal"),
+      confirmModalBackdrop: this.shadowRoot.getElementById("confirm-modal-backdrop"),
+      confirmModalPanel: this.shadowRoot.getElementById("confirm-modal-panel"),
+      confirmModalTitle: this.shadowRoot.getElementById("confirm-modal-title"),
+      confirmModalMessage: this.shadowRoot.getElementById("confirm-modal-message"),
+      confirmCancelBtn: this.shadowRoot.getElementById("confirm-cancel-btn"),
+      confirmOkBtn: this.shadowRoot.getElementById("confirm-ok-btn"),
     };
 
     this._elements.timerMenuBtn.addEventListener("click", () => this._openTimerModal());
@@ -2075,9 +2350,17 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.modalModeTimerBtn?.addEventListener("click", () => this._setMenuMode("timer"));
     this._elements.modalModeTasksBtn?.addEventListener("click", () => this._setMenuMode("tasks"));
     this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
+    this._elements.tasksImportBtn?.addEventListener("click", () => this._openImportTasksFilePicker());
+    this._elements.tasksExportBtn?.addEventListener("click", () => this._exportTasksFromCard());
+    this._elements.tasksModeMergeBtn?.addEventListener("click", () => this._setImportMode("merge"));
+    this._elements.tasksModeReplaceBtn?.addEventListener("click", () => this._setImportMode("replace"));
+    this._elements.tasksImportFile?.addEventListener("change", (event) => this._handleImportTasksFile(event));
     this._elements.scheduleCloseBtn.addEventListener("click", () => this._closeScheduleModal());
     this._elements.scheduleCancelBtn.addEventListener("click", () => this._closeScheduleModal());
     this._elements.scheduleModalBackdrop.addEventListener("click", () => this._closeScheduleModal());
+    this._elements.confirmModalBackdrop?.addEventListener("click", () => this._closeConfirmModal(false));
+    this._elements.confirmCancelBtn?.addEventListener("click", () => this._closeConfirmModal(false));
+    this._elements.confirmOkBtn?.addEventListener("click", () => this._closeConfirmModal(true));
     this._elements.scheduleTypeWindowBtn?.addEventListener("click", () => this._setScheduleType("window"));
     this._elements.scheduleTypeTimelineBtn?.addEventListener("click", () => this._setScheduleType("timeline"));
     this._elements.schedulePanelRecurrenceBtn?.addEventListener("click", () => this._setSchedulePanel("recurrence"));
@@ -2098,6 +2381,7 @@ class BoilerWaterCard extends HTMLElement {
     this._renderScheduleMonthButtons();
     this._resetTimelinePoints();
     this._setSchedulePanel(this._schedulePanel);
+    this._setImportMode(this._importMode);
     this._setMenuMode(this._menuMode);
   }
 
@@ -2142,6 +2426,35 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.tasksAddBtn.textContent = this._t("tasks_add");
       this._elements.tasksAddBtn.disabled = !this._hasAnyTaskCreateService();
     }
+    if (this._elements.tasksImportBtn) {
+      this._elements.tasksImportBtn.textContent = this._t("tasks_import");
+      this._elements.tasksImportBtn.disabled = !this._hasTaskImportService();
+    }
+    if (this._elements.tasksExportBtn) {
+      this._elements.tasksExportBtn.textContent = this._t("tasks_export");
+      this._elements.tasksExportBtn.disabled = this._taskSwitchEntities().length === 0;
+    }
+    if (this._elements.tasksModeMergeBtn) {
+      this._elements.tasksModeMergeBtn.textContent = this._t("import_mode_merge");
+      this._elements.tasksModeMergeBtn.disabled = !this._hasTaskImportService();
+    }
+    if (this._elements.tasksModeReplaceBtn) {
+      this._elements.tasksModeReplaceBtn.textContent = this._t("import_mode_replace");
+      this._elements.tasksModeReplaceBtn.disabled = !this._hasTaskImportService();
+    }
+    if (this._elements.confirmModalPanel) {
+      this._elements.confirmModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
+    }
+    if (this._elements.confirmModalTitle) {
+      this._elements.confirmModalTitle.textContent = this._t("dialog_title");
+    }
+    if (this._elements.confirmCancelBtn) {
+      this._elements.confirmCancelBtn.textContent = this._t("task_cancel");
+    }
+    if (this._elements.confirmOkBtn) {
+      this._elements.confirmOkBtn.textContent = this._t("dialog_ok");
+    }
+    this._setImportMode(this._importMode);
     if (this._elements.modalModeTimerBtn) {
       this._elements.modalModeTimerBtn.textContent = this._t("menu_timers");
     }
@@ -2950,6 +3263,211 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
+  _setImportMode(mode) {
+    const normalized = String(mode || "").toLowerCase() === "replace" ? "replace" : "merge";
+    this._importMode = normalized;
+
+    if (this._elements.tasksModeMergeBtn) {
+      const active = normalized === "merge";
+      this._elements.tasksModeMergeBtn.classList.toggle("active", active);
+      this._elements.tasksModeMergeBtn.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+    if (this._elements.tasksModeReplaceBtn) {
+      const active = normalized === "replace";
+      this._elements.tasksModeReplaceBtn.classList.toggle("active", active);
+      this._elements.tasksModeReplaceBtn.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+  }
+
+  _openImportTasksFilePicker() {
+    if (!this._hasTaskImportService()) {
+      return;
+    }
+    const input = this._elements.tasksImportFile;
+    if (!input) {
+      return;
+    }
+    input.value = "";
+    // Mobile Safari/Chrome: showPicker is more reliable when available.
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+        return;
+      }
+    } catch (_error) {
+      // Fallback to click when showPicker is unsupported or blocked.
+    }
+    input.click();
+  }
+
+  async _handleImportTasksFile(event) {
+    const input = event?.target;
+    const file = input?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const tasks = Array.isArray(parsed)
+        ? parsed
+        : (Array.isArray(parsed?.tasks) ? parsed.tasks : null);
+
+      if (!Array.isArray(tasks)) {
+        await this._showInfoModal(this._t("import_invalid_file"));
+        return;
+      }
+
+      if (this._importMode === "replace") {
+        const approved = await this._openConfirmModal(this._t("import_replace_confirm"));
+        if (!approved) {
+          return;
+        }
+      }
+
+      this._callConfiguredService(this._config.service_import_tasks, {
+        ...this._builtInServiceBaseData(),
+        mode: this._importMode,
+        tasks,
+      });
+    } catch (_error) {
+      await this._showInfoModal(this._t("import_invalid_file"));
+    }
+  }
+
+  _exportTasksFromCard() {
+    const tasks = this._taskSwitchEntities()
+      .map((taskState) => this._taskStateToExportTask(taskState))
+      .filter((task) => !!task);
+    if (tasks.length === 0) {
+      return;
+    }
+
+    const payload = {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      source: "boiler-water-card",
+      tasks,
+    };
+
+    const jsonText = JSON.stringify(payload, null, 2);
+    const blob = new Blob([jsonText], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `boiler_tasks_${stamp}.json`;
+    document.body.appendChild(link);
+    try {
+      link.click();
+    } catch (_error) {
+      // iOS fallback: open blob URL in a new tab if direct download is blocked.
+      window.open(url, "_blank", "noopener");
+    }
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  _taskStateToExportTask(taskState) {
+    const attrs = taskState?.attributes || {};
+    const taskType = String(attrs.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
+    const name = String(attrs.task_name || attrs.friendly_name || "").trim();
+    if (!name) {
+      return null;
+    }
+
+    const days = this._normalizedDaysForExport(attrs.days);
+    const months = this._normalizedMonthsForExport(attrs.months);
+    const recurrence = this._normalizedRecurrenceForExport(attrs.recurrence);
+    const enabled = String(taskState.state || "").toLowerCase() === "on";
+
+    const base = {
+      name,
+      task_type: taskType,
+      days,
+      months,
+      recurrence,
+      ...(attrs.start_date ? { start_date: String(attrs.start_date).trim() } : {}),
+      ...(attrs.end_date ? { end_date: String(attrs.end_date).trim() } : {}),
+      enabled,
+    };
+
+    if (taskType === "timeline") {
+      const timelinePoints = Array.isArray(attrs.timeline_points)
+        ? attrs.timeline_points
+            .map((point) => {
+              const at = String(point?.at || "").trim();
+              const durationOption = String(point?.duration_option || "").trim();
+              const durationMinutes = Number.parseInt(point?.duration_minutes, 10);
+              if (!at || (!durationOption && !Number.isInteger(durationMinutes))) {
+                return null;
+              }
+              const minutes = Number.isInteger(durationMinutes) && durationMinutes > 0
+                ? durationMinutes
+                : this._optionToMinutes(durationOption);
+              if (!minutes || minutes <= 0) {
+                return null;
+              }
+              return {
+                at,
+                duration_option: durationOption || `${minutes}m`,
+                duration_minutes: minutes,
+              };
+            })
+            .filter((point) => !!point)
+        : [];
+
+      if (timelinePoints.length > 0) {
+        return {
+          ...base,
+          timeline_points: timelinePoints,
+        };
+      }
+    }
+
+    const startTime = String(attrs.start_time || "").trim();
+    const endTime = String(attrs.end_time || "").trim();
+    if (!startTime || !endTime) {
+      return null;
+    }
+
+    return {
+      ...base,
+      start_time: startTime,
+      end_time: endTime,
+    };
+  }
+
+  _normalizedDaysForExport(days) {
+    if (!Array.isArray(days)) {
+      return [0, 1, 2, 3, 4, 5, 6];
+    }
+    const normalized = days
+      .map((item) => Number.parseInt(item, 10))
+      .filter((item) => Number.isInteger(item) && item >= 0 && item <= 6);
+    return normalized.length > 0 ? [...new Set(normalized)].sort((a, b) => a - b) : [0, 1, 2, 3, 4, 5, 6];
+  }
+
+  _normalizedMonthsForExport(months) {
+    if (!Array.isArray(months)) {
+      return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+    const normalized = months
+      .map((item) => Number.parseInt(item, 10))
+      .filter((item) => Number.isInteger(item) && item >= 1 && item <= 12);
+    return normalized.length > 0 ? [...new Set(normalized)].sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  }
+
+  _normalizedRecurrenceForExport(value) {
+    const normalized = String(value || "forever").trim().toLowerCase();
+    if (normalized === "once" || normalized === "range") {
+      return normalized;
+    }
+    return "forever";
+  }
+
   _changeTimerPage(direction) {
     const duration = this._hass?.states[this._config.duration_entity];
     const options = this._durationOptions(duration);
@@ -3039,10 +3557,62 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
+  _openConfirmModal(message, { title = null, okOnly = false } = {}) {
+    if (!this._elements.confirmModal) {
+      return Promise.resolve(false);
+    }
+
+    this._resolveConfirmDialog(false);
+    this._elements.confirmModal.hidden = false;
+
+    if (this._elements.confirmModalTitle) {
+      this._elements.confirmModalTitle.textContent = title || this._t("dialog_title");
+    }
+    if (this._elements.confirmModalMessage) {
+      this._elements.confirmModalMessage.textContent = String(message || "");
+    }
+    if (this._elements.confirmCancelBtn) {
+      this._elements.confirmCancelBtn.hidden = !!okOnly;
+    }
+    if (this._elements.confirmOkBtn) {
+      this._elements.confirmOkBtn.focus({ preventScroll: true });
+    }
+
+    this._attachEscapeListener();
+    return new Promise((resolve) => {
+      this._confirmResolver = resolve;
+    });
+  }
+
+  _resolveConfirmDialog(result) {
+    if (typeof this._confirmResolver !== "function") {
+      return;
+    }
+    const resolver = this._confirmResolver;
+    this._confirmResolver = null;
+    resolver(!!result);
+  }
+
+  async _showInfoModal(message) {
+    await this._openConfirmModal(message, { okOnly: true });
+  }
+
+  _closeConfirmModal(result = false) {
+    if (!this._elements.confirmModal) {
+      return;
+    }
+    this._elements.confirmModal.hidden = true;
+    this._resolveConfirmDialog(result);
+    if (!this._isAnyModalOpen()) {
+      window.removeEventListener("keydown", this._handleEscapeKey);
+    }
+  }
+
   _isAnyModalOpen() {
     return !!(
       (this._elements.timerModal && !this._elements.timerModal.hidden)
       || (this._elements.scheduleModal && !this._elements.scheduleModal.hidden)
+      || (this._elements.confirmModal && !this._elements.confirmModal.hidden)
     );
   }
 
@@ -4011,6 +4581,10 @@ class BoilerWaterCard extends HTMLElement {
 
   _hasScheduleDeleteService() {
     return this._isServiceAvailable(this._config.service_delete_schedule);
+  }
+
+  _hasTaskImportService() {
+    return this._isServiceAvailable(this._config.service_import_tasks);
   }
 
   _isServiceRef(value) {

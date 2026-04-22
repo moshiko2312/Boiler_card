@@ -235,3 +235,58 @@ delete_schedule:
       description: Schedule task identifier to remove.
       example: "a1b2c3d4e5"
       required: true
+
+export_tasks:
+  name: Export Tasks
+  description: Export all tasks to a JSON backup file (portable payload without entity IDs).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    file_path:
+      name: File Path
+      description: Optional absolute or relative path under /config. If omitted, defaults to /config/boiler_manager_backups/...
+      example: "/config/boiler_manager_backups/tasks_backup.json"
+
+import_tasks:
+  name: Import Tasks
+  description: Import tasks from JSON with merge or replace mode.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    mode:
+      name: Mode
+      description: merge adds imported tasks to existing ones, replace clears existing tasks before import.
+      example: "merge"
+      selector:
+        select:
+          options:
+            - "merge"
+            - "replace"
+    file_path:
+      name: File Path
+      description: Path to JSON backup under /config.
+      example: "/config/boiler_manager_backups/tasks_backup.json"
+    tasks:
+      name: Tasks
+      description: Optional direct list payload instead of file_path.
+      example:
+        - name: "Morning Heat"
+          task_type: "window"
+          start_time: "10:00"
+          end_time: "12:00"
+          days: [0, 1, 2, 3, 4]
+          months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+          recurrence: "forever"
+          enabled: true

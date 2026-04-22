@@ -7,6 +7,7 @@ Custom boiler control solution for Home Assistant with:
 - Task entities as real `switch` entities
 - Optional card sensors (temperature / current / voltage)
 - Mobile-friendly popups (Safari + Chrome)
+- In-card task backup/restore (Import/Export)
 
 ## What You Get
 
@@ -14,6 +15,8 @@ Custom boiler control solution for Home Assistant with:
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
 - Create, edit, enable/disable, and delete tasks from card UI
+- Import/Export tasks directly from Tasks view in hamburger popup
+  - Import mode buttons: `merge` / `replace`
 - Sensor chips shown only when configured in the card
 - Custom display name per sensor in card editor
 - Heat bar can run from real temperature sensor (with threshold colors)
@@ -61,18 +64,24 @@ Note:
 On integration startup, card assets are auto-copied to:
 - `/config/www/boiler-card/boiler-card.js`
 
-Important:
-- This copy step does **not** modify Lovelace Resources list.
-- It only updates files inside `/config/www/boiler-card`.
+### 3) Lovelace Resource Registration (Automatic + Safe)
 
-### 3) Add Lovelace Resource (once)
+On integration startup, Boiler Manager also tries to auto-register this resource:
+- `/local/boiler-card/boiler-card.js` (`module`)
 
-`Settings -> Dashboards -> Resources -> Add Resource`
+Behavior:
+- Adds the card resource only if missing
+- Updates only this card resource entry if needed
+- Does **not** remove or overwrite unrelated existing resources
 
-- URL: `/local/boiler-card/boiler-card.js?v=1`
+Notes:
+- Works with Lovelace Storage mode (`.storage/lovelace_resources`)
+- If your dashboard/resources are YAML-managed, add resource manually
+
+Manual fallback (if auto registration is blocked/fails):
+- `Settings -> Dashboards -> Resources -> Add Resource`
+- URL: `/local/boiler-card/boiler-card.js`
 - Type: `JavaScript Module`
-
-If already exists, do not add again.
 
 ### 4) Add Card
 
@@ -88,6 +97,8 @@ service_create_schedule: boiler_manager.create_schedule
 service_create_timeline: boiler_manager.create_timeline
 service_update_schedule: boiler_manager.update_schedule
 service_delete_schedule: boiler_manager.delete_schedule
+service_import_tasks: boiler_manager.import_tasks
+service_export_tasks: boiler_manager.export_tasks
 
 # Optional card sensors (card-only configuration)
 temperature_sensor: sensor.boiler_temperature
@@ -130,6 +141,19 @@ Notes:
 - Open hamburger menu (`☰`)
 - Choose `Tasks`
 - Click `Add`
+
+### Import / Export (From Card UI)
+
+- Open hamburger menu (`☰`) -> `Tasks`
+- Use mode buttons:
+  - `merge` = add imported tasks to existing tasks
+  - `replace` = remove existing tasks first, then import
+- Click `Import` and pick a `.json` file
+- Click `Export` to download a backup JSON
+
+Import confirmation:
+- `replace` mode shows in-card confirmation popup before execution
+- Popup is custom-styled like the card and centered on desktop/mobile
 
 #### Task Type: Time Window
 
@@ -217,6 +241,37 @@ Fallback:
 - `boiler_manager.create_timeline`
 - `boiler_manager.update_schedule`
 - `boiler_manager.delete_schedule`
+- `boiler_manager.export_tasks`
+- `boiler_manager.import_tasks`
+
+### export_tasks example
+
+```yaml
+service: boiler_manager.export_tasks
+data:
+  boiler_entity: switch.boiler
+  file_path: /config/boiler_manager_backups/tasks_backup.json
+```
+
+### import_tasks example (merge)
+
+```yaml
+service: boiler_manager.import_tasks
+data:
+  boiler_entity: switch.boiler
+  file_path: /config/boiler_manager_backups/tasks_backup.json
+  mode: merge
+```
+
+### import_tasks example (replace)
+
+```yaml
+service: boiler_manager.import_tasks
+data:
+  boiler_entity: switch.boiler
+  file_path: /config/boiler_manager_backups/tasks_backup.json
+  mode: replace
+```
 
 ### create_timeline example
 

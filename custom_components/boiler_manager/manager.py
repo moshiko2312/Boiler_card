@@ -47,6 +47,9 @@ from .const import (
     MODE_MANUAL_TIMED,
     MODE_OFF,
     MODE_SCHEDULE,
+    IMPORT_MODE_MERGE,
+    IMPORT_MODE_REPLACE,
+    IMPORT_MODES,
     RECURRENCE_FOREVER,
     RECURRENCE_ONCE,
     RECURRENCE_OPTIONS,
@@ -483,6 +486,73 @@ class BoilerManager:
         """Return one task by id."""
         return self._tasks.get(task_id)
 
+    def export_tasks_payload(self) -> dict:
+        """Return tasks payload for backup/export."""
+        return {
+            "version": 1,
+            "tasks": [_task_to_export_dict(task) for task in self.tasks],
+        }
+
+    async def async_import_tasks(
+        self,
+        raw_tasks: list[dict],
+        *,
+        mode: str = IMPORT_MODE_MERGE,
+    ) -> dict[str, int]:
+        """Import tasks from payload with merge/replace mode."""
+        normalized_mode = str(mode or IMPORT_MODE_MERGE).strip().lower()
+        if normalized_mode not in IMPORT_MODES:
+            raise BoilerManagerError(
+                f"Unsupported import mode: {mode}. Expected one of: {', '.join(IMPORT_MODES)}"
+            )
+
+        if not isinstance(raw_tasks, list):
+            raise BoilerManagerError("Import payload must include a tasks list")
+
+        imported_tasks: list[BoilerTask] = []
+        for index, raw in enumerate(raw_tasks, start=1):
+            try:
+                task = _task_from_import_raw(raw)
+            except BoilerManagerError as err:
+                raise BoilerManagerError(f"Invalid imported task #{index}: {err}") from err
+            imported_tasks.append(task)
+
+        removed_ids: list[str] = []
+        if normalized_mode == IMPORT_MODE_REPLACE:
+            removed_ids = list(self._tasks.keys())
+            for task_id in removed_ids:
+                self._async_remove_task_switch_entity(task_id)
+            self._tasks.clear()
+            self._active_task_ids.clear()
+            self._snoozed_task_until.clear()
+
+        for task in imported_tasks:
+            self._tasks[task.task_id] = task
+
+        await self._async_save()
+
+        for task_id in removed_ids:
+            async_dispatcher_send(
+                self.hass,
+                signal_tasks_updated(self.entry.entry_id),
+                {"action": "remove", ATTR_TASK_ID: task_id},
+            )
+
+        for task in imported_tasks:
+            async_dispatcher_send(
+                self.hass,
+                signal_tasks_updated(self.entry.entry_id),
+                {"action": "add", ATTR_TASK_ID: task.task_id},
+            )
+
+        await self._async_apply_schedule_state()
+        self._async_notify_state()
+        return {
+            "imported": len(imported_tasks),
+            "removed": len(removed_ids),
+            "total": len(self._tasks),
+        }
+
     async def async_turn_on_continuous(self) -> None:
         """Turn on boiler and keep it running until explicit off."""
         self._manual_continuous = True
@@ -816,6 +886,83 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         end_date=end_date,
         enabled=enabled,
         once_started=once_started,
+    )
+
+
+def _task_to_export_dict(task: BoilerTask) -> dict:
+    """Convert runtime task to portable export payload."""
+    return {
+        ATTR_TASK_NAME: task.name,
+        ATTR_TASK_TYPE: task.task_type,
+        ATTR_START_TIME: task.start_time,
+        ATTR_END_TIME: task.end_time,
+        ATTR_TIMELINE_POINTS: [point.as_dict() for point in task.timeline_points],
+        ATTR_DAYS: list(task.days),
+        ATTR_MONTHS: list(task.months),
+        ATTR_RECURRENCE: task.recurrence,
+        ATTR_START_DATE: task.start_date,
+        ATTR_END_DATE: task.end_date,
+        ATTR_ENABLED: bool(task.enabled),
+    }
+
+
+def _task_from_import_raw(raw: dict) -> BoilerTask:
+    """Parse one task object from import payload (without task_id/entity ids)."""
+    if not isinstance(raw, dict):
+        raise BoilerManagerError("Task payload must be an object")
+
+    name = str(raw.get(ATTR_TASK_NAME) or "").strip()
+    if not name:
+        raise BoilerManagerError("Task name is required")
+
+    task_type = _normalize_task_type(raw.get(ATTR_TASK_TYPE))
+    recurrence = _normalize_recurrence(raw.get(ATTR_RECURRENCE))
+    days = _normalize_days(raw.get(ATTR_DAYS))
+    months = _normalize_months(raw.get(ATTR_MONTHS))
+    start_date, end_date = _normalize_date_bounds(
+        raw.get(ATTR_START_DATE),
+        raw.get(ATTR_END_DATE),
+        recurrence,
+    )
+    enabled = bool(raw.get(ATTR_ENABLED, True))
+
+    if task_type == TASK_TYPE_TIMELINE:
+        raw_points = raw.get(ATTR_TIMELINE_POINTS)
+        if raw_points in (None, []):
+            start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
+            end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+            minutes = max(1, _minutes_between(start_time, end_time))
+            timeline_points = _normalize_timeline_points(
+                [
+                    {
+                        ATTR_POINT_TIME: start_time,
+                        ATTR_DURATION_OPTION: _minutes_to_option_label(minutes),
+                        ATTR_DURATION_MINUTES: minutes,
+                    }
+                ]
+            )
+        else:
+            timeline_points = _normalize_timeline_points(raw_points)
+        start_time, end_time = _timeline_time_bounds(timeline_points)
+    else:
+        timeline_points = []
+        start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
+        end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+
+    return BoilerTask(
+        task_id=uuid.uuid4().hex[:10],
+        name=name,
+        start_time=start_time,
+        end_time=end_time,
+        task_type=task_type,
+        timeline_points=timeline_points,
+        days=days,
+        months=months,
+        recurrence=recurrence,
+        start_date=start_date,
+        end_date=end_date,
+        enabled=enabled,
+        once_started=False,
     )
 
 

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import logging
+from datetime import datetime, timezone
+from uuid import uuid4
 
 import voluptuous as vol
 
@@ -23,21 +26,28 @@ from .const import (
     ATTR_DURATION_OPTION,
     ATTR_ENTRY_ID,
     ATTR_MINUTES,
+    ATTR_MODE,
     ATTR_MONTHS,
     ATTR_POINT_TIME,
+    ATTR_FILE_PATH,
     ATTR_RECURRENCE,
     ATTR_START_TIME,
     ATTR_START_DATE,
     ATTR_TASK_ID,
+    ATTR_TASKS,
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
     ATTR_TIMELINE_POINTS,
     CONF_BOILER_ENTITY,
     DOMAIN,
+    IMPORT_MODE_MERGE,
+    IMPORT_MODES,
     RECURRENCE_OPTIONS,
     SERVICE_CREATE_TIMELINE,
     SERVICE_CREATE_SCHEDULE,
     SERVICE_DELETE_SCHEDULE,
+    SERVICE_EXPORT_TASKS,
+    SERVICE_IMPORT_TASKS,
     SERVICE_RUN_TIMED,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON_CONTINUOUS,
@@ -52,6 +62,9 @@ PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.SENSOR]
 
 DATA_MANAGERS = "managers"
 DATA_SERVICES_REGISTERED = "services_registered"
+
+FRONTEND_RESOURCE_URL = "/local/boiler-card/boiler-card.js"
+FRONTEND_RESOURCE_TYPE = "module"
 
 BASE_SERVICE_SCHEMA = {
     vol.Optional(ATTR_ENTRY_ID): cv.string,
@@ -130,6 +143,24 @@ DELETE_SCHEDULE_SCHEMA = vol.Schema(
     {
         **BASE_SERVICE_SCHEMA,
         vol.Required(ATTR_TASK_ID): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+EXPORT_TASKS_SCHEMA = vol.Schema(
+    {
+        **BASE_SERVICE_SCHEMA,
+        vol.Optional(ATTR_FILE_PATH): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+IMPORT_TASKS_SCHEMA = vol.Schema(
+    {
+        **BASE_SERVICE_SCHEMA,
+        vol.Optional(ATTR_FILE_PATH): cv.string,
+        vol.Optional(ATTR_TASKS): list,
+        vol.Optional(ATTR_MODE, default=IMPORT_MODE_MERGE): vol.In(IMPORT_MODES),
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -259,6 +290,55 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         if not removed:
             raise ServiceValidationError(f"Task not found: {call.data[ATTR_TASK_ID]}")
 
+    async def _export_tasks(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        payload = manager.export_tasks_payload()
+        target_path = _resolve_backup_file_path(
+            hass,
+            call.data.get(ATTR_FILE_PATH),
+            default_name=f"boiler_manager_tasks_{manager.entry.entry_id}_{_utc_timestamp()}.json",
+        )
+        await hass.async_add_executor_job(_write_json_file, target_path, payload)
+        _LOGGER.info("Exported %s tasks to %s", len(payload.get("tasks", [])), target_path)
+
+    async def _import_tasks(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        mode = call.data.get(ATTR_MODE, IMPORT_MODE_MERGE)
+
+        tasks_payload = call.data.get(ATTR_TASKS)
+        file_path = call.data.get(ATTR_FILE_PATH)
+        if tasks_payload is None and not file_path:
+            raise ServiceValidationError(
+                f"Provide either '{ATTR_TASKS}' or '{ATTR_FILE_PATH}' for import"
+            )
+        if tasks_payload is not None and file_path:
+            raise ServiceValidationError(
+                f"Provide only one source: '{ATTR_TASKS}' or '{ATTR_FILE_PATH}'"
+            )
+
+        if file_path:
+            source_path = _resolve_backup_file_path(hass, file_path)
+            raw_payload = await hass.async_add_executor_job(_read_json_file, source_path)
+            if isinstance(raw_payload, dict):
+                tasks_payload = raw_payload.get(ATTR_TASKS, [])
+            elif isinstance(raw_payload, list):
+                tasks_payload = raw_payload
+            else:
+                raise ServiceValidationError("Imported file must contain a JSON object or list")
+
+        if not isinstance(tasks_payload, list):
+            raise ServiceValidationError(f"'{ATTR_TASKS}' must be a list of task objects")
+
+        result = await manager.async_import_tasks(tasks_payload, mode=mode)
+        _LOGGER.info(
+            "Imported tasks for entry %s (mode=%s, imported=%s, removed=%s, total=%s)",
+            manager.entry.entry_id,
+            mode,
+            result["imported"],
+            result["removed"],
+            result["total"],
+        )
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_TURN_ON_CONTINUOUS,
@@ -301,6 +381,18 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         _wrap_service_errors(_delete_schedule),
         schema=DELETE_SCHEDULE_SCHEMA,
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_EXPORT_TASKS,
+        _wrap_service_errors(_export_tasks),
+        schema=EXPORT_TASKS_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_IMPORT_TASKS,
+        _wrap_service_errors(_import_tasks),
+        schema=IMPORT_TASKS_SCHEMA,
+    )
 
     hass.data[DOMAIN][DATA_SERVICES_REGISTERED] = True
 
@@ -316,6 +408,8 @@ def _async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_CREATE_TIMELINE,
         SERVICE_UPDATE_SCHEDULE,
         SERVICE_DELETE_SCHEDULE,
+        SERVICE_EXPORT_TASKS,
+        SERVICE_IMPORT_TASKS,
     ):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)
@@ -380,6 +474,26 @@ async def _async_install_frontend_card(hass: HomeAssistant) -> None:
         _LOGGER.debug("Boiler frontend assets synced to %s (%d changed)", target_dir, copied)
     except OSError as err:
         _LOGGER.error("Failed to install boiler frontend assets into www: %s", err)
+        return
+
+    try:
+        resources_path = Path(hass.config.path(".storage", "lovelace_resources"))
+        resource_changed = await hass.async_add_executor_job(
+            _ensure_lovelace_resource_entry,
+            resources_path,
+            FRONTEND_RESOURCE_URL,
+            FRONTEND_RESOURCE_TYPE,
+        )
+        if resource_changed:
+            _LOGGER.info("Added Lovelace resource automatically: %s", FRONTEND_RESOURCE_URL)
+            await _async_reload_lovelace_resources(hass)
+    except (OSError, ValueError, TypeError) as err:
+        _LOGGER.warning(
+            "Failed to update Lovelace resources automatically (%s). "
+            "You can add %s manually in Dashboard resources.",
+            err,
+            FRONTEND_RESOURCE_URL,
+        )
 
 
 def _copy_frontend_assets(source_dir: Path, target_dir: Path) -> int:
@@ -401,3 +515,156 @@ def _copy_frontend_assets(source_dir: Path, target_dir: Path) -> int:
         changed += 1
 
     return changed
+
+
+async def _async_reload_lovelace_resources(hass: HomeAssistant) -> None:
+    """Reload Lovelace resources so the new card URL is picked up immediately."""
+    if not hass.services.has_service("lovelace", "reload_resources"):
+        return
+
+    try:
+        await hass.services.async_call("lovelace", "reload_resources", {}, blocking=True)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Lovelace resources reload failed: %s", err)
+
+
+def _ensure_lovelace_resource_entry(
+    storage_path: Path,
+    resource_url: str,
+    resource_type: str,
+) -> bool:
+    """Ensure a single Lovelace resource entry exists without overwriting others."""
+    payload: dict
+    if storage_path.exists():
+        with storage_path.open("r", encoding="utf-8") as handle:
+            loaded = json.load(handle)
+        if not isinstance(loaded, dict):
+            raise ValueError("Invalid lovelace_resources format")
+        payload = loaded
+    else:
+        payload = {
+            "version": 1,
+            "minor_version": 1,
+            "key": "lovelace_resources",
+            "data": {"items": []},
+        }
+
+    items = _resolve_resource_items(payload)
+    desired_url = _normalize_resource_url(resource_url)
+    changed = False
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        existing_url = _normalize_resource_url(item.get("url"))
+        if existing_url != desired_url:
+            continue
+
+        if item.get("type") != resource_type:
+            item["type"] = resource_type
+            changed = True
+        if changed:
+            _write_json_file(storage_path, payload)
+        return changed
+
+    new_item = {
+        "url": resource_url,
+        "type": resource_type,
+    }
+    if any(isinstance(item, dict) and "id" in item for item in items):
+        new_item["id"] = _next_resource_id(items)
+
+    items.append(new_item)
+    _write_json_file(storage_path, payload)
+    return True
+
+
+def _resolve_resource_items(payload: dict) -> list:
+    """Return mutable Lovelace resources items list from storage payload."""
+    data = payload.get("data")
+    if isinstance(data, dict):
+        items = data.get("items")
+        if isinstance(items, list):
+            return items
+        data["items"] = []
+        return data["items"]
+
+    items = payload.get("items")
+    if isinstance(items, list):
+        return items
+
+    payload["data"] = {"items": []}
+    return payload["data"]["items"]
+
+
+def _normalize_resource_url(value: str | None) -> str:
+    """Normalize resource URL for duplicate checks."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.split("?", 1)[0].lower()
+
+
+def _next_resource_id(items: list) -> int | str:
+    """Generate next resource id while preserving existing id style."""
+    ids = [item.get("id") for item in items if isinstance(item, dict) and "id" in item]
+    if not ids:
+        return 1
+
+    int_ids = [value for value in ids if isinstance(value, int)]
+    if len(int_ids) == len(ids):
+        return max(int_ids) + 1
+
+    numeric_str_ids = [
+        int(value)
+        for value in ids
+        if isinstance(value, str) and value.isdigit()
+    ]
+    if len(numeric_str_ids) == len(ids):
+        return str(max(numeric_str_ids) + 1)
+
+    return uuid4().hex
+
+
+def _utc_timestamp() -> str:
+    """Return compact UTC timestamp for backup filenames."""
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+
+def _resolve_backup_file_path(
+    hass: HomeAssistant,
+    requested_path: str | None,
+    *,
+    default_name: str | None = None,
+) -> Path:
+    """Resolve a backup file path under /config."""
+    config_dir = Path(hass.config.path()).resolve()
+
+    if requested_path:
+        candidate = Path(str(requested_path).strip())
+        if not candidate.is_absolute():
+            candidate = config_dir / candidate
+    else:
+        filename = default_name or f"boiler_manager_tasks_{_utc_timestamp()}.json"
+        candidate = config_dir / "boiler_manager_backups" / filename
+
+    candidate = candidate.resolve()
+    if config_dir not in candidate.parents and candidate != config_dir:
+        raise ServiceValidationError("Backup path must be inside /config")
+
+    return candidate
+
+
+def _write_json_file(path: Path, payload: dict) -> None:
+    """Write JSON payload to disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+
+
+def _read_json_file(path: Path) -> dict | list:
+    """Read JSON payload from disk."""
+    if not path.exists():
+        raise ServiceValidationError(f"Backup file not found: {path}")
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
