@@ -141,6 +141,9 @@ class BoilerManager:
         self._manual_until: datetime | None = None
         self._schedule_driven = False
         self._active_task_ids: set[str] = set()
+        # Task ids temporarily skipped until the current active segment ends
+        # (used for user-initiated OFF so the task resumes only on its next event).
+        self._snoozed_task_until: dict[str, datetime] = {}
 
     @property
     def name(self) -> str:
@@ -359,6 +362,7 @@ class BoilerManager:
             return False
 
         self._tasks.pop(key)
+        self._snoozed_task_until.pop(key, None)
         self._async_remove_task_switch_entity(key)
         await self._async_save()
 
@@ -403,6 +407,7 @@ class BoilerManager:
             raise BoilerManagerError(f"Unknown task id: {key}")
 
         task = self._tasks[key]
+        self._snoozed_task_until.pop(key, None)
 
         if name is not None:
             task.name = str(name).strip() or task.name
@@ -515,10 +520,13 @@ class BoilerManager:
 
     async def async_turn_off(self) -> None:
         """Turn off boiler and clear manual states."""
+        now = dt_util.now()
+        self._async_snooze_active_tasks_until_segment_end(now)
         self._manual_continuous = False
         self._manual_until = None
         self._schedule_driven = False
         self._cancel_timed_off()
+        await self._async_apply_schedule_state()
         await self._async_turn_off_entity()
         self._async_notify_state()
 
@@ -644,6 +652,11 @@ class BoilerManager:
         for task in self._tasks.values():
             if not task.enabled:
                 continue
+            snoozed_until = self._snoozed_task_until.get(task.task_id)
+            if snoozed_until:
+                if now < snoozed_until:
+                    continue
+                self._snoozed_task_until.pop(task.task_id, None)
 
             windows = _task_time_windows(task)
             for start, end in windows:
@@ -669,6 +682,49 @@ class BoilerManager:
                     break
 
         return active
+
+    def _async_snooze_active_tasks_until_segment_end(self, now: datetime) -> None:
+        """Skip currently active task segments until they naturally end."""
+        for task in self._tasks_active_now(now):
+            active_until = self._task_active_until(task, now)
+            if active_until and active_until > now:
+                self._snoozed_task_until[task.task_id] = active_until
+
+    def _task_active_until(self, task: BoilerTask, now: datetime) -> datetime | None:
+        """Return end timestamp of the currently active segment for one task."""
+        local_now = dt_util.as_local(now)
+        tzinfo = local_now.tzinfo
+        if tzinfo is None:
+            return None
+
+        weekday = local_now.weekday()
+        previous_weekday = (weekday - 1) % 7
+        now_time = local_now.time().replace(second=0, microsecond=0)
+        current_date = local_now.date()
+        previous_date = current_date - timedelta(days=1)
+        next_date = current_date + timedelta(days=1)
+
+        latest_end_local: datetime | None = None
+        for start, end in _task_time_windows(task):
+            if start == end:
+                continue
+
+            end_local: datetime | None = None
+            if start < end:
+                if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
+                    end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
+            else:
+                if now_time >= start and _task_matches_schedule_day(task, weekday, current_date):
+                    end_local = datetime.combine(next_date, end, tzinfo=tzinfo)
+                elif now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
+                    end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
+
+            if end_local and (latest_end_local is None or end_local > latest_end_local):
+                latest_end_local = end_local
+
+        if latest_end_local is None:
+            return None
+        return dt_util.as_utc(latest_end_local)
 
     async def _async_load(self) -> None:
         """Load persisted tasks from storage."""

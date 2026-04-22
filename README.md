@@ -17,6 +17,7 @@ Custom boiler control solution for Home Assistant with:
   - `forever`
   - `once` (auto-removes after first completed run)
   - `range` (start/end date)
+  - Selected from 3 fixed UI buttons (no dropdown)
 - Day and month filtering
 - Timeline task type:
   - Multiple points per day
@@ -96,6 +97,7 @@ Notes:
 - Choose `Timer`
 - Pick duration option
 - Boiler starts immediately via integration service
+- If a schedule/timeline is currently active, timed buttons are blocked until that active segment ends
 
 ### Tasks Mode
 
@@ -109,7 +111,7 @@ Notes:
 - Set `Start` and `End`
 - Select days
 - Select months
-- Set recurrence (`forever / once / range`)
+- Set recurrence via 3 buttons (`forever / once / range`)
 - Save
 
 #### Task Type: Timeline
@@ -121,8 +123,15 @@ Notes:
   - choose timer option from existing options (15m..)
 - Select days
 - Select months
-- Set recurrence
+- Set recurrence via 3 buttons (`forever / once / range`)
 - Save
+
+### Manual OFF During Active Task
+
+- Pressing `Off` while a schedule/timeline segment is currently active performs a **manual immediate off**
+- The currently running segment is skipped until its natural end
+- The task itself is **not** deleted or disabled
+- The task resumes automatically on its **next scheduled event**
 
 ### Edit Existing Task
 
@@ -201,6 +210,7 @@ data:
   - `days`, `months`, `recurrence`, `start_date`, `end_date`
   - `timeline_points`, `timeline_label` for timeline tasks
   - `active_now`
+- `active_now` represents the task being active by schedule window/timeline timing
 
 ## Troubleshooting
 
