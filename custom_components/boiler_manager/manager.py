@@ -289,6 +289,7 @@ class BoilerManager:
             once_started=False,
         )
 
+        self._ensure_no_duplicate_task(task)
         self._tasks[task_id] = task
         await self._async_save()
 
@@ -345,6 +346,7 @@ class BoilerManager:
             once_started=False,
         )
 
+        self._ensure_no_duplicate_task(task)
         self._tasks[task_id] = task
         await self._async_save()
 
@@ -410,61 +412,68 @@ class BoilerManager:
             raise BoilerManagerError(f"Unknown task id: {key}")
 
         task = self._tasks[key]
+        snapshot = task.as_dict()
         self._snoozed_task_until.pop(key, None)
 
-        if name is not None:
-            task.name = str(name).strip() or task.name
+        try:
+            if name is not None:
+                task.name = str(name).strip() or task.name
 
-        next_task_type = task.task_type if task_type is None else _normalize_task_type(task_type)
-        task.task_type = next_task_type
+            next_task_type = task.task_type if task_type is None else _normalize_task_type(task_type)
+            task.task_type = next_task_type
 
-        if next_task_type == TASK_TYPE_TIMELINE:
-            if timeline_points is not None:
-                next_points = _normalize_timeline_points(timeline_points)
-            elif task.timeline_points:
-                next_points = list(task.timeline_points)
+            if next_task_type == TASK_TYPE_TIMELINE:
+                if timeline_points is not None:
+                    next_points = _normalize_timeline_points(timeline_points)
+                elif task.timeline_points:
+                    next_points = list(task.timeline_points)
+                else:
+                    derived_start = _normalize_time_string(start_time) if start_time is not None else task.start_time
+                    derived_end = _normalize_time_string(end_time) if end_time is not None else task.end_time
+                    minutes = max(1, _minutes_between(derived_start, derived_end))
+                    next_points = _normalize_timeline_points(
+                        [
+                            {
+                                ATTR_POINT_TIME: derived_start,
+                                ATTR_DURATION_OPTION: _minutes_to_option_label(minutes),
+                                ATTR_DURATION_MINUTES: minutes,
+                            }
+                        ]
+                    )
+                task.timeline_points = next_points
+                task.start_time, task.end_time = _timeline_time_bounds(next_points)
             else:
-                derived_start = _normalize_time_string(start_time) if start_time is not None else task.start_time
-                derived_end = _normalize_time_string(end_time) if end_time is not None else task.end_time
-                minutes = max(1, _minutes_between(derived_start, derived_end))
-                next_points = _normalize_timeline_points(
-                    [
-                        {
-                            ATTR_POINT_TIME: derived_start,
-                            ATTR_DURATION_OPTION: _minutes_to_option_label(minutes),
-                            ATTR_DURATION_MINUTES: minutes,
-                        }
-                    ]
-                )
-            task.timeline_points = next_points
-            task.start_time, task.end_time = _timeline_time_bounds(next_points)
-        else:
-            task.timeline_points = []
-            if start_time is not None:
-                task.start_time = _normalize_time_string(start_time)
-            if end_time is not None:
-                task.end_time = _normalize_time_string(end_time)
+                task.timeline_points = []
+                if start_time is not None:
+                    task.start_time = _normalize_time_string(start_time)
+                if end_time is not None:
+                    task.end_time = _normalize_time_string(end_time)
 
-        if days is not None:
-            task.days = _normalize_days(days)
-        if months is not None:
-            task.months = _normalize_months(months)
+            if days is not None:
+                task.days = _normalize_days(days)
+            if months is not None:
+                task.months = _normalize_months(months)
 
-        next_recurrence = task.recurrence if recurrence is None else _normalize_recurrence(recurrence)
-        next_start_date, next_end_date = _normalize_date_bounds(
-            task.start_date if start_date is None else start_date,
-            task.end_date if end_date is None else end_date,
-            next_recurrence,
-        )
-        task.recurrence = next_recurrence
-        task.start_date = next_start_date
-        task.end_date = next_end_date
-        if recurrence is not None and next_recurrence == RECURRENCE_ONCE:
-            task.once_started = False
-        if recurrence is not None and next_recurrence != RECURRENCE_ONCE:
-            task.once_started = False
-        if enabled is not None:
-            task.enabled = bool(enabled)
+            next_recurrence = task.recurrence if recurrence is None else _normalize_recurrence(recurrence)
+            next_start_date, next_end_date = _normalize_date_bounds(
+                task.start_date if start_date is None else start_date,
+                task.end_date if end_date is None else end_date,
+                next_recurrence,
+            )
+            task.recurrence = next_recurrence
+            task.start_date = next_start_date
+            task.end_date = next_end_date
+            if recurrence is not None and next_recurrence == RECURRENCE_ONCE:
+                task.once_started = False
+            if recurrence is not None and next_recurrence != RECURRENCE_ONCE:
+                task.once_started = False
+            if enabled is not None:
+                task.enabled = bool(enabled)
+
+            self._ensure_no_duplicate_task(task, exclude_task_id=key)
+        except BoilerManagerError:
+            self._tasks[key] = _task_from_raw(snapshot)
+            raise
 
         await self._async_save()
 
@@ -485,6 +494,18 @@ class BoilerManager:
     def get_task(self, task_id: str) -> BoilerTask | None:
         """Return one task by id."""
         return self._tasks.get(task_id)
+
+    def _ensure_no_duplicate_task(self, candidate: BoilerTask, *, exclude_task_id: str | None = None) -> None:
+        """Block duplicate tasks with identical timing/day logic."""
+        candidate_key = _task_duplicate_signature(candidate)
+        for existing in self._tasks.values():
+            if exclude_task_id and existing.task_id == exclude_task_id:
+                continue
+            if _task_duplicate_signature(existing) != candidate_key:
+                continue
+            raise BoilerManagerError(
+                f"Duplicate task detected: '{candidate.name}' matches '{existing.name}'"
+            )
 
     def export_tasks_payload(self) -> dict:
         """Return tasks payload for backup/export."""
@@ -516,6 +537,28 @@ class BoilerManager:
             except BoilerManagerError as err:
                 raise BoilerManagerError(f"Invalid imported task #{index}: {err}") from err
             imported_tasks.append(task)
+
+        existing_by_signature: dict[str, BoilerTask] = {}
+        if normalized_mode == IMPORT_MODE_MERGE:
+            existing_by_signature = {
+                _task_duplicate_signature(task): task for task in self._tasks.values()
+            }
+
+        seen_import_signatures: dict[str, BoilerTask] = {}
+        for task in imported_tasks:
+            signature = _task_duplicate_signature(task)
+            duplicate_import = seen_import_signatures.get(signature)
+            if duplicate_import:
+                raise BoilerManagerError(
+                    f"Import payload has duplicate tasks: '{duplicate_import.name}' and '{task.name}'"
+                )
+            seen_import_signatures[signature] = task
+
+            if normalized_mode == IMPORT_MODE_MERGE and signature in existing_by_signature:
+                existing = existing_by_signature[signature]
+                raise BoilerManagerError(
+                    f"Imported task '{task.name}' duplicates existing task '{existing.name}'"
+                )
 
         removed_ids: list[str] = []
         if normalized_mode == IMPORT_MODE_REPLACE:
@@ -1174,6 +1217,53 @@ def _task_time_windows(task: BoilerTask) -> list[tuple[time, time]]:
         return windows
 
     return [(_time_from_hhmm(task.start_time), _time_from_hhmm(task.end_time))]
+
+
+def _task_duplicate_signature(task: BoilerTask) -> str:
+    """Stable signature for duplicate detection."""
+    task_type = TASK_TYPE_TIMELINE if task.task_type == TASK_TYPE_TIMELINE else TASK_TYPE_WINDOW
+    days = ",".join(str(day) for day in sorted(set(task.days)))
+    months = ",".join(str(month) for month in sorted(set(task.months)))
+    recurrence = _normalize_recurrence(task.recurrence)
+    start_date, end_date = _normalize_date_bounds(task.start_date, task.end_date, recurrence)
+    range_start = start_date or ""
+    range_end = end_date or ""
+
+    if task_type == TASK_TYPE_TIMELINE:
+        points = sorted(
+            (
+                f"{_normalize_time_string(point.at)}>{max(1, int(point.duration_minutes))}"
+                for point in task.timeline_points
+            ),
+            key=str,
+        )
+        points_key = ",".join(points)
+        return "|".join(
+            [
+                task_type,
+                points_key,
+                days,
+                months,
+                recurrence,
+                range_start,
+                range_end,
+            ]
+        )
+
+    start_time = _normalize_time_string(task.start_time)
+    end_time = _normalize_time_string(task.end_time)
+    return "|".join(
+        [
+            task_type,
+            start_time,
+            end_time,
+            days,
+            months,
+            recurrence,
+            range_start,
+            range_end,
+        ]
+    )
 
 
 def format_timeline_for_display(points: list[BoilerTimelinePoint]) -> str:

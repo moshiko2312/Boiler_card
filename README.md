@@ -189,11 +189,30 @@ Import confirmation:
 - Change fields
 - Save
 
+### Disable vs Delete
+
+- `Enable/Disable` button:
+  - Keeps the task in the system
+  - Only toggles availability (`on`/`off`)
+  - Use this when you want to pause a task without losing settings
+- `Delete` button:
+  - Removes task permanently
+  - Removes the related task switch entity from registry
+
 ### Delete Task
 
 - In Tasks list click `Delete`
 - Task is removed permanently
 - Task switch entity is removed from entity registry
+
+### Duplicate Protection (Logical Validation)
+
+- The card blocks saving when a task duplicates an existing task's schedule logic.
+- A styled in-card popup shows which existing tasks conflict.
+- Save is canceled until conflict is resolved.
+- Validation is enforced both:
+  - In frontend card UI (before save)
+  - In backend integration manager (service/API level)
 
 ### Task Order In List
 

@@ -61,6 +61,8 @@ const I18N = {
     import_invalid_file: "קובץ ייבוא לא תקין",
     dialog_title: "אישור פעולה",
     dialog_ok: "אישור",
+    duplicate_task_title: "זוהתה כפילות במשימות",
+    duplicate_task_message_intro: "לא ניתן לשמור. נמצאה כפילות עם המשימות הבאות:",
     tasks_empty: "אין משימות",
     task_name: "שם משימה",
     task_start: "התחלה",
@@ -71,6 +73,8 @@ const I18N = {
     task_delete: "מחיקה",
     task_enabled: "פעיל",
     task_disabled: "כבוי",
+    task_enable: "הפעל",
+    task_disable: "השבת",
     task_edit: "עריכה",
     menu_timers: "טיימר",
     menu_tasks: "משימות",
@@ -144,6 +148,8 @@ const I18N = {
     import_invalid_file: "Invalid import file",
     dialog_title: "Confirm Action",
     dialog_ok: "OK",
+    duplicate_task_title: "Duplicate Task Detected",
+    duplicate_task_message_intro: "Cannot save. Duplicate settings found with these tasks:",
     tasks_empty: "No tasks yet",
     task_name: "Task Name",
     task_start: "Start",
@@ -154,6 +160,8 @@ const I18N = {
     task_delete: "Delete",
     task_enabled: "Enabled",
     task_disabled: "Disabled",
+    task_enable: "Enable",
+    task_disable: "Disable",
     task_edit: "Edit",
     menu_timers: "Timer",
     menu_tasks: "Tasks",
@@ -227,6 +235,8 @@ const I18N = {
     import_invalid_file: "Некорректный файл импорта",
     dialog_title: "Подтверждение",
     dialog_ok: "ОК",
+    duplicate_task_title: "Обнаружен дубликат задачи",
+    duplicate_task_message_intro: "Сохранение невозможно. Обнаружено совпадение со следующими задачами:",
     tasks_empty: "Задач пока нет",
     task_name: "Название задачи",
     task_start: "Начало",
@@ -237,6 +247,8 @@ const I18N = {
     task_delete: "Удалить",
     task_enabled: "Включено",
     task_disabled: "Выключено",
+    task_enable: "Включить",
+    task_disable: "Отключить",
     task_edit: "Изменить",
     menu_timers: "Таймер",
     menu_tasks: "Задачи",
@@ -3593,8 +3605,8 @@ class BoilerWaterCard extends HTMLElement {
     resolver(!!result);
   }
 
-  async _showInfoModal(message) {
-    await this._openConfirmModal(message, { okOnly: true });
+  async _showInfoModal(message, title = null) {
+    await this._openConfirmModal(message, { title, okOnly: true });
   }
 
   _closeConfirmModal(result = false) {
@@ -4054,6 +4066,26 @@ class BoilerWaterCard extends HTMLElement {
       if (timelinePoints.length === 0) {
         return;
       }
+      const duplicateMatches = this._findDuplicateTaskConflicts(
+        {
+          task_type: "timeline",
+          timeline_points: timelinePoints,
+          days,
+          months,
+          recurrence,
+          start_date: includeDateRange ? startDate : "",
+          end_date: includeDateRange ? endDate : "",
+        },
+        this._editingTaskId
+      );
+      if (duplicateMatches.length > 0) {
+        const details = duplicateMatches.map((item) => `• ${item.name}: ${item.summary}`).join("\n");
+        this._showInfoModal(
+          `${this._t("duplicate_task_message_intro")}\n${details}`,
+          this._t("duplicate_task_title")
+        );
+        return;
+      }
       if (isEdit) {
         this._callConfiguredService(this._config.service_update_schedule, {
           ...baseData,
@@ -4074,6 +4106,27 @@ class BoilerWaterCard extends HTMLElement {
     const startTime = String(this._elements.scheduleStartInput?.value || "").trim();
     const endTime = String(this._elements.scheduleEndInput?.value || "").trim();
     if (!startTime || !endTime) {
+      return;
+    }
+    const duplicateMatches = this._findDuplicateTaskConflicts(
+      {
+        task_type: "window",
+        start_time: startTime,
+        end_time: endTime,
+        days,
+        months,
+        recurrence,
+        start_date: includeDateRange ? startDate : "",
+        end_date: includeDateRange ? endDate : "",
+      },
+      this._editingTaskId
+    );
+    if (duplicateMatches.length > 0) {
+      const details = duplicateMatches.map((item) => `• ${item.name}: ${item.summary}`).join("\n");
+      this._showInfoModal(
+        `${this._t("duplicate_task_message_intro")}\n${details}`,
+        this._t("duplicate_task_title")
+      );
       return;
     }
 
@@ -4125,6 +4178,143 @@ class BoilerWaterCard extends HTMLElement {
       .sort((a, b) => String(a.attributes?.start_time || "").localeCompare(String(b.attributes?.start_time || "")));
 
     return entities;
+  }
+
+  _findDuplicateTaskConflicts(candidatePayload, excludeTaskId = null) {
+    const candidateKey = this._taskDuplicateKeyFromPayload(candidatePayload);
+    if (!candidateKey) {
+      return [];
+    }
+
+    const exclude = String(excludeTaskId || "").trim();
+    const matches = [];
+    this._taskSwitchEntities().forEach((taskState) => {
+      const attrs = taskState?.attributes || {};
+      const taskId = String(attrs.task_id || "").trim();
+      if (exclude && taskId && taskId === exclude) {
+        return;
+      }
+      const taskKey = this._taskDuplicateKeyFromPayload(attrs);
+      if (taskKey !== candidateKey) {
+        return;
+      }
+      matches.push({
+        taskId: taskId || taskState.entity_id,
+        name: String(attrs.task_name || attrs.friendly_name || taskId || taskState.entity_id),
+        summary: this._taskDuplicateSummary(attrs),
+      });
+    });
+    return matches;
+  }
+
+  _taskDuplicateKeyFromPayload(raw) {
+    const payload = raw || {};
+    const taskType = String(payload.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
+    const recurrence = this._normalizedRecurrenceForExport(payload.recurrence);
+    const normalizedDates = this._normalizedDateRangeForDuplicate(
+      recurrence,
+      payload.start_date,
+      payload.end_date
+    );
+    const days = this._normalizedDaysForExport(payload.days).join(",");
+    const months = this._normalizedMonthsForExport(payload.months).join(",");
+
+    if (taskType === "timeline") {
+      const points = this._normalizedTimelinePointsForDuplicate(payload.timeline_points);
+      if (!points) {
+        return null;
+      }
+      return [
+        "timeline",
+        points,
+        days,
+        months,
+        recurrence,
+        normalizedDates.startDate,
+        normalizedDates.endDate,
+      ].join("|");
+    }
+
+    const startTime = this._normalizeHhMm(payload.start_time);
+    const endTime = this._normalizeHhMm(payload.end_time);
+    if (!startTime || !endTime) {
+      return null;
+    }
+    return [
+      "window",
+      startTime,
+      endTime,
+      days,
+      months,
+      recurrence,
+      normalizedDates.startDate,
+      normalizedDates.endDate,
+    ].join("|");
+  }
+
+  _normalizedTimelinePointsForDuplicate(points) {
+    if (!Array.isArray(points) || points.length === 0) {
+      return null;
+    }
+    const normalized = points
+      .map((point) => {
+        const at = this._normalizeHhMm(point?.at);
+        const minutesRaw = Number.parseInt(point?.duration_minutes, 10);
+        const minutes = Number.isInteger(minutesRaw) && minutesRaw > 0
+          ? minutesRaw
+          : this._optionToMinutes(String(point?.duration_option || ""));
+        if (!at || !minutes || minutes <= 0) {
+          return null;
+        }
+        return `${at}>${minutes}`;
+      })
+      .filter((item) => !!item)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (normalized.length === 0) {
+      return null;
+    }
+    return normalized.join(",");
+  }
+
+  _normalizeHhMm(value) {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return null;
+    }
+    const hh = Number.parseInt(match[1], 10);
+    const mm = Number.parseInt(match[2], 10);
+    if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+      return null;
+    }
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  }
+
+  _normalizedDateRangeForDuplicate(recurrence, startDate, endDate) {
+    const start = this._validDateKey(startDate) || "";
+    const end = this._validDateKey(endDate) || "";
+    if (recurrence === "range") {
+      return { startDate: start, endDate: end };
+    }
+    if (recurrence === "once") {
+      const oneDay = start || end || "";
+      return { startDate: oneDay, endDate: oneDay };
+    }
+    return { startDate: "", endDate: "" };
+  }
+
+  _taskDuplicateSummary(attrs) {
+    const taskType = String(attrs?.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
+    const localizedDays = this._formatScheduleDays(attrs.days);
+    const dayText = localizedDays ? ` · ${localizedDays}` : "";
+    if (taskType === "timeline") {
+      const timeline = String(attrs.timeline_label || "").trim();
+      return `${timeline || "--"}${dayText}`;
+    }
+    return `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${dayText}`;
   }
 
   _syncUpcomingTaskNotice() {
@@ -4419,7 +4609,7 @@ class BoilerWaterCard extends HTMLElement {
       toggle.className = "task-toggle-btn";
       const isOn = String(taskState.state || "").toLowerCase() === "on";
       toggle.classList.toggle("on", isOn);
-      toggle.textContent = isOn ? this._t("task_enabled") : this._t("task_disabled");
+      toggle.textContent = isOn ? this._t("task_disable") : this._t("task_enable");
       toggle.addEventListener("click", () => {
         const [domain] = taskState.entity_id.split(".", 1);
         const service = isOn ? "turn_off" : "turn_on";
