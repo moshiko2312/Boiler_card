@@ -772,21 +772,24 @@ def _task_from_raw(raw: dict) -> BoilerTask:
     start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
     end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
     task_type = _normalize_task_type(raw.get(ATTR_TASK_TYPE))
-    timeline_points = _normalize_timeline_points(raw.get(ATTR_TIMELINE_POINTS))
-    if task_type == TASK_TYPE_TIMELINE and not timeline_points:
-        # Fallback for old/partial payloads.
-        timeline_points = _normalize_timeline_points(
-            [
-                {
-                    ATTR_POINT_TIME: start_time,
-                    ATTR_DURATION_OPTION: _minutes_to_option_label(
-                        max(1, _minutes_between(start_time, end_time))
-                    ),
-                    ATTR_DURATION_MINUTES: max(1, _minutes_between(start_time, end_time)),
-                }
-            ]
-        )
+    timeline_points: list[BoilerTimelinePoint] = []
     if task_type == TASK_TYPE_TIMELINE:
+        raw_points = raw.get(ATTR_TIMELINE_POINTS)
+        if raw_points in (None, []):
+            # Fallback for old/partial payloads without timeline points.
+            timeline_points = _normalize_timeline_points(
+                [
+                    {
+                        ATTR_POINT_TIME: start_time,
+                        ATTR_DURATION_OPTION: _minutes_to_option_label(
+                            max(1, _minutes_between(start_time, end_time))
+                        ),
+                        ATTR_DURATION_MINUTES: max(1, _minutes_between(start_time, end_time)),
+                    }
+                ]
+            )
+        else:
+            timeline_points = _normalize_timeline_points(raw_points)
         start_time, end_time = _timeline_time_bounds(timeline_points)
     days = _normalize_days(raw.get(ATTR_DAYS))
     months = _normalize_months(raw.get(ATTR_MONTHS))

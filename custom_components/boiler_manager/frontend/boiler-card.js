@@ -589,6 +589,23 @@ class BoilerWaterCard extends HTMLElement {
           letter-spacing: 0.02em;
         }
 
+        .countdown-value.continuous-active {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 2.3ch;
+          padding: 2px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(171, 233, 255, 0.88);
+          background: linear-gradient(165deg, rgba(72, 177, 221, 0.92), rgba(35, 130, 180, 0.88));
+          color: #ffffff;
+          text-shadow: 0 1px 2px rgba(8, 34, 55, 0.5);
+          box-shadow:
+            0 5px 12px rgba(23, 97, 133, 0.34),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          animation: continuous-badge-pulse 1.9s ease-in-out infinite;
+        }
+
         .boiler-progress-row .timer-menu-btn {
           grid-area: menu;
           align-self: center;
@@ -601,37 +618,36 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .sensors-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-          gap: 8px;
-          margin-bottom: 4px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          margin-bottom: 2px;
         }
 
         .sensor-pill {
-          border: 1px solid rgba(170, 186, 213, 0.55);
-          border-radius: 18px;
-          background: linear-gradient(160deg, rgba(85, 90, 126, 0.65), rgba(71, 76, 108, 0.72));
-          padding: 10px 12px;
-          display: grid;
-          gap: 6px;
-          min-height: 62px;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.22),
-            0 4px 10px rgba(18, 24, 44, 0.2);
+          border: 0;
+          border-radius: 0;
+          background: transparent;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 0;
+          min-height: 0;
+          box-shadow: none;
         }
 
         .sensor-label {
-          font-size: 0.9rem;
-          font-weight: 700;
-          color: rgba(229, 236, 247, 0.95);
-          line-height: 1.2;
+          display: none;
         }
 
         .sensor-value {
-          font-size: 1.75rem;
+          font-size: 1rem;
           font-weight: 800;
           color: #ffffff;
-          line-height: 1.1;
+          line-height: 1.2;
+          text-shadow: 0 1px 2px rgba(8, 26, 42, 0.45);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1459,12 +1475,29 @@ class BoilerWaterCard extends HTMLElement {
             padding: 6px;
           }
 
+          #timer-modal {
+            align-items: center;
+            padding: 8px;
+          }
+
+          #schedule-modal {
+            align-items: flex-end;
+            padding: 6px;
+          }
+
           .timer-modal-panel {
             width: calc(100vw - 12px);
             max-height: min(88dvh, 760px);
             border-radius: 18px;
             padding: 14px 14px calc(16px + env(safe-area-inset-bottom, 0px));
             animation: modal-sheet-up 190ms ease;
+          }
+
+          #timer-modal .timer-modal-panel {
+            width: min(560px, calc(100vw - 14px));
+            max-height: min(82dvh, 700px);
+            border-radius: 18px;
+            animation: card-enter 180ms ease;
           }
 
           #schedule-modal-panel {
@@ -1524,11 +1557,13 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timeline-point-row {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
           }
 
           .timeline-point-remove {
-            grid-column: 1 / -1;
+            grid-column: auto;
+            width: 100%;
           }
 
           .schedule-days {
@@ -1549,6 +1584,11 @@ class BoilerWaterCard extends HTMLElement {
           .timeline-point-add {
             min-height: 44px;
             font-size: 16px;
+          }
+
+          .timeline-point-time,
+          .timeline-point-duration {
+            min-height: 46px;
           }
 
           .schedule-day,
@@ -1683,22 +1723,20 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .sensors-row {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 6px;
+            gap: 8px;
           }
 
           .sensor-pill {
-            min-height: 56px;
-            padding: 9px 10px;
-            border-radius: 14px;
+            min-height: 0;
+            padding: 0;
           }
 
           .sensor-label {
-            font-size: 0.84rem;
+            display: none;
           }
 
           .sensor-value {
-            font-size: 1.45rem;
+            font-size: 0.94rem;
           }
 
           .boiler-icon {
@@ -1773,6 +1811,20 @@ class BoilerWaterCard extends HTMLElement {
           to {
             transform: translateY(0);
             opacity: 1;
+          }
+        }
+
+        @keyframes continuous-badge-pulse {
+          0%, 100% {
+            box-shadow:
+              0 5px 12px rgba(23, 97, 133, 0.34),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35);
+          }
+          50% {
+            box-shadow:
+              0 7px 16px rgba(23, 97, 133, 0.42),
+              0 0 0 4px rgba(75, 177, 224, 0.18),
+              inset 0 1px 0 rgba(255, 255, 255, 0.45);
           }
         }
       </style>
@@ -2210,9 +2262,9 @@ class BoilerWaterCard extends HTMLElement {
     const pendingOff = this._offPendingUntil > Date.now();
     const offSelected = pendingOff || (!isBoilerOn && !timerActive);
     const noTimerSelected = this._isNoTimerOption(selected);
-    const allowSelectedState = this._isEntityOn(boilerEntity)
-      || timerEntity?.state === "active"
-      || timerEntity?.state === "paused";
+    // Highlight timed quick buttons only while a timer is actually running/paused.
+    // This prevents false "30m selected" visual state after restart when boiler is ON in continuous mode.
+    const allowSelectedState = timerActive;
     const buttons = this._elements.quickTimerBtns || [];
     buttons.forEach((button) => {
       if (button.dataset.action === "off") {
@@ -2309,17 +2361,20 @@ class BoilerWaterCard extends HTMLElement {
           ? this._t("countdown_paused")
           : this._t("countdown_remaining");
       this._elements.countdownValue.textContent = this._formatSeconds(seconds);
+      this._elements.countdownValue.classList.remove("continuous-active");
       return;
     }
 
     if (this._isEntityOn(boiler)) {
       this._elements.countdownLabel.textContent = this._t("no_timer");
       this._elements.countdownValue.textContent = "∞";
+      this._elements.countdownValue.classList.add("continuous-active");
       return;
     }
 
     this._elements.countdownLabel.textContent = this._t("countdown_remaining");
     this._elements.countdownValue.textContent = "--:--";
+    this._elements.countdownValue.classList.remove("continuous-active");
   }
 
   _syncSensors() {
@@ -2329,7 +2384,11 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const sensors = this._configuredSensors();
-    if (sensors.length === 0) {
+    const visibleSensors = sensors
+      .map(({ label, entityId }) => ({ label, entity: this._hass.states[entityId] }))
+      .filter(({ entity }) => this._hasAvailableSensorValue(entity));
+
+    if (visibleSensors.length === 0) {
       row.hidden = true;
       row.innerHTML = "";
       return;
@@ -2337,8 +2396,7 @@ class BoilerWaterCard extends HTMLElement {
 
     row.hidden = false;
     row.innerHTML = "";
-    sensors.forEach(({ label, entityId }) => {
-      const entity = this._hass.states[entityId];
+    visibleSensors.forEach(({ label, entity }) => {
       const pill = document.createElement("div");
       pill.className = "sensor-pill";
 
@@ -2391,6 +2449,14 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     return normalized.includes(".");
+  }
+
+  _hasAvailableSensorValue(entity) {
+    const state = String(entity?.state || "").trim().toLowerCase();
+    if (!state) {
+      return false;
+    }
+    return !["unknown", "unavailable", "none", "null", "undefined"].includes(state);
   }
 
   _formatSensorValue(entity) {
