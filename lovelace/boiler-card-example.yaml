@@ -1,5 +1,6 @@
 type: custom:boiler-water-card
-title: דוד מים חמים / Boiler
+language: fr
+title: Chauffe-eau
 boiler_entity: switch.boiler
 integration_entry_id: 01JABCDEFGH1234567890
 service_run_timed: boiler_manager.run_timed

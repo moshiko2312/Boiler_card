@@ -18,7 +18,7 @@ const DEFAULT_DURATION_OPTIONS = [
   "No Timer",
 ];
 
-const SUPPORTED_LANGUAGES = ["he", "en", "ru"];
+const SUPPORTED_LANGUAGES = ["he", "en", "ru", "fr"];
 
 const I18N = {
   he: {
@@ -323,6 +323,107 @@ const I18N = {
     day_fri: "Пт",
     day_sat: "Сб",
     day_sun: "Вс",
+  },
+  fr: {
+    default_title: "Chauffe-eau",
+    status_on: "MARCHE",
+    status_off: "ARRÊT",
+    status_unavailable: "Indisponible",
+    subtitle_ready: "Prêt",
+    subtitle_heating_timer: "Chauffage avec minuterie",
+    subtitle_heating_continuous: "Chauffage continu",
+    subtitle_check_entity: "Vérifiez l'entité du chauffe-eau",
+    countdown_remaining: "Restant",
+    countdown_paused: "En pause",
+    no_timer: "Sans minuterie",
+    timer_label: "Minuterie",
+    timer_select: "Choisir une minuterie",
+    timer_menu: "Menu minuterie",
+    timer_prev_page: "Page précédente",
+    timer_next_page: "Page suivante",
+    turn_on: "Allumer",
+    turn_off: "Éteindre",
+    missing_entity: "Entité manquante",
+    no_heating: "Pas de chauffage",
+    no_timer_mode: "Mode sans minuterie",
+    warmed_suffix: "chauffé",
+    stage_cool: "Étape froide",
+    stage_warm: "Étape tiède",
+    stage_hot: "Étape chaude",
+    stage_continuous: "Chauffage continu",
+    stage_off: "Arrêt",
+    minutes_short: "min",
+    hours_short: "h",
+    tasks_title: "Tâches",
+    tasks_add: "Ajouter",
+    tasks_import: "Importer",
+    tasks_export: "Exporter",
+    import_mode_merge: "Fusionner",
+    import_mode_replace: "Remplacer",
+    import_replace_confirm: "Importer en mode remplacement ? Cela supprimera toutes les tâches existantes avant l'import.",
+    import_invalid_file: "Fichier d'import invalide",
+    dialog_title: "Confirmer l'action",
+    dialog_ok: "OK",
+    duplicate_task_title: "Tâche en double détectée",
+    duplicate_task_message_intro: "Impossible d'enregistrer. Doublon détecté avec ces tâches :",
+    tasks_empty: "Aucune tâche",
+    task_name: "Nom de la tâche",
+    task_start: "Début",
+    task_end: "Fin",
+    task_days: "Jours",
+    task_cancel: "Annuler",
+    task_save: "Enregistrer",
+    clear_value: "Effacer",
+    task_delete: "Supprimer",
+    task_enabled: "Activée",
+    task_disabled: "Désactivée",
+    task_enable: "Activer",
+    task_disable: "Désactiver",
+    task_edit: "Modifier",
+    menu_timers: "Minuterie",
+    menu_tasks: "Tâches",
+    menu_import_export: "Import/Export",
+    recurrence_label: "Récurrence",
+    recurrence_forever: "Toujours",
+    recurrence_once: "Une fois (suppression auto)",
+    recurrence_range: "Plage de dates",
+    date_start: "Date de début",
+    date_end: "Date de fin",
+    months_label: "Mois",
+    task_add_title: "Ajouter une tâche",
+    task_edit_title: "Modifier la tâche",
+    task_type: "Type",
+    task_type_window: "Plage horaire",
+    task_type_timeline: "Chronologie",
+    timeline_points: "Points de chronologie",
+    timeline_add_point: "Ajouter un point",
+    timeline_remove_point: "Supprimer",
+    timeline_time: "Heure",
+    timeline_timer: "Minuterie",
+    condition_entity_label: "Entité de condition",
+    condition_operator_label: "Opérateur",
+    condition_state_label: "Ignorer si état",
+    condition_state_placeholder: "on",
+    condition_op_eq: "=",
+    condition_op_gt: ">",
+    condition_op_lt: "<",
+    condition_op_gte: ">=",
+    condition_op_lte: "<=",
+    condition_summary_prefix: "Ignorer si",
+    active_task_ends_at: "Se termine à",
+    upcoming_task_starts_in: "Commence dans",
+    sensor_temperature: "Température",
+    sensor_power: "Puissance",
+    sensor_current: "Courant",
+    sensor_voltage: "Tension",
+    sensor_unavailable: "Indisponible",
+    day_mon: "Lun",
+    day_tue: "Mar",
+    day_wed: "Mer",
+    day_thu: "Jeu",
+    day_fri: "Ven",
+    day_sat: "Sam",
+    day_sun: "Dim",
   },
 };
 
@@ -1503,6 +1604,11 @@ class BoilerWaterCard extends HTMLElement {
           -webkit-tap-highlight-color: transparent;
         }
 
+        #timer-modal {
+          align-items: flex-start;
+          padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px;
+        }
+
         .timer-modal-head {
           display: flex;
           align-items: center;
@@ -1836,8 +1942,8 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           #timer-modal {
-            align-items: center;
-            padding: 8px;
+            align-items: flex-start;
+            padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px;
           }
 
           #schedule-modal {
@@ -6204,6 +6310,7 @@ class BoilerWaterCardEditor extends HTMLElement {
               { value: "he", label: "עברית" },
               { value: "en", label: "English" },
               { value: "ru", label: "Русский" },
+              { value: "fr", label: "Français" },
             ],
           },
         },
@@ -6295,6 +6402,16 @@ class BoilerWaterCardEditor extends HTMLElement {
         current_sensor: "Датчик тока",
         voltage_sensor: "Датчик напряжения",
         boiler_flow_image: "Изображение потока (путь / URL)",
+      },
+      fr: {
+        language: "Langue",
+        title: "Titre",
+        boiler_entity: "Entité chauffe-eau",
+        temperature_sensor: "Capteur de température",
+        power_sensor: "Capteur de puissance (W)",
+        current_sensor: "Capteur de courant",
+        voltage_sensor: "Capteur de tension",
+        boiler_flow_image: "Image du flux d'eau (chemin / URL)",
       },
     };
 

@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Gestionnaire de chauffe-eau",
+        "description": "Configurez l'entité du chauffe-eau et les capteurs source optionnels.",
+        "data": {
+          "name": "Nom",
+          "boiler_entity": "Entité du chauffe-eau",
+          "temperature_sensor": "Capteur de température (optionnel)",
+          "power_sensor": "Capteur de puissance (optionnel)",
+          "current_sensor": "Capteur de courant (optionnel)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Cette entité de chauffe-eau est déjà configurée"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options du gestionnaire de chauffe-eau",
+        "data": {
+          "name": "Nom",
+          "boiler_entity": "Entité du chauffe-eau",
+          "temperature_sensor": "Capteur de température (optionnel)",
+          "power_sensor": "Capteur de puissance (optionnel)",
+          "current_sensor": "Capteur de courant (optionnel)"
+        }
+      }
+    }
+  }
+}

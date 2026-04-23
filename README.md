@@ -11,6 +11,7 @@ Custom boiler control solution for Home Assistant with:
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
 - Card editor auto-fills `boiler_entity` from Boiler Manager integration when a single matching entry is detected
+- Card UI languages: `he` / `en` / `ru` / `fr`
 
 ## What You Get
 
@@ -131,7 +132,7 @@ Custom boiler control solution for Home Assistant with:
 
 - Purpose: configure card behavior and data sources.
 - Key fields:
-  - Language
+  - Language (`he` / `en` / `ru` / `fr`)
   - Title
   - Boiler entity
   - Temperature sensor
@@ -205,7 +206,8 @@ Manual fallback (if auto registration is blocked/fails):
 
 ```yaml
 type: custom:boiler-water-card
-title: דוד מים חמים
+language: fr
+title: Chauffe-eau
 boiler_entity: switch.boiler
 integration_entry_id: 01JABCDEFGH1234567890
 service_run_timed: boiler_manager.run_timed
