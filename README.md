@@ -6,7 +6,7 @@ Custom boiler control solution for Home Assistant with:
 - No required Home Assistant package/scripts/timer helpers for normal install (integration-first flow)
 - Timer control, recurring tasks, and timeline tasks
 - Task entities as real `switch` entities
-- Optional card sensors (temperature / current / voltage)
+- Optional card sensors (temperature / power / current / voltage)
 - Mobile-friendly popups (Safari + Chrome)
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
@@ -17,8 +17,9 @@ Custom boiler control solution for Home Assistant with:
 - Quick buttons: `15 / 30 / 60 / Off`
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
+- Separate `Import/Export` tab in the same menu
 - Create, edit, enable/disable, and delete tasks from card UI
-- Import/Export tasks directly from Tasks view in hamburger popup
+- Import/Export tasks directly from dedicated Import/Export tab
   - Import mode buttons: `merge` / `replace`
 - Per-task condition in card UI:
   - `Condition Entity` (for example `input_boolean.some_flag`)
@@ -26,7 +27,6 @@ Custom boiler control solution for Home Assistant with:
   - `Skip If State` (for example `on`)
   - Smart state suggestions by selected entity domain (for example `light` => `on/off`)
 - Sensor chips shown only when configured in the card
-- Custom display name per sensor in card editor
 - Heat bar can run from real temperature sensor (with threshold colors)
 - Task recurrence options:
   - `forever`
@@ -127,11 +127,9 @@ service_export_tasks: boiler_manager.export_tasks
 
 # Optional card sensors (card-only configuration)
 temperature_sensor: sensor.boiler_temperature
-temperature_sensor_name: טמפרטורת דוד
+power_sensor: sensor.boiler_power
 current_sensor: sensor.boiler_current
-current_sensor_name: זרם נוכחי
 voltage_sensor: sensor.boiler_voltage
-voltage_sensor_name: מתח קו
 ```
 
 Notes:
@@ -143,7 +141,7 @@ Notes:
 ### Quick Daily Flow
 
 1. Open hamburger menu (`☰`)
-2. Choose `Timer` for immediate heat, or `Tasks` for automation
+2. Choose `Timer` for immediate heat, `Tasks` for automation, or `Import/Export` for backup/restore
 3. For automation, create a task and set:
    - Type (`Time Window` / `Timeline`)
    - Recurrence (`forever` / `once` / `range`)
@@ -170,7 +168,7 @@ Notes:
 
 ### Import / Export (From Card UI)
 
-- Open hamburger menu (`☰`) -> `Tasks`
+- Open hamburger menu (`☰`) -> `Import/Export`
 - Use mode buttons:
   - `merge` = add imported tasks to existing tasks
   - `replace` = remove existing tasks first, then import
@@ -289,13 +287,15 @@ Import confirmation:
 ## Sensor Display (Card Only)
 
 - Sensor fields are configured in the card editor:
-  - `temperature_sensor`, `current_sensor`, `voltage_sensor`
-  - Optional custom names:
-    - `temperature_sensor_name`
-    - `current_sensor_name`
-    - `voltage_sensor_name`
+  - `temperature_sensor`, `power_sensor`, `current_sensor`, `voltage_sensor`
 - If no sensors are configured, sensor UI is hidden completely.
 - If configured, chips appear below the boiler visual.
+- Chips row above the bar shows only:
+  - `power_sensor` (consumption)
+  - `current_sensor`
+  - `voltage_sensor`
+- `temperature_sensor` is used for heat-bar logic and is **not** shown in that chips row.
+- Chips grid always keeps equal distribution for available sensors (`1/2/3` columns based on visible sensors).
 
 ## Temperature-Driven Heat Bar
 

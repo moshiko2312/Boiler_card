@@ -713,7 +713,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .sensors-row {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
+          grid-template-columns: repeat(var(--sensor-columns, 3), minmax(0, 1fr));
           align-items: stretch;
           justify-items: stretch;
           gap: 6px;
@@ -888,18 +888,19 @@ class BoilerWaterCard extends HTMLElement {
         .import-export-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
+          gap: 6px;
           direction: ltr;
+          width: min(100%, 66.6667%);
+          margin-inline: auto;
         }
 
         .import-export-grid .tasks-mode-btn,
         .import-export-grid .tasks-import-btn,
         .import-export-grid .tasks-export-btn {
-          min-height: 76px;
-          border-radius: 18px;
-          font-size: 1.05rem;
-          font-weight: 800;
-          padding: 10px 14px;
+          min-height: 44px;
+          border-radius: 11px;
+          font-size: 0.9rem;
+          padding: 10px 8px;
         }
 
         .tasks-import-mode {
@@ -1821,7 +1822,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .sensors-row {
-            grid-template-columns: repeat(auto-fit, minmax(98px, 1fr));
+            grid-template-columns: repeat(var(--sensor-columns, 3), minmax(0, 1fr));
           }
 
           .timer-modal {
@@ -1889,6 +1890,10 @@ class BoilerWaterCard extends HTMLElement {
             min-width: 0;
           }
 
+          .import-export-grid {
+            width: 100%;
+          }
+
           .timer-modal-actions {
             width: 100%;
             margin-inline-start: 0;
@@ -1937,14 +1942,6 @@ class BoilerWaterCard extends HTMLElement {
 
           .schedule-action-btn {
             min-height: 42px;
-          }
-
-          .import-export-grid .tasks-mode-btn,
-          .import-export-grid .tasks-import-btn,
-          .import-export-grid .tasks-export-btn {
-            min-height: 58px;
-            border-radius: 14px;
-            font-size: 1.01rem;
           }
 
           .schedule-input,
@@ -2138,7 +2135,6 @@ class BoilerWaterCard extends HTMLElement {
             min-height: 44px;
             font-size: 0.84rem;
           }
-
           .timer-page-btn {
             width: 44px;
             height: 44px;
@@ -3049,10 +3045,12 @@ class BoilerWaterCard extends HTMLElement {
     if (visibleSensors.length === 0) {
       row.hidden = true;
       row.innerHTML = "";
+      row.style.removeProperty("--sensor-columns");
       return;
     }
 
     row.hidden = false;
+    row.style.setProperty("--sensor-columns", String(Math.min(3, Math.max(1, visibleSensors.length))));
     row.innerHTML = "";
     visibleSensors.forEach(({ label, entity }) => {
       const pill = document.createElement("div");
@@ -3075,10 +3073,6 @@ class BoilerWaterCard extends HTMLElement {
 
   _configuredSensors() {
     const defs = [
-      {
-        key: "temperature_sensor",
-        fallbackLabel: this._t("sensor_temperature"),
-      },
       {
         key: "power_sensor",
         fallbackLabel: this._t("sensor_power"),
