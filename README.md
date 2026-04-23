@@ -54,7 +54,7 @@ Custom boiler control solution for Home Assistant with:
 > Place screenshots in `docs/screenshots/` using the exact filenames below.
 
 ### 1) Main Boiler Card
-![Main Boiler Card](docs/screenshots/01-main-card.png)
+![Main Boiler Card](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/01-main-card.png)
 
 - Purpose: primary operational view for day-to-day boiler control.
 - Header title/subtitle:
@@ -75,7 +75,7 @@ Custom boiler control solution for Home Assistant with:
   - `Off` immediate shutdown.
 
 ### 2) Timer Tab (Paged Options)
-![Timer Tab](docs/screenshots/02-timer-tab.png)
+![Timer Tab](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/02-timer-tab.png)
 
 - Purpose: select full duration catalog beyond quick presets.
 - Top controls:
@@ -88,7 +88,7 @@ Custom boiler control solution for Home Assistant with:
   - Selected option is highlighted.
 
 ### 3) Tasks Tab
-![Tasks Tab](docs/screenshots/03-tasks-tab.png)
+![Tasks Tab](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/03-tasks-tab.png)
 
 - Purpose: task automation management in one place.
 - `Add`: create a new scheduled task (time window or timeline).
@@ -103,7 +103,7 @@ Custom boiler control solution for Home Assistant with:
   - Actions are reflected in both card UI and integration state.
 
 ### 4) Import / Export Tab
-![Import Export Tab](docs/screenshots/05-import-export-tab.png)
+![Import Export Tab](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/05-import-export-tab.png)
 
 - Purpose: task backup and restore operations.
 - Mode buttons:
@@ -116,7 +116,7 @@ Custom boiler control solution for Home Assistant with:
   - Safe maintenance operations separated from normal task editing.
 
 ### 5) Replace Confirmation Dialog
-![Replace Confirmation](docs/screenshots/06-replace-confirmation.png)
+![Replace Confirmation](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/06-replace-confirmation.png)
 
 - Purpose: guardrail before destructive import.
 - Triggered when user imports in `Replace` mode.
@@ -127,7 +127,7 @@ Custom boiler control solution for Home Assistant with:
   - Explicit confirmation required to proceed.
 
 ### 6) Card Editor Configuration
-![Card Editor Configuration](docs/screenshots/07-card-editor.png)
+![Card Editor Configuration](https://raw.githubusercontent.com/moshiko2312/Boiler_card/main/docs/screenshots/07-card-editor.png)
 
 - Purpose: configure card behavior and data sources.
 - Key fields:
