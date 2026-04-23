@@ -1738,18 +1738,25 @@ class BoilerWaterCard extends HTMLElement {
           margin: 0;
           font-size: 1rem;
           color: var(--boiler-text);
+          display: flex;
+          align-items: center;
+          min-height: 46px;
           min-width: 0;
+          width: 100%;
+          text-align: left;
+          padding-left: 58px;
         }
 
         .timer-modal-actions {
           grid-area: actions;
-          display: inline-flex;
+          display: flex;
           align-items: center;
           gap: 6px;
           margin-inline-start: 0;
-          justify-self: end;
+          justify-self: stretch;
           width: 100%;
-          justify-content: flex-end;
+          justify-content: center;
+          min-height: 50px;
         }
 
         .menu-mode-toggle {
@@ -1948,7 +1955,21 @@ class BoilerWaterCard extends HTMLElement {
 
         .timer-modal-panel[dir="rtl"] .timer-modal-actions {
           margin-inline-start: 0;
-          margin-inline-end: auto;
+          margin-inline-end: 0;
+        }
+
+        .timer-modal-panel[dir="rtl"] .timer-modal-title {
+          text-align: right;
+          padding-left: 0;
+          padding-right: 0;
+        }
+
+        #timer-close-btn {
+          position: absolute;
+          left: 8px;
+          top: 8px;
+          transform: none;
+          z-index: 9;
         }
 
         .confirm-modal-panel {
@@ -2168,6 +2189,8 @@ class BoilerWaterCard extends HTMLElement {
 
           .timer-modal-title {
             width: 100%;
+            text-align: left;
+            padding-left: 58px;
           }
 
           .menu-mode-toggle {
@@ -2185,7 +2208,7 @@ class BoilerWaterCard extends HTMLElement {
           .timer-modal-actions {
             width: 100%;
             margin-inline-start: 0;
-            justify-content: space-between;
+            justify-content: center;
           }
 
           .timer-grid {
