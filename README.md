@@ -49,6 +49,108 @@ Custom boiler control solution for Home Assistant with:
   - sticky top toolbar in mobile tasks view
   - timer page arrows hidden in tasks mode (list-only mode)
 
+## UI Screenshots & Professional Walkthrough
+
+> Place screenshots in `docs/screenshots/` using the exact filenames below.
+
+### 1) Main Boiler Card
+![Main Boiler Card](docs/screenshots/01-main-card.png)
+
+- Purpose: primary operational view for day-to-day boiler control.
+- Header title/subtitle:
+  - `title`: configurable card title.
+  - `subtitle`: dynamic runtime status (ready / timed heating / continuous heating).
+- Left image block: custom boiler flow image (`boiler_flow_image`).
+- Center top value:
+  - Shows live temperature when `temperature_sensor` is configured and valid.
+  - Otherwise shows timer-based warming progress text.
+- Progress bar:
+  - Temperature-driven mode when live temperature exists.
+  - Timer-driven fallback when no valid live temperature is available.
+- Right block:
+  - Countdown timer value and label.
+  - Hamburger menu (`☰`) opens advanced modal.
+- Bottom quick actions:
+  - `15 / 30 / 60` timed presets.
+  - `Off` immediate shutdown.
+
+### 2) Timer Tab (Paged Options)
+![Timer Tab](docs/screenshots/02-timer-tab.png)
+
+- Purpose: select full duration catalog beyond quick presets.
+- Top controls:
+  - Close (`✕`)
+  - Previous/Next page arrows
+  - Page indicator (`current / total`)
+  - Mode tabs (`Timer`, `Tasks`, `Import/Export`)
+- Timer grid:
+  - All configured duration options including long presets and no-timer option.
+  - Selected option is highlighted.
+
+### 3) Tasks Tab
+![Tasks Tab](docs/screenshots/03-tasks-tab.png)
+
+- Purpose: task automation management in one place.
+- `Add`: create a new scheduled task (time window or timeline).
+- Task rows include:
+  - Task name.
+  - Compact schedule summary (time, days, months, timeline points when relevant).
+  - `Enable/Disable` action.
+  - `Edit` action.
+  - `Delete` action.
+- Behavior:
+  - Tasks are sorted by nearest next execution.
+  - Actions are reflected in both card UI and integration state.
+
+### 4) Timer Tab (Alternate State)
+![Timer Tab Alternate](docs/screenshots/04-timer-tab-alt.png)
+
+- Same timer workflow in another runtime state.
+- Demonstrates:
+  - Tab persistence between openings.
+  - Consistent layout/spacing and active-state styling.
+  - Preset grid responsiveness.
+
+### 5) Import / Export Tab
+![Import Export Tab](docs/screenshots/05-import-export-tab.png)
+
+- Purpose: task backup and restore operations.
+- Mode buttons:
+  - `Merge`: append imported tasks to existing tasks.
+  - `Replace`: clear existing tasks before import.
+- Action buttons:
+  - `Import`: upload JSON backup.
+  - `Export`: download current task set as JSON.
+- Design goal:
+  - Safe maintenance operations separated from normal task editing.
+
+### 6) Replace Confirmation Dialog
+![Replace Confirmation](docs/screenshots/06-replace-confirmation.png)
+
+- Purpose: guardrail before destructive import.
+- Triggered when user imports in `Replace` mode.
+- Content:
+  - Clear warning message.
+  - List/summary of impacted tasks when available.
+- Action:
+  - Explicit confirmation required to proceed.
+
+### 7) Card Editor Configuration
+![Card Editor Configuration](docs/screenshots/07-card-editor.png)
+
+- Purpose: configure card behavior and data sources.
+- Key fields:
+  - Language
+  - Title
+  - Boiler entity
+  - Temperature sensor
+  - Power sensor (`W`)
+  - Current sensor
+  - Voltage sensor
+  - Flow image URL/path
+- Right-side preview:
+  - Real-time visual feedback while editing.
+
 ## Project Structure
 
 - `www/boiler-card/boiler-card.js` - source frontend card

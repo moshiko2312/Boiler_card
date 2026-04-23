@@ -2676,10 +2676,12 @@ class BoilerWaterCard extends HTMLElement {
     const managerMode = this._boilerManagerModeEntity();
     this._maybeCancelLegacyTimerForSchedule(managerMode);
 
-    const title = typeof cfg.title === "string" && cfg.title.trim()
+    const hasExplicitTitle = typeof cfg.title === "string";
+    const title = hasExplicitTitle
       ? cfg.title.trim()
       : this._t("default_title");
     this._elements.title.textContent = title;
+    this._elements.title.hidden = hasExplicitTitle && title.length === 0;
     if (this._elements.timerModalPanel) {
       this._elements.timerModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
     }
