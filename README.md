@@ -154,6 +154,13 @@ Custom boiler control solution for Home Assistant with:
 
 ## Installation
 
+### HACS (Recommended)
+
+1. In Home Assistant, open `HACS -> Integrations -> ⋮ -> Custom repositories`
+2. Add repository URL: `https://github.com/moshiko2312/Boiler_card`
+3. Category: `Integration`
+4. Install `Boiler Manager` from HACS and restart Home Assistant
+
 ### 1) Install Integration
 
 Copy:
