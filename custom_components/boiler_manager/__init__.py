@@ -65,6 +65,7 @@ from .manager import BoilerManager, BoilerManagerError
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.SENSOR]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 DATA_MANAGERS = "managers"
 DATA_SERVICES_REGISTERED = "services_registered"
