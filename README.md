@@ -11,6 +11,9 @@ Custom boiler control solution for Home Assistant with:
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
 - Card editor auto-fills `boiler_entity` from Boiler Manager integration when a single matching entry is detected
+- `Switcher mode` support with adapter behavior:
+  - Uses `boiler_manager` timed/continuous/off services when available
+  - Falls back to native `switcher_kis.turn_on_with_timer` / `homeassistant.turn_on` / `homeassistant.turn_off` when needed
 - Card UI languages: `he` / `en` / `ru` / `fr`
 
 ## What You Get
@@ -41,6 +44,7 @@ Custom boiler control solution for Home Assistant with:
   - Overlap behavior: extends until latest end time (max end wins)
 - Tasks list sorted by the **next upcoming event** (chronological order)
 - Active task notice in card with current task end time
+- Vacation mode toggle directly in Tasks tab
 - Scheduler tick every second for near-immediate start/stop transitions
 - Runtime state restore on Home Assistant restart (active manual timed/continuous sessions are recovered)
 - Mobile-first schedule/task modals:
@@ -228,6 +232,7 @@ service_update_schedule: boiler_manager.update_schedule
 service_delete_schedule: boiler_manager.delete_schedule
 service_import_tasks: boiler_manager.import_tasks
 service_export_tasks: boiler_manager.export_tasks
+service_set_vacation_mode: boiler_manager.set_vacation_mode
 
 # Optional card sensors (card-only configuration)
 temperature_sensor: sensor.boiler_temperature
@@ -239,6 +244,37 @@ voltage_sensor: sensor.boiler_voltage
 Notes:
 - `integration_entry_id` is optional if you have only one Boiler Manager entry.
 - Built-in integration mode is the supported/default runtime path.
+
+### 4.1) Optional: Switcher Mode Card Configuration
+
+`switcher_mode` is intended for users with Switcher devices who still want full in-card time management.
+
+```yaml
+type: custom:boiler-water-card
+language: he
+title: דוד חכם
+switcher_mode: true
+boiler_entity: switch.switcher_touch_boiler
+
+# Keep boiler_manager services for full Tasks/Import/Export/Vacation support:
+service_run_timed: boiler_manager.run_timed
+service_on_continuous: boiler_manager.turn_on_continuous
+service_off: boiler_manager.turn_off
+service_create_schedule: boiler_manager.create_schedule
+service_create_timeline: boiler_manager.create_timeline
+service_update_schedule: boiler_manager.update_schedule
+service_delete_schedule: boiler_manager.delete_schedule
+service_import_tasks: boiler_manager.import_tasks
+service_export_tasks: boiler_manager.export_tasks
+service_set_vacation_mode: boiler_manager.set_vacation_mode
+
+# Optional Switcher-specific sensors:
+switcher_time_left_sensor: sensor.switcher_touch_boiler_remaining_time
+switcher_sensor_1: sensor.switcher_touch_boiler_electric_current
+switcher_sensor_2: sensor.switcher_touch_boiler_power_consumption
+switcher_icon_sensor: sensor.switcher_touch_boiler_temperature
+switcher_timer_values: "15,30,45,60,90,120"
+```
 
 ## Card Usage Guide
 
@@ -432,6 +468,16 @@ Fallback:
 - `boiler_manager.delete_schedule`
 - `boiler_manager.export_tasks`
 - `boiler_manager.import_tasks`
+- `boiler_manager.set_vacation_mode`
+
+### Vacation Mode example
+
+```yaml
+service: boiler_manager.set_vacation_mode
+data:
+  boiler_entity: switch.boiler
+  vacation_mode: true
+```
 
 ### export_tasks example
 
@@ -569,6 +615,8 @@ data:
   - If remaining time exists, countdown resumes and auto-off is rescheduled
   - If end time already passed during downtime, manual timed state is cleared on startup
 - Manual continuous mode is restored and boiler stays ON until explicit OFF
+- For timed runs, when the managed entity is a Switcher switch and `switcher_kis.turn_on_with_timer` is available,
+  Boiler Manager uses native Switcher timer service (up to 150 minutes) to keep device-side remaining-time behavior aligned.
 
 ## Troubleshooting
 

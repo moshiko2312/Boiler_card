@@ -78,6 +78,10 @@ _LOGGER = logging.getLogger(__name__)
 STATE_KEY_MANUAL_CONTINUOUS = "manual_continuous"
 STATE_KEY_MANUAL_UNTIL = "manual_until"
 STATE_KEY_MANUAL_DURATION_SECONDS = "manual_duration_seconds"
+STATE_KEY_VACATION_MODE = "vacation_mode"
+SWITCHER_TIMER_MAX_MINUTES = 150
+SWITCHER_TIMER_DOMAIN = "switcher_kis"
+SWITCHER_TIMER_SERVICE = "turn_on_with_timer"
 
 
 class BoilerManagerError(HomeAssistantError):
@@ -162,6 +166,7 @@ class BoilerManager:
         self._manual_continuous = False
         self._manual_until: datetime | None = None
         self._manual_duration_seconds: int | None = None
+        self._vacation_mode = False
         self._schedule_driven = False
         self._active_task_ids: set[str] = set()
         # Task ids temporarily skipped until the current active segment ends
@@ -207,6 +212,11 @@ class BoilerManager:
         return set(self._active_task_ids)
 
     @property
+    def vacation_mode(self) -> bool:
+        """Whether schedule execution is globally disabled."""
+        return bool(self._vacation_mode)
+
+    @property
     def mode(self) -> str:
         """Current manager mode."""
         now = dt_util.now()
@@ -230,6 +240,7 @@ class BoilerManager:
                 for task_id in sorted(self._active_task_ids)
                 if task_id in self._tasks
             ],
+            "vacation_mode": self._vacation_mode,
         }
         if self._manual_until:
             attrs["manual_until"] = dt_util.as_local(self._manual_until).isoformat()
@@ -704,7 +715,7 @@ class BoilerManager:
         self._schedule_manual_timeout(seconds)
 
         await self._async_save()
-        await self._async_turn_on_entity()
+        await self._async_turn_on_timed_entity(seconds)
         self._async_notify_state()
         return seconds
 
@@ -720,6 +731,17 @@ class BoilerManager:
         await self._async_save()
         await self._async_apply_schedule_state()
         await self._async_turn_off_entity()
+        self._async_notify_state()
+
+    async def async_set_vacation_mode(self, enabled: bool) -> None:
+        """Enable/disable global vacation mode (skip all scheduled tasks)."""
+        next_value = bool(enabled)
+        if self._vacation_mode == next_value:
+            return
+
+        self._vacation_mode = next_value
+        await self._async_save()
+        await self._async_apply_schedule_state()
         self._async_notify_state()
 
     async def _async_handle_timed_finished(self) -> None:
@@ -816,6 +838,46 @@ class BoilerManager:
         domain = entity_id.split(".", 1)[0]
         await self._async_call_action(domain, "turn_on", entity_id)
 
+    async def _async_turn_on_timed_entity(self, seconds: int) -> None:
+        """Turn on managed entity for a timed session.
+
+        For supported Switcher devices, prefer native `turn_on_with_timer` so
+        remaining-time sensors stay accurate to the device runtime timer.
+        """
+        entity_id = self.boiler_entity
+        if not entity_id:
+            _LOGGER.warning("No boiler entity configured")
+            return
+
+        can_use_switcher_timer = (
+            entity_id.startswith("switch.")
+            and 0 < seconds <= (SWITCHER_TIMER_MAX_MINUTES * 60)
+            and self.hass.services.has_service(SWITCHER_TIMER_DOMAIN, SWITCHER_TIMER_SERVICE)
+        )
+
+        if can_use_switcher_timer:
+            timer_minutes = max(
+                1,
+                min(SWITCHER_TIMER_MAX_MINUTES, int((seconds + 59) // 60)),
+            )
+            try:
+                await self.hass.services.async_call(
+                    SWITCHER_TIMER_DOMAIN,
+                    SWITCHER_TIMER_SERVICE,
+                    {"entity_id": entity_id, "timer_minutes": timer_minutes},
+                    blocking=True,
+                )
+                return
+            except HomeAssistantError:
+                _LOGGER.debug(
+                    "Service %s.%s failed for %s, falling back to regular turn_on",
+                    SWITCHER_TIMER_DOMAIN,
+                    SWITCHER_TIMER_SERVICE,
+                    entity_id,
+                )
+
+        await self._async_turn_on_entity()
+
     async def _async_turn_off_entity(self) -> None:
         """Turn off managed boiler entity."""
         entity_id = self.boiler_entity
@@ -872,6 +934,9 @@ class BoilerManager:
 
     def _tasks_active_now(self, now: datetime) -> list[BoilerTask]:
         """Return tasks active for provided timestamp."""
+        if self._vacation_mode:
+            return []
+
         local_now = dt_util.as_local(now)
         weekday = local_now.weekday()
         previous_weekday = (weekday - 1) % 7
@@ -1009,6 +1074,7 @@ class BoilerManager:
         self._manual_continuous = bool(raw.get(STATE_KEY_MANUAL_CONTINUOUS, False))
         self._manual_until = _parse_stored_datetime(raw.get(STATE_KEY_MANUAL_UNTIL))
         self._manual_duration_seconds = _parse_positive_int(raw.get(STATE_KEY_MANUAL_DURATION_SECONDS))
+        self._vacation_mode = bool(raw.get(STATE_KEY_VACATION_MODE, False))
         if self._manual_continuous:
             # Continuous and timed are mutually exclusive.
             self._manual_until = None
@@ -1023,6 +1089,7 @@ class BoilerManager:
                 dt_util.as_utc(self._manual_until).isoformat() if self._manual_until else None
             ),
             STATE_KEY_MANUAL_DURATION_SECONDS: self._manual_duration_seconds,
+            STATE_KEY_VACATION_MODE: self._vacation_mode,
         }
         await self._store.async_save(payload)
 
@@ -1056,7 +1123,7 @@ class BoilerManager:
 
         remaining_seconds = int((self._manual_until - now).total_seconds())
         self._schedule_manual_timeout(remaining_seconds)
-        await self._async_turn_on_entity()
+        await self._async_turn_on_timed_entity(remaining_seconds)
 
     @callback
     def _async_notify_state(self) -> None:

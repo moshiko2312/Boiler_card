@@ -45,6 +45,23 @@ turn_off:
       description: Optional boiler entity to resolve matching entry.
       example: "switch.boiler"
 
+set_vacation_mode:
+  name: Set Vacation Mode
+  description: Enable or disable global vacation mode (all schedules are paused while enabled).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"
+    vacation_mode:
+      name: Vacation Mode
+      description: true to pause all scheduled tasks, false to resume schedule execution.
+      example: true
+
 create_schedule:
   name: Create Schedule
   description: Create a recurring from-to task and expose it as a switch entity.

@@ -43,6 +43,7 @@ from .const import (
     ATTR_TASK_TYPE,
     ATTR_TIMELINE_POINTS,
     ATTR_SKIP_IF_STATE,
+    ATTR_VACATION_MODE,
     CONF_BOILER_ENTITY,
     CONDITION_OPERATORS,
     DOMAIN,
@@ -55,6 +56,7 @@ from .const import (
     SERVICE_EXPORT_TASKS,
     SERVICE_IMPORT_TASKS,
     SERVICE_RUN_TIMED,
+    SERVICE_SET_VACATION_MODE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON_CONTINUOUS,
     SERVICE_UPDATE_SCHEDULE,
@@ -181,6 +183,14 @@ IMPORT_TASKS_SCHEMA = vol.Schema(
     extra=vol.PREVENT_EXTRA,
 )
 
+VACATION_MODE_SCHEMA = vol.Schema(
+    {
+        **BASE_SERVICE_SCHEMA,
+        vol.Optional(ATTR_VACATION_MODE, default=True): cv.boolean,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up integration domain storage."""
@@ -236,6 +246,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     async def _turn_off(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
         await manager.async_turn_off()
+
+    async def _set_vacation_mode(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        await manager.async_set_vacation_mode(call.data.get(ATTR_VACATION_MODE, True))
 
     async def _create_schedule(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
@@ -387,6 +401,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_SET_VACATION_MODE,
+        _wrap_service_errors(_set_vacation_mode),
+        schema=VACATION_MODE_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_CREATE_SCHEDULE,
         _wrap_service_errors(_create_schedule),
         schema=CREATE_SCHEDULE_SCHEMA,
@@ -432,6 +452,7 @@ def _async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_TURN_ON_CONTINUOUS,
         SERVICE_RUN_TIMED,
         SERVICE_TURN_OFF,
+        SERVICE_SET_VACATION_MODE,
         SERVICE_CREATE_SCHEDULE,
         SERVICE_CREATE_TIMELINE,
         SERVICE_UPDATE_SCHEDULE,

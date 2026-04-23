@@ -12,3 +12,4 @@ service_update_schedule: boiler_manager.update_schedule
 service_delete_schedule: boiler_manager.delete_schedule
 service_import_tasks: boiler_manager.import_tasks
 service_export_tasks: boiler_manager.export_tasks
+service_set_vacation_mode: boiler_manager.set_vacation_mode

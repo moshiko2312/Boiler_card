@@ -53,6 +53,9 @@ const I18N = {
     hours_short: "ש׳",
     tasks_title: "משימות",
     tasks_add: "הוספה",
+    vacation_mode_notice: "מצב חופשה פעיל • ביטול שעונים",
+    vacation_mode_enable: "הפעל מצב חופשה",
+    vacation_mode_disable: "בטל מצב חופשה",
     tasks_import: "ייבוא",
     tasks_export: "ייצוא",
     import_mode_merge: "מיזוג",
@@ -113,6 +116,8 @@ const I18N = {
     sensor_power: "צריכה",
     sensor_current: "זרם",
     sensor_voltage: "מתח",
+    sensor_switcher_on: "סנסור פעיל",
+    sensor_switcher_always: "סנסור קבוע",
     sensor_unavailable: "לא זמין",
     day_mon: "ב׳",
     day_tue: "ג׳",
@@ -154,6 +159,9 @@ const I18N = {
     hours_short: "h",
     tasks_title: "Tasks",
     tasks_add: "Add",
+    vacation_mode_notice: "Vacation mode active • schedules paused",
+    vacation_mode_enable: "Enable Vacation Mode",
+    vacation_mode_disable: "Disable Vacation Mode",
     tasks_import: "Import",
     tasks_export: "Export",
     import_mode_merge: "Merge",
@@ -214,6 +222,8 @@ const I18N = {
     sensor_power: "Power",
     sensor_current: "Current",
     sensor_voltage: "Voltage",
+    sensor_switcher_on: "On Sensor",
+    sensor_switcher_always: "Always Sensor",
     sensor_unavailable: "Unavailable",
     day_mon: "Mon",
     day_tue: "Tue",
@@ -255,6 +265,9 @@ const I18N = {
     hours_short: "ч",
     tasks_title: "Задачи",
     tasks_add: "Добавить",
+    vacation_mode_notice: "Режим отпуска активен • расписания приостановлены",
+    vacation_mode_enable: "Включить режим отпуска",
+    vacation_mode_disable: "Выключить режим отпуска",
     tasks_import: "Импорт",
     tasks_export: "Экспорт",
     import_mode_merge: "Слияние",
@@ -315,6 +328,8 @@ const I18N = {
     sensor_power: "Мощность",
     sensor_current: "Ток",
     sensor_voltage: "Напряжение",
+    sensor_switcher_on: "Датчик (вкл)",
+    sensor_switcher_always: "Датчик (всегда)",
     sensor_unavailable: "Недоступно",
     day_mon: "Пн",
     day_tue: "Вт",
@@ -356,6 +371,9 @@ const I18N = {
     hours_short: "h",
     tasks_title: "Tâches",
     tasks_add: "Ajouter",
+    vacation_mode_notice: "Mode vacances actif • plannings en pause",
+    vacation_mode_enable: "Activer le mode vacances",
+    vacation_mode_disable: "Désactiver le mode vacances",
     tasks_import: "Importer",
     tasks_export: "Exporter",
     import_mode_merge: "Fusionner",
@@ -416,6 +434,8 @@ const I18N = {
     sensor_power: "Puissance",
     sensor_current: "Courant",
     sensor_voltage: "Tension",
+    sensor_switcher_on: "Capteur actif",
+    sensor_switcher_always: "Capteur permanent",
     sensor_unavailable: "Indisponible",
     day_mon: "Lun",
     day_tue: "Mar",
@@ -430,11 +450,17 @@ const I18N = {
 const DEFAULT_CONFIG = {
   title: "דוד מים חמים",
   language: "he",
+  switcher_mode: false,
   boiler_entity: "",
   temperature_sensor: "",
   power_sensor: "",
   current_sensor: "",
   voltage_sensor: "",
+  switcher_time_left_sensor: "",
+  switcher_sensor_1: "",
+  switcher_sensor_2: "",
+  switcher_icon_sensor: "",
+  switcher_timer_values: "15,30,45,60",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "",
   timer_entity: "",
@@ -451,6 +477,7 @@ const DEFAULT_CONFIG = {
   service_delete_schedule: "boiler_manager.delete_schedule",
   service_import_tasks: "boiler_manager.import_tasks",
   service_export_tasks: "boiler_manager.export_tasks",
+  service_set_vacation_mode: "boiler_manager.set_vacation_mode",
   state_on_values: ["on"],
   state_off_values: ["off", "idle", "standby", "unavailable", "unknown"],
 };
@@ -674,6 +701,20 @@ class BoilerWaterCard extends HTMLElement {
           font-weight: 800;
           text-align: center;
           text-shadow: 0 1px 1px rgba(12, 34, 18, 0.45);
+        }
+
+        .vacation-notice {
+          margin: 0 0 4px;
+          padding: 6px 10px;
+          border-radius: 9px;
+          border: 1px solid rgba(255, 191, 102, 0.8);
+          background: linear-gradient(165deg, rgba(255, 187, 79, 0.3), rgba(210, 118, 22, 0.24));
+          color: #fff8e8;
+          font-size: 0.74rem;
+          font-weight: 900;
+          text-align: center;
+          letter-spacing: 0.01em;
+          text-shadow: 0 1px 1px rgba(56, 24, 2, 0.45);
         }
 
         .boiler-progress-row {
@@ -1060,6 +1101,32 @@ class BoilerWaterCard extends HTMLElement {
             inset 0 1px 0 rgba(255, 255, 255, 0.28);
         }
 
+        .tasks-vacation-btn {
+          border: 1px solid rgba(245, 190, 104, 0.94);
+          border-radius: 10px;
+          background: linear-gradient(165deg, rgba(255, 242, 219, 0.95), rgba(255, 226, 184, 0.88));
+          color: #6f3a00;
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+          font-size: 0.78rem;
+          font-weight: 900;
+          min-height: 34px;
+          padding: 6px 10px;
+          cursor: pointer;
+          box-shadow:
+            0 2px 6px rgba(82, 46, 11, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .tasks-vacation-btn.active {
+          border-color: rgba(255, 194, 102, 0.98);
+          background: linear-gradient(165deg, #f7bc5a, #d8891a);
+          color: #fff8ec;
+          text-shadow: 0 1px 1px rgba(83, 39, 3, 0.45);
+          box-shadow:
+            0 3px 9px rgba(130, 73, 10, 0.3),
+            inset 0 1px 0 rgba(255, 233, 198, 0.4);
+        }
+
         .tasks-import-btn,
         .tasks-export-btn {
           border: 1px solid rgba(148, 170, 198, 0.78);
@@ -1081,6 +1148,7 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .tasks-add-btn[disabled],
+        .tasks-vacation-btn[disabled],
         .tasks-import-btn[disabled],
         .tasks-export-btn[disabled],
         .tasks-mode-btn[disabled] {
@@ -1181,6 +1249,7 @@ class BoilerWaterCard extends HTMLElement {
         .task-edit-btn:focus-visible,
         .task-delete-btn:focus-visible,
         .tasks-add-btn:focus-visible,
+        .tasks-vacation-btn:focus-visible,
         .tasks-import-btn:focus-visible,
         .tasks-export-btn:focus-visible,
         .tasks-mode-btn:focus-visible {
@@ -2121,14 +2190,16 @@ class BoilerWaterCard extends HTMLElement {
 
           .tasks-import-btn,
           .tasks-export-btn,
-          .tasks-add-btn {
+          .tasks-add-btn,
+          .tasks-vacation-btn {
             min-height: 42px;
             font-size: 0.82rem;
             width: 100%;
             padding: 6px 10px;
           }
 
-          .tasks-head-actions .tasks-add-btn {
+          .tasks-head-actions .tasks-add-btn,
+          .tasks-head-actions .tasks-vacation-btn {
             grid-column: 1 / -1;
           }
         }
@@ -2241,7 +2312,8 @@ class BoilerWaterCard extends HTMLElement {
 
           .tasks-import-btn,
           .tasks-export-btn,
-          .tasks-add-btn {
+          .tasks-add-btn,
+          .tasks-vacation-btn {
             padding: 5px 8px;
             min-height: 44px;
             font-size: 0.84rem;
@@ -2386,6 +2458,7 @@ class BoilerWaterCard extends HTMLElement {
               <p class="boiler-stage" id="boiler-stage">Cool Stage</p>
               <p class="upcoming-task-notice" id="upcoming-task-notice" hidden></p>
               <p class="active-task-notice" id="active-task-notice" hidden></p>
+              <p class="vacation-notice" id="vacation-notice" hidden></p>
               <div class="sensors-row" id="sensors-row" hidden></div>
               <div class="boiler-progress-row">
                 <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed</p>
@@ -2438,6 +2511,7 @@ class BoilerWaterCard extends HTMLElement {
                 <p class="tasks-title" id="tasks-title">Tasks</p>
                 <div class="tasks-head-actions">
                   <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
+                  <button type="button" class="tasks-vacation-btn" id="tasks-vacation-btn">Vacation</button>
                 </div>
               </div>
               <div class="tasks-list" id="tasks-list"></div>
@@ -2619,6 +2693,7 @@ class BoilerWaterCard extends HTMLElement {
       boilerStage: this.shadowRoot.getElementById("boiler-stage"),
       upcomingTaskNotice: this.shadowRoot.getElementById("upcoming-task-notice"),
       activeTaskNotice: this.shadowRoot.getElementById("active-task-notice"),
+      vacationNotice: this.shadowRoot.getElementById("vacation-notice"),
       boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
       boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
@@ -2629,6 +2704,7 @@ class BoilerWaterCard extends HTMLElement {
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
       importExportTitle: this.shadowRoot.getElementById("import-export-title"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
+      tasksVacationBtn: this.shadowRoot.getElementById("tasks-vacation-btn"),
       tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
       tasksExportBtn: this.shadowRoot.getElementById("tasks-export-btn"),
       tasksModeMergeBtn: this.shadowRoot.getElementById("tasks-mode-merge-btn"),
@@ -2731,6 +2807,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.modalModeTasksBtn?.addEventListener("click", () => this._setMenuMode("tasks"));
     this._elements.modalModeImportExportBtn?.addEventListener("click", () => this._setMenuMode("import_export"));
     this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
+    this._elements.tasksVacationBtn?.addEventListener("click", () => this._toggleVacationMode());
     this._elements.tasksImportBtn?.addEventListener("click", () => this._openImportTasksFilePicker());
     this._elements.tasksExportBtn?.addEventListener("click", () => this._exportTasksFromCard());
     this._elements.tasksModeMergeBtn?.addEventListener("click", () => this._setImportMode("merge"));
@@ -2813,9 +2890,20 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.importExportTitle) {
       this._elements.importExportTitle.textContent = this._t("menu_import_export");
     }
+    const hasTasksView = this._hasTasksView();
+    const hasImportExportView = this._hasImportExportView();
     if (this._elements.tasksAddBtn) {
       this._elements.tasksAddBtn.textContent = this._t("tasks_add");
       this._elements.tasksAddBtn.disabled = !this._hasAnyTaskCreateService();
+    }
+    if (this._elements.tasksVacationBtn) {
+      const vacationEnabled = this._isVacationModeEnabled(managerMode);
+      this._elements.tasksVacationBtn.textContent = vacationEnabled
+        ? this._t("vacation_mode_disable")
+        : this._t("vacation_mode_enable");
+      this._elements.tasksVacationBtn.classList.toggle("active", vacationEnabled);
+      this._elements.tasksVacationBtn.setAttribute("aria-pressed", vacationEnabled ? "true" : "false");
+      this._elements.tasksVacationBtn.disabled = !this._hasVacationModeService();
     }
     if (this._elements.tasksImportBtn) {
       this._elements.tasksImportBtn.textContent = this._t("tasks_import");
@@ -2851,9 +2939,11 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.modalModeTasksBtn) {
       this._elements.modalModeTasksBtn.textContent = this._t("menu_tasks");
+      this._elements.modalModeTasksBtn.hidden = !hasTasksView;
     }
     if (this._elements.modalModeImportExportBtn) {
       this._elements.modalModeImportExportBtn.textContent = this._t("menu_import_export");
+      this._elements.modalModeImportExportBtn.hidden = !hasImportExportView;
     }
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
@@ -2968,6 +3058,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncHeatingVisual(boiler, timer, duration, managerMode);
     this._syncStatus(boiler, timer, managerMode);
     this._syncCountdown(timer, boiler, managerMode);
+    this._syncVacationNotice(managerMode);
     this._syncSensors();
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
@@ -3098,6 +3189,11 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    if (this._isSwitcherMode()) {
+      this._elements.subtitle.textContent = this._switcherStatusLine(boiler);
+      return;
+    }
+
     const isOn = this._isEntityOn(boiler);
     const scheduleActive = this._isBuiltInScheduleMode(managerMode);
     const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
@@ -3113,6 +3209,19 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _syncCountdown(timer, boiler, managerMode = null) {
+    if (this._isSwitcherMode()) {
+      const isOn = this._isEntityOn(boiler);
+      const timeLeftValue = this._switcherSensorDisplayValue(this._config.switcher_time_left_sensor, {
+        withUnit: false,
+      });
+      this._elements.countdownLabel.textContent = this._t("countdown_remaining");
+      this._elements.countdownValue.textContent = isOn
+        ? (timeLeftValue || "--:--")
+        : "--:--";
+      this._elements.countdownValue.classList.remove("continuous-active");
+      return;
+    }
+
     const scheduleActive = this._isBuiltInScheduleMode(managerMode);
     if (!scheduleActive && (timer?.state === "active" || timer?.state === "paused")) {
       const seconds = this._remainingSeconds(timer);
@@ -3185,6 +3294,27 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _configuredSensors() {
+    if (this._isSwitcherMode()) {
+      const isOn = this._isEntityOn(this._hass?.states?.[this._config.boiler_entity]);
+      const defs = [
+        ...(isOn ? [{
+          key: "switcher_sensor_1",
+          fallbackLabel: this._t("sensor_switcher_on"),
+        }] : []),
+        {
+          key: "switcher_sensor_2",
+          fallbackLabel: this._t("sensor_switcher_always"),
+        },
+      ];
+
+      return defs
+        .map(({ key, fallbackLabel }) => {
+          const entityId = String(this._config?.[key] || "").trim();
+          return { label: fallbackLabel, entityId };
+        })
+        .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
+    }
+
     const defs = [
       {
         key: "power_sensor",
@@ -3306,6 +3436,7 @@ class BoilerWaterCard extends HTMLElement {
     const managerMode = this._boilerManagerModeEntity();
     this._maybeCancelLegacyTimerForSchedule(managerMode);
     this._syncCountdown(timer, boiler, managerMode);
+    this._syncVacationNotice(managerMode);
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
     this._syncHeatingVisual(boiler, timer, duration, managerMode);
@@ -3474,7 +3605,7 @@ class BoilerWaterCard extends HTMLElement {
       return null;
     }
 
-    const sensorEntityId = String(this._config?.temperature_sensor || "").trim();
+    const sensorEntityId = this._temperatureSensorEntityId();
     if (!this._isConfiguredSensorEntity(sensorEntityId)) {
       return null;
     }
@@ -3592,6 +3723,14 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _durationOptions(durationEntity) {
+    if (this._isSwitcherMode()) {
+      const configured = this._switcherTimerOptionsFromConfig();
+      if (configured.length > 0) {
+        return configured;
+      }
+      return ["15m", "30m", "45m", "60m", "No Timer"];
+    }
+
     const fromEntity = durationEntity?.attributes?.options;
     if (Array.isArray(fromEntity) && fromEntity.length > 0) {
       return fromEntity;
@@ -3654,21 +3793,47 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const canUseBuiltIn = this._hasBuiltInControlServices();
+    const runTimedService = this._resolvedControlService(
+      this._config.service_run_timed,
+      "service_run_timed"
+    );
+    const onContinuousService = this._resolvedControlService(
+      this._config.service_on_continuous,
+      "service_on_continuous"
+    );
 
     if (this._isNoTimerOption(option)) {
       if (canUseBuiltIn) {
-        this._callConfiguredService(this._config.service_on_continuous, this._builtInServiceBaseData());
+        this._callConfiguredService(
+          onContinuousService,
+          this._controlServiceBaseData(onContinuousService)
+        );
       }
       return;
     }
 
     if (canUseBuiltIn) {
       const minutes = this._optionToMinutes(option);
-      this._callConfiguredService(this._config.service_run_timed, {
-        ...this._builtInServiceBaseData(),
-        duration: this._optionToHhMmSs(option) || "00:30:00",
-        ...(minutes ? { minutes } : {}),
-      });
+      if (this._isSwitcherMode()) {
+        if (this._isBoilerManagerService(runTimedService)) {
+          this._callConfiguredService(runTimedService, {
+            ...this._controlServiceBaseData(runTimedService),
+            duration: this._optionToHhMmSs(option) || "00:30:00",
+            ...(minutes ? { minutes } : {}),
+          });
+        } else {
+          this._callConfiguredService(runTimedService, {
+            ...this._controlServiceBaseData(runTimedService),
+            timer_minutes: minutes || 30,
+          });
+        }
+      } else {
+        this._callConfiguredService(runTimedService, {
+          ...this._controlServiceBaseData(runTimedService),
+          duration: this._optionToHhMmSs(option) || "00:30:00",
+          ...(minutes ? { minutes } : {}),
+        });
+      }
     }
   }
 
@@ -3687,8 +3852,33 @@ class BoilerWaterCard extends HTMLElement {
     this._attachEscapeListener();
   }
 
+  _hasTasksView() {
+    return this._hasAnyTaskCreateService()
+      || this._hasScheduleUpdateService()
+      || this._hasScheduleDeleteService()
+      || this._hasVacationModeService()
+      || this._taskSwitchEntities().length > 0;
+  }
+
+  _hasImportExportView() {
+    return this._hasTaskImportService() || this._taskSwitchEntities().length > 0;
+  }
+
+  _availableMenuModes() {
+    const modes = ["timer"];
+    if (this._hasTasksView()) {
+      modes.push("tasks");
+    }
+    if (this._hasImportExportView()) {
+      modes.push("import_export");
+    }
+    return modes;
+  }
+
   _setMenuMode(mode) {
-    const normalized = mode === "tasks" || mode === "import_export" ? mode : "timer";
+    const requested = mode === "tasks" || mode === "import_export" ? mode : "timer";
+    const availableModes = this._availableMenuModes();
+    const normalized = availableModes.includes(requested) ? requested : "timer";
     this._menuMode = normalized;
     const isTimer = this._menuMode === "timer";
     const isTasks = this._menuMode === "tasks";
@@ -3738,6 +3928,18 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.tasksModeReplaceBtn.classList.toggle("active", active);
       this._elements.tasksModeReplaceBtn.setAttribute("aria-pressed", active ? "true" : "false");
     }
+  }
+
+  _toggleVacationMode() {
+    if (!this._hasVacationModeService()) {
+      return;
+    }
+    const managerMode = this._boilerManagerModeEntity();
+    const currentlyEnabled = this._isVacationModeEnabled(managerMode);
+    this._callConfiguredService(this._config.service_set_vacation_mode, {
+      ...this._builtInServiceBaseData(),
+      vacation_mode: !currentlyEnabled,
+    });
   }
 
   _openImportTasksFilePicker() {
@@ -5226,9 +5428,25 @@ class BoilerWaterCard extends HTMLElement {
     return `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${dayText}`;
   }
 
+  _syncVacationNotice(managerMode = null) {
+    const notice = this._elements.vacationNotice;
+    if (!notice) {
+      return;
+    }
+    const enabled = this._isVacationModeEnabled(managerMode || this._boilerManagerModeEntity());
+    notice.hidden = !enabled;
+    notice.textContent = enabled ? this._t("vacation_mode_notice") : "";
+  }
+
   _syncActiveTaskNotice() {
     const notice = this._elements.activeTaskNotice;
     if (!notice) {
+      return;
+    }
+
+    if (this._isVacationModeEnabled(this._boilerManagerModeEntity())) {
+      notice.hidden = true;
+      notice.textContent = "";
       return;
     }
 
@@ -5372,6 +5590,12 @@ class BoilerWaterCard extends HTMLElement {
   _syncUpcomingTaskNotice() {
     const notice = this._elements.upcomingTaskNotice;
     if (!notice) {
+      return;
+    }
+
+    if (this._isVacationModeEnabled(this._boilerManagerModeEntity())) {
+      notice.hidden = true;
+      notice.textContent = "";
       return;
     }
 
@@ -5725,6 +5949,15 @@ class BoilerWaterCard extends HTMLElement {
     offButton?.focus({ preventScroll: true });
     this._sync();
 
+    const offService = this._resolvedControlService(
+      this._config.service_off,
+      "service_off"
+    );
+    if (this._isSwitcherMode()) {
+      this._callConfiguredService(offService, this._controlServiceBaseData(offService));
+      return;
+    }
+
     const entityDomain = String(this._config.boiler_entity || "").split(".")[0];
     // Always send direct OFF to the entity domain first (works for switch/light/etc).
     if (entityDomain) {
@@ -5741,7 +5974,7 @@ class BoilerWaterCard extends HTMLElement {
     );
 
     // Then call integration off flow for state cleanup.
-    this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
+    this._callConfiguredService(offService, this._builtInServiceBaseData());
 
     if (this._config.timer_entity) {
       this._hass?.callService("timer", "cancel", {
@@ -5779,10 +6012,85 @@ class BoilerWaterCard extends HTMLElement {
     return data;
   }
 
+  _controlServiceBaseData(serviceRef = "") {
+    if (this._isSwitcherMode()) {
+      if (this._isBoilerManagerService(serviceRef)) {
+        return this._builtInServiceBaseData();
+      }
+      return this._config.boiler_entity
+        ? { entity_id: this._config.boiler_entity }
+        : {};
+    }
+    return this._builtInServiceBaseData();
+  }
+
+  _resolvedControlService(serviceRef, serviceKey = "") {
+    const raw = String(serviceRef || "").trim();
+    const normalized = raw.toLowerCase();
+
+    if (!this._isSwitcherMode()) {
+      return raw;
+    }
+
+    if (
+      serviceKey === "service_run_timed"
+      && (
+        !normalized
+        || normalized === "switcher_kis.turn_on_with_timer"
+        || normalized === String(DEFAULT_CONFIG.service_run_timed).toLowerCase()
+      )
+      && this._isServiceAvailable("boiler_manager.run_timed")
+    ) {
+      return "boiler_manager.run_timed";
+    }
+
+    if (
+      serviceKey === "service_on_continuous"
+      && (
+        !normalized
+        || normalized === "homeassistant.turn_on"
+        || normalized === String(DEFAULT_CONFIG.service_on_continuous).toLowerCase()
+      )
+      && this._isServiceAvailable("boiler_manager.turn_on_continuous")
+    ) {
+      return "boiler_manager.turn_on_continuous";
+    }
+
+    if (
+      serviceKey === "service_off"
+      && (
+        !normalized
+        || normalized === "homeassistant.turn_off"
+        || normalized === String(DEFAULT_CONFIG.service_off).toLowerCase()
+      )
+      && this._isServiceAvailable("boiler_manager.turn_off")
+    ) {
+      return "boiler_manager.turn_off";
+    }
+
+    return raw;
+  }
+
+  _isBoilerManagerService(serviceRef) {
+    return String(serviceRef || "").trim().toLowerCase().startsWith("boiler_manager.");
+  }
+
   _hasBuiltInControlServices() {
-    return this._isServiceAvailable(this._config.service_run_timed)
-      && this._isServiceAvailable(this._config.service_on_continuous)
-      && this._isServiceAvailable(this._config.service_off);
+    const runTimedService = this._resolvedControlService(
+      this._config.service_run_timed,
+      "service_run_timed"
+    );
+    const onContinuousService = this._resolvedControlService(
+      this._config.service_on_continuous,
+      "service_on_continuous"
+    );
+    const offService = this._resolvedControlService(
+      this._config.service_off,
+      "service_off"
+    );
+    return this._isServiceAvailable(runTimedService)
+      && this._isServiceAvailable(onContinuousService)
+      && this._isServiceAvailable(offService);
   }
 
   _hasScheduleCreateService() {
@@ -5807,6 +6115,10 @@ class BoilerWaterCard extends HTMLElement {
 
   _hasTaskImportService() {
     return this._isServiceAvailable(this._config.service_import_tasks);
+  }
+
+  _hasVacationModeService() {
+    return this._isServiceAvailable(this._config.service_set_vacation_mode);
   }
 
   _isServiceRef(value) {
@@ -5920,6 +6232,7 @@ class BoilerWaterCard extends HTMLElement {
       "no timer",
       "без таймера",
       "ללא טיימר",
+      "sans minuterie",
     ];
     return known.includes(normalized) || normalized.includes("ללא");
   }
@@ -6165,6 +6478,90 @@ class BoilerWaterCard extends HTMLElement {
     }
     return raw;
   }
+
+  _isVacationModeEnabled(managerMode) {
+    return this._asTruthy(managerMode?.attributes?.vacation_mode);
+  }
+
+  _isSwitcherMode() {
+    return this._asTruthy(this._config?.switcher_mode);
+  }
+
+  _temperatureSensorEntityId() {
+    if (this._isSwitcherMode() && this._isConfiguredSensorEntity(this._config?.switcher_icon_sensor)) {
+      return String(this._config.switcher_icon_sensor).trim();
+    }
+    return String(this._config?.temperature_sensor || "").trim();
+  }
+
+  _switcherStatusLine(boiler) {
+    const isOn = this._isEntityOn(boiler);
+    const parts = [];
+    if (isOn) {
+      const timeLeft = this._switcherSensorDisplayValue(this._config.switcher_time_left_sensor, { withUnit: false });
+      const sensor1 = this._switcherSensorDisplayValue(this._config.switcher_sensor_1);
+      const sensor2 = this._switcherSensorDisplayValue(this._config.switcher_sensor_2);
+      if (timeLeft) {
+        parts.push(timeLeft);
+      }
+      if (sensor1) {
+        parts.push(sensor1);
+      }
+      if (sensor2) {
+        parts.push(sensor2);
+      }
+      if (parts.length === 0) {
+        parts.push(this._t("status_on"));
+      }
+      return parts.join(" • ");
+    }
+
+    parts.push(this._t("status_off"));
+    const sensor2 = this._switcherSensorDisplayValue(this._config.switcher_sensor_2);
+    if (sensor2) {
+      parts.push(sensor2);
+    }
+    return parts.join(" • ");
+  }
+
+  _switcherSensorDisplayValue(entityId, options = null) {
+    if (!this._hass || !this._isConfiguredSensorEntity(entityId)) {
+      return "";
+    }
+    const entity = this._hass.states?.[entityId];
+    if (!this._hasAvailableSensorValue(entity)) {
+      return "";
+    }
+
+    const withUnit = options?.withUnit !== false;
+    if (!withUnit) {
+      return String(entity?.state || "").trim();
+    }
+    return this._formatSensorValue(entity);
+  }
+
+  _switcherTimerOptionsFromConfig() {
+    const raw = this._config?.switcher_timer_values;
+    const values = Array.isArray(raw)
+      ? raw
+      : String(raw || "")
+        .split(/[,\s]+/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+
+    const minutes = Array.from(new Set(values
+      .map((item) => Number.parseInt(String(item), 10))
+      .filter((item) => Number.isInteger(item) && item > 0 && item <= 150)))
+      .sort((a, b) => a - b);
+
+    if (minutes.length === 0) {
+      return [];
+    }
+
+    const options = minutes.map((value) => `${value}m`);
+    options.push("No Timer");
+    return options;
+  }
 }
 
 class BoilerWaterCardEditor extends HTMLElement {
@@ -6183,10 +6580,15 @@ class BoilerWaterCardEditor extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     this._maybeApplyIntegrationDefaults();
+    this._maybeApplySwitcherDefaults();
     this._render();
   }
 
   _maybeApplyIntegrationDefaults() {
+    if (this._asTruthy(this._config?.switcher_mode)) {
+      return;
+    }
+
     if (!this._hass || !this._shouldAutofillBoilerEntity()) {
       return;
     }
@@ -6206,6 +6608,179 @@ class BoilerWaterCardEditor extends HTMLElement {
     this.dispatchEvent(new CustomEvent("config-changed", {
       detail: { config: nextConfig },
     }));
+  }
+
+  _maybeApplySwitcherDefaults() {
+    if (!this._hass || !this._asTruthy(this._config?.switcher_mode)) {
+      return;
+    }
+
+    const nextConfig = this._withSwitcherModeDefaults(this._config, {
+      preserveManualValues: true,
+    });
+    const changed = JSON.stringify(nextConfig) !== JSON.stringify(this._config);
+    if (!changed) {
+      return;
+    }
+
+    this._config = nextConfig;
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      detail: { config: nextConfig },
+    }));
+  }
+
+  _withSwitcherModeDefaults(sourceConfig, options = null) {
+    const cfg = { ...(sourceConfig || {}) };
+    const next = { ...cfg };
+    const preserveManualValues = options?.preserveManualValues !== false;
+    const selectedBoiler = String(cfg.boiler_entity || "").trim();
+    const boilerEntity = selectedBoiler || this._guessSwitcherBoilerEntity();
+
+    if (!selectedBoiler && boilerEntity) {
+      next.boiler_entity = boilerEntity;
+    }
+
+    const applyIfEmpty = (key, value) => {
+      if (!value) {
+        return;
+      }
+      const current = String(next[key] || "").trim();
+      if (!current || !preserveManualValues) {
+        next[key] = value;
+      }
+    };
+
+    const currentRunService = String(next.service_run_timed || "").trim().toLowerCase();
+    const currentOnService = String(next.service_on_continuous || "").trim().toLowerCase();
+    const currentOffService = String(next.service_off || "").trim().toLowerCase();
+    const prefersManagerRunTimed = this._isServiceAvailable("boiler_manager.run_timed");
+    const prefersManagerContinuous = this._isServiceAvailable("boiler_manager.turn_on_continuous");
+    const prefersManagerOff = this._isServiceAvailable("boiler_manager.turn_off");
+    const desiredRunService = prefersManagerRunTimed
+      ? "boiler_manager.run_timed"
+      : "switcher_kis.turn_on_with_timer";
+    const desiredOnService = prefersManagerContinuous
+      ? "boiler_manager.turn_on_continuous"
+      : "homeassistant.turn_on";
+    const desiredOffService = prefersManagerOff
+      ? "boiler_manager.turn_off"
+      : "homeassistant.turn_off";
+
+    if (
+      !currentRunService
+      || currentRunService === String(DEFAULT_CONFIG.service_run_timed).toLowerCase()
+      || currentRunService === "switcher_kis.turn_on_with_timer"
+    ) {
+      next.service_run_timed = desiredRunService;
+    }
+    if (
+      !currentOnService
+      || currentOnService === String(DEFAULT_CONFIG.service_on_continuous).toLowerCase()
+      || currentOnService === "homeassistant.turn_on"
+    ) {
+      next.service_on_continuous = desiredOnService;
+    }
+    if (
+      !currentOffService
+      || currentOffService === String(DEFAULT_CONFIG.service_off).toLowerCase()
+      || currentOffService === "homeassistant.turn_off"
+    ) {
+      next.service_off = desiredOffService;
+    }
+
+    if (!String(next.switcher_timer_values || "").trim()) {
+      next.switcher_timer_values = DEFAULT_CONFIG.switcher_timer_values;
+    }
+
+    const inferred = this._inferSwitcherEntities(boilerEntity);
+    applyIfEmpty("switcher_time_left_sensor", inferred.timeLeft);
+    applyIfEmpty("switcher_sensor_1", inferred.sensor1);
+    applyIfEmpty("switcher_sensor_2", inferred.sensor2);
+    applyIfEmpty("switcher_icon_sensor", inferred.iconSensor);
+
+    return next;
+  }
+
+  _guessSwitcherBoilerEntity() {
+    const states = this._hass?.states;
+    if (!states) {
+      return "";
+    }
+
+    const candidates = Object.keys(states).filter((entityId) => {
+      if (!entityId.startsWith("switch.")) {
+        return false;
+      }
+      const stateObj = states[entityId];
+      const haystack = `${entityId} ${stateObj?.attributes?.friendly_name || ""}`.toLowerCase();
+      return haystack.includes("switcher") || haystack.includes("kis");
+    });
+
+    if (candidates.length === 0) {
+      return "";
+    }
+    return candidates[0];
+  }
+
+  _inferSwitcherEntities(boilerEntity) {
+    const states = this._hass?.states || {};
+    const objectId = String(boilerEntity || "").split(".")[1] || "";
+    const escapedObjectId = objectId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const firstExisting = (candidates) => {
+      for (const candidate of candidates) {
+        if (states[candidate]) {
+          return candidate;
+        }
+      }
+      return "";
+    };
+
+    const matchByPattern = (pattern) => {
+      const entries = Object.keys(states).filter((entityId) => {
+        if (!entityId.startsWith("sensor.")) {
+          return false;
+        }
+        const stateObj = states[entityId];
+        const haystack = `${entityId} ${stateObj?.attributes?.friendly_name || ""}`.toLowerCase();
+        if (escapedObjectId && !(new RegExp(escapedObjectId, "i").test(haystack))) {
+          return false;
+        }
+        return pattern.test(haystack);
+      });
+      return entries[0] || "";
+    };
+
+    const timeLeft = firstExisting([
+      `sensor.${objectId}_remaining_time`,
+      `sensor.${objectId}_time_left`,
+      `sensor.${objectId}_auto_off_time_left`,
+    ]) || matchByPattern(/remaining|time[_\s-]?left|auto[_\s-]?off/i);
+
+    const sensor1 = firstExisting([
+      `sensor.${objectId}_current`,
+      `sensor.${objectId}_electric_current`,
+      `sensor.${objectId}_amp`,
+    ]) || matchByPattern(/current|amp/i);
+
+    const sensor2 = firstExisting([
+      `sensor.${objectId}_power`,
+      `sensor.${objectId}_electric_power`,
+      `sensor.${objectId}_consumption`,
+    ]) || matchByPattern(/power|consumption|watt/i);
+
+    const iconSensor = firstExisting([
+      `sensor.${objectId}_water_temperature`,
+      `sensor.${objectId}_temperature`,
+      `sensor.${objectId}_temp`,
+    ]) || matchByPattern(/water[_\s-]?temp|temperature|boiler[_\s-]?temp|temp/i);
+
+    return {
+      timeLeft,
+      sensor1,
+      sensor2,
+      iconSensor,
+    };
   }
 
   _shouldAutofillBoilerEntity() {
@@ -6283,6 +6858,21 @@ class BoilerWaterCardEditor extends HTMLElement {
     return Array.from(candidates.values());
   }
 
+  _isServiceAvailable(serviceRef) {
+    if (typeof serviceRef !== "string") {
+      return false;
+    }
+    const normalized = serviceRef.trim().toLowerCase();
+    if (!normalized.includes(".")) {
+      return false;
+    }
+    const [domain, service] = normalized.split(".", 2);
+    if (!domain || !service) {
+      return false;
+    }
+    return !!(this._hass?.services?.[domain]?.[service]);
+  }
+
   _render() {
     if (!this._hass) {
       return;
@@ -6299,6 +6889,7 @@ class BoilerWaterCardEditor extends HTMLElement {
 
     this._form.hass = this._hass;
     this._form.data = this._config;
+    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
     this._form.schema = [
       {
         name: "language",
@@ -6321,31 +6912,68 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { text: {} },
       },
       {
+        name: "switcher_mode",
+        label: labels.switcher_mode,
+        selector: { boolean: {} },
+      },
+      {
         name: "boiler_entity",
         label: labels.boiler_entity,
         required: true,
-        selector: { entity: {} },
+        selector: isSwitcherMode
+          ? { entity: { domain: "switch" } }
+          : { entity: {} },
       },
-      {
-        name: "temperature_sensor",
-        label: labels.temperature_sensor,
-        selector: { entity: { domain: "sensor" } },
-      },
-      {
-        name: "power_sensor",
-        label: labels.power_sensor,
-        selector: { entity: { domain: "sensor" } },
-      },
-      {
-        name: "current_sensor",
-        label: labels.current_sensor,
-        selector: { entity: { domain: "sensor" } },
-      },
-      {
-        name: "voltage_sensor",
-        label: labels.voltage_sensor,
-        selector: { entity: { domain: "sensor" } },
-      },
+      ...(isSwitcherMode
+        ? [
+          {
+            name: "switcher_time_left_sensor",
+            label: labels.switcher_time_left_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "switcher_sensor_1",
+            label: labels.switcher_sensor_1,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "switcher_sensor_2",
+            label: labels.switcher_sensor_2,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "switcher_icon_sensor",
+            label: labels.switcher_icon_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "switcher_timer_values",
+            label: labels.switcher_timer_values,
+            selector: { text: {} },
+          },
+        ]
+        : [
+          {
+            name: "temperature_sensor",
+            label: labels.temperature_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "power_sensor",
+            label: labels.power_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "current_sensor",
+            label: labels.current_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+          {
+            name: "voltage_sensor",
+            label: labels.voltage_sensor,
+            selector: { entity: { domain: "sensor" } },
+          },
+        ]),
       {
         name: "boiler_flow_image",
         label: labels.boiler_flow_image,
@@ -6358,10 +6986,13 @@ class BoilerWaterCardEditor extends HTMLElement {
     const value = event?.detail?.value || {};
     const prevLanguage = this._normalizeLanguage(this._config?.language);
     const hasLanguageChange = Object.prototype.hasOwnProperty.call(value, "language");
+    const hasSwitcherModeChange = Object.prototype.hasOwnProperty.call(value, "switcher_mode");
+    const prevSwitcherMode = this._asTruthy(this._config?.switcher_mode);
     const nextLanguage = hasLanguageChange
       ? this._normalizeLanguage(value.language)
       : prevLanguage;
-    const nextConfig = { ...this._config, ...value };
+    let nextConfig = { ...this._config, ...value };
+    const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
 
     if (hasLanguageChange && nextLanguage !== prevLanguage) {
       const titleFromCurrentConfig = typeof this._config?.title === "string"
@@ -6378,15 +7009,39 @@ class BoilerWaterCardEditor extends HTMLElement {
       }
     }
 
+    if (nextSwitcherMode) {
+      nextConfig = this._withSwitcherModeDefaults(nextConfig, {
+        preserveManualValues: true,
+      });
+    } else if (hasSwitcherModeChange && prevSwitcherMode && !nextSwitcherMode) {
+      if (String(nextConfig.service_run_timed || "").trim().toLowerCase() === "switcher_kis.turn_on_with_timer") {
+        nextConfig.service_run_timed = DEFAULT_CONFIG.service_run_timed;
+      }
+      if (String(nextConfig.service_on_continuous || "").trim().toLowerCase() === "homeassistant.turn_on") {
+        nextConfig.service_on_continuous = DEFAULT_CONFIG.service_on_continuous;
+      }
+      if (String(nextConfig.service_off || "").trim().toLowerCase() === "homeassistant.turn_off") {
+        nextConfig.service_off = DEFAULT_CONFIG.service_off;
+      }
+    }
+
     this._config = nextConfig;
     this.dispatchEvent(new CustomEvent("config-changed", {
       detail: { config: nextConfig },
     }));
 
     // Keep editor stable so dropdown/entity selectors stay interactive.
-    if (hasLanguageChange && nextLanguage !== prevLanguage) {
+    if ((hasLanguageChange && nextLanguage !== prevLanguage) || (hasSwitcherModeChange && nextSwitcherMode !== prevSwitcherMode)) {
       this._render();
     }
+  }
+
+  _asTruthy(value) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+    const normalized = String(value ?? "").trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "on" || normalized === "yes";
   }
 
   _normalizeLanguage(language) {
@@ -6417,41 +7072,65 @@ class BoilerWaterCardEditor extends HTMLElement {
       he: {
         language: "שפה",
         title: "כותרת",
+        switcher_mode: "Switcher Mode",
         boiler_entity: "ישות דוד",
         temperature_sensor: "סנסור טמפרטורה",
         power_sensor: "סנסור צריכה (W)",
         current_sensor: "סנסור זרם",
         voltage_sensor: "סנסור מתח",
+        switcher_time_left_sensor: "סנסור זמן נותר (Switcher)",
+        switcher_sensor_1: "Sensor 1 - רק בזמן דלוק",
+        switcher_sensor_2: "Sensor 2 - תמיד מוצג",
+        switcher_icon_sensor: "סנסור טמפ׳ לאייקון/פרוגרס",
+        switcher_timer_values: "ערכי טיימר בדקות (לדוגמה: 15,30,45,60)",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
       },
       en: {
         language: "Language",
         title: "Title",
+        switcher_mode: "Switcher Mode",
         boiler_entity: "Boiler Entity",
         temperature_sensor: "Temperature Sensor",
         power_sensor: "Power Sensor (W)",
         current_sensor: "Current Sensor",
         voltage_sensor: "Voltage Sensor",
+        switcher_time_left_sensor: "Switcher Time Left Sensor",
+        switcher_sensor_1: "Switcher Sensor 1 (On only)",
+        switcher_sensor_2: "Switcher Sensor 2 (Always)",
+        switcher_icon_sensor: "Switcher Icon Temperature Sensor",
+        switcher_timer_values: "Switcher Timer Values in minutes (e.g. 15,30,45,60)",
         boiler_flow_image: "Water Flow Image (path / URL)",
       },
       ru: {
         language: "Язык",
         title: "Заголовок",
+        switcher_mode: "Режим Switcher",
         boiler_entity: "Сущность бойлера",
         temperature_sensor: "Датчик температуры",
         power_sensor: "Датчик мощности (W)",
         current_sensor: "Датчик тока",
         voltage_sensor: "Датчик напряжения",
+        switcher_time_left_sensor: "Switcher датчик оставшегося времени",
+        switcher_sensor_1: "Switcher датчик 1 (только ВКЛ)",
+        switcher_sensor_2: "Switcher датчик 2 (всегда)",
+        switcher_icon_sensor: "Switcher датчик температуры иконки",
+        switcher_timer_values: "Значения таймера Switcher в минутах (например 15,30,45,60)",
         boiler_flow_image: "Изображение потока (путь / URL)",
       },
       fr: {
         language: "Langue",
         title: "Titre",
+        switcher_mode: "Mode Switcher",
         boiler_entity: "Entité chauffe-eau",
         temperature_sensor: "Capteur de température",
         power_sensor: "Capteur de puissance (W)",
         current_sensor: "Capteur de courant",
         voltage_sensor: "Capteur de tension",
+        switcher_time_left_sensor: "Capteur temps restant Switcher",
+        switcher_sensor_1: "Capteur Switcher 1 (marche)",
+        switcher_sensor_2: "Capteur Switcher 2 (toujours)",
+        switcher_icon_sensor: "Capteur température icône Switcher",
+        switcher_timer_values: "Valeurs minuterie Switcher en minutes (ex: 15,30,45,60)",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
       },
     };
