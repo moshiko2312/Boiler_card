@@ -3,12 +3,14 @@
 Custom boiler control solution for Home Assistant with:
 - Lovelace custom card (`boiler-water-card`)
 - Built-in custom integration (`boiler_manager`)
+- No required Home Assistant package/scripts/timer helpers for normal install (integration-first flow)
 - Timer control, recurring tasks, and timeline tasks
 - Task entities as real `switch` entities
 - Optional card sensors (temperature / current / voltage)
 - Mobile-friendly popups (Safari + Chrome)
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
+- Card editor auto-fills `boiler_entity` from Boiler Manager integration when a single matching entry is detected
 
 ## What You Get
 
@@ -39,6 +41,7 @@ Custom boiler control solution for Home Assistant with:
 - Tasks list sorted by the **next upcoming event** (chronological order)
 - Active task notice in card with current task end time
 - Scheduler tick every second for near-immediate start/stop transitions
+- Runtime state restore on Home Assistant restart (active manual timed/continuous sessions are recovered)
 - Mobile-first schedule/task modals:
   - touch-friendly controls
   - no horizontal scrolling
@@ -71,6 +74,7 @@ Configure:
 
 Note:
 - Sensors are now configured only in the **card editor UI**, not in integration setup/options.
+- Timer logic runs through `boiler_manager` services by default; `home-assistant/packages/boiler_hot_water.yaml` is legacy-only.
 
 ### 2) Frontend Card File
 
@@ -447,6 +451,14 @@ data:
 - Scheduler runs every second (`SCHEDULER_INTERVAL = 1s`)
 - This minimizes delay between planned event time and actual entity `turn_on/turn_off`
 - Minor runtime jitter (system load/network) may still happen, but should be very small
+
+## Restart Behavior
+
+- Tasks are persisted and restored automatically after Home Assistant restart
+- Manual timed run (`run_timed`) is restored:
+  - If remaining time exists, countdown resumes and auto-off is rescheduled
+  - If end time already passed during downtime, manual timed state is cleared on startup
+- Manual continuous mode is restored and boiler stays ON until explicit OFF
 
 ## Troubleshooting
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 import logging
 import re
 import uuid
@@ -74,6 +74,9 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+STATE_KEY_MANUAL_CONTINUOUS = "manual_continuous"
+STATE_KEY_MANUAL_UNTIL = "manual_until"
 
 
 class BoilerManagerError(HomeAssistantError):
@@ -217,6 +220,7 @@ class BoilerManager:
     def mode_attributes(self) -> dict:
         """Additional mode attrs for sensors/UI."""
         attrs: dict[str, str | int | list[str] | None] = {
+            "entry_id": self.entry.entry_id,
             "boiler_entity": self.boiler_entity,
             "active_tasks_count": len(self._active_task_ids),
             "active_tasks": [
@@ -249,6 +253,7 @@ class BoilerManager:
             self._async_scheduler_tick,
             SCHEDULER_INTERVAL,
         )
+        await self._async_restore_manual_state()
         await self._async_apply_schedule_state()
         self._async_notify_state()
 
@@ -672,6 +677,7 @@ class BoilerManager:
         self._manual_until = None
         self._schedule_driven = False
         self._cancel_timed_off()
+        await self._async_save()
         await self._async_turn_on_entity()
         self._async_notify_state()
 
@@ -690,13 +696,9 @@ class BoilerManager:
         self._schedule_driven = False
 
         self._cancel_timed_off()
+        self._schedule_manual_timeout(seconds)
 
-        @callback
-        def _handle_timed_finished(_now) -> None:
-            self.hass.async_create_task(self._async_handle_timed_finished())
-
-        self._unsub_timed_off = async_call_later(self.hass, seconds, _handle_timed_finished)
-
+        await self._async_save()
         await self._async_turn_on_entity()
         self._async_notify_state()
         return seconds
@@ -709,6 +711,7 @@ class BoilerManager:
         self._manual_until = None
         self._schedule_driven = False
         self._cancel_timed_off()
+        await self._async_save()
         await self._async_apply_schedule_state()
         await self._async_turn_off_entity()
         self._async_notify_state()
@@ -717,6 +720,7 @@ class BoilerManager:
         """Handle end of timed operation."""
         self._manual_until = None
         self._cancel_timed_off()
+        await self._async_save()
         await self._async_apply_schedule_state()
         if not self._active_task_ids:
             await self._async_turn_off_entity()
@@ -730,9 +734,12 @@ class BoilerManager:
     async def _async_apply_schedule_state(self) -> None:
         """Apply task-driven state (if not in manual mode)."""
         now = dt_util.now()
+        manual_timed_expired = False
 
         if self._manual_until and now >= self._manual_until:
             self._manual_until = None
+            manual_timed_expired = True
+            await self._async_save()
 
         previous_active = set(self._active_task_ids)
         active_tasks = self._tasks_active_now(now)
@@ -776,7 +783,7 @@ class BoilerManager:
             await self._async_turn_on_entity()
             return
 
-        if self._schedule_driven:
+        if self._schedule_driven or manual_timed_expired:
             await self._async_turn_off_entity()
             self._schedule_driven = False
         elif previous_active != self._active_task_ids:
@@ -982,10 +989,21 @@ class BoilerManager:
             loaded[task.task_id] = task
 
         self._tasks = loaded
+        self._manual_continuous = bool(raw.get(STATE_KEY_MANUAL_CONTINUOUS, False))
+        self._manual_until = _parse_stored_datetime(raw.get(STATE_KEY_MANUAL_UNTIL))
+        if self._manual_continuous:
+            # Continuous and timed are mutually exclusive.
+            self._manual_until = None
 
     async def _async_save(self) -> None:
         """Persist tasks to storage."""
-        payload = {"tasks": [task.as_dict() for task in self._tasks.values()]}
+        payload = {
+            "tasks": [task.as_dict() for task in self._tasks.values()],
+            STATE_KEY_MANUAL_CONTINUOUS: self._manual_continuous,
+            STATE_KEY_MANUAL_UNTIL: (
+                dt_util.as_utc(self._manual_until).isoformat() if self._manual_until else None
+            ),
+        }
         await self._store.async_save(payload)
 
     def _cancel_timed_off(self) -> None:
@@ -993,6 +1011,32 @@ class BoilerManager:
         if self._unsub_timed_off:
             self._unsub_timed_off()
             self._unsub_timed_off = None
+
+    def _schedule_manual_timeout(self, seconds: int) -> None:
+        """Schedule callback for current timed-manual session."""
+        @callback
+        def _handle_timed_finished(_now) -> None:
+            self.hass.async_create_task(self._async_handle_timed_finished())
+
+        self._unsub_timed_off = async_call_later(self.hass, max(1, int(seconds)), _handle_timed_finished)
+
+    async def _async_restore_manual_state(self) -> None:
+        """Restore runtime manual state after Home Assistant restart."""
+        now = dt_util.now()
+
+        if self._manual_continuous:
+            await self._async_turn_on_entity()
+            return
+
+        if not self._manual_until:
+            return
+
+        if self._manual_until <= now:
+            return
+
+        remaining_seconds = int((self._manual_until - now).total_seconds())
+        self._schedule_manual_timeout(remaining_seconds)
+        await self._async_turn_on_entity()
 
     @callback
     def _async_notify_state(self) -> None:
@@ -1173,6 +1217,21 @@ def _normalize_time_string(value: str | None) -> str:
         raise BoilerManagerError(f"Invalid time range: {value}")
 
     return f"{hours:02d}:{minutes:02d}"
+
+
+def _parse_stored_datetime(value: str | None) -> datetime | None:
+    """Parse datetime persisted in manager storage."""
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+
+    parsed = dt_util.parse_datetime(raw)
+    if parsed is None:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return dt_util.as_utc(parsed)
 
 
 def _normalize_days(value: list[int | str] | None) -> list[int]:

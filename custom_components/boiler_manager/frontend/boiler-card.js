@@ -323,7 +323,7 @@ const I18N = {
 const DEFAULT_CONFIG = {
   title: "דוד מים חמים",
   language: "he",
-  boiler_entity: "switch.boiler",
+  boiler_entity: "",
   temperature_sensor: "",
   temperature_sensor_name: "",
   current_sensor: "",
@@ -372,6 +372,7 @@ class BoilerWaterCard extends HTMLElement {
     this._schedulePanel = "recurrence";
     this._editingTaskId = null;
     this._offPendingUntil = 0;
+    this._selectedDurationOptionLocal = "30m";
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
@@ -2609,6 +2610,7 @@ class BoilerWaterCard extends HTMLElement {
     const boiler = this._hass.states[cfg.boiler_entity];
     const duration = this._hass.states[cfg.duration_entity];
     const timer = this._hass.states[cfg.timer_entity];
+    const managerMode = this._boilerManagerModeEntity();
     const scripts = this._scriptEntities();
 
     const title = typeof cfg.title === "string" && cfg.title.trim()
@@ -2785,10 +2787,10 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.boilerMainImage?.getAttribute("src") !== flowImage) {
       this._elements.boilerMainImage.setAttribute("src", flowImage);
     }
-    this._syncTimerPicker(duration, boiler, timer);
-    this._syncHeatingVisual(boiler, timer, duration);
-    this._syncStatus(boiler, timer);
-    this._syncCountdown(timer, boiler);
+    this._syncTimerPicker(duration, boiler, timer, managerMode);
+    this._syncHeatingVisual(boiler, timer, duration, managerMode);
+    this._syncStatus(boiler, timer, managerMode);
+    this._syncCountdown(timer, boiler, managerMode);
     this._syncSensors();
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
@@ -2797,7 +2799,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncScheduleList();
   }
 
-  _syncTimerPicker(durationEntity, boilerEntity, timerEntity) {
+  _syncTimerPicker(durationEntity, boilerEntity, timerEntity, managerMode = null) {
     const options = this._durationOptions(durationEntity);
     const selected = this._selectedDurationOption(durationEntity, options);
     this._timerPageIndex = this._clamp(this._timerPageIndex, 0, this._timerPageCount(options) - 1);
@@ -2808,19 +2810,21 @@ class BoilerWaterCard extends HTMLElement {
         `${this._t("timer_label")}: ${this._renderOptionLabel(selected)}`
       );
     }
-    this._syncQuickTimerButtons(options, selected, boilerEntity, timerEntity);
+    this._syncQuickTimerButtons(options, selected, boilerEntity, timerEntity, managerMode);
     this._renderTimerGrid(options, selected);
   }
 
-  _syncQuickTimerButtons(options, selected, boilerEntity, timerEntity) {
+  _syncQuickTimerButtons(options, selected, boilerEntity, timerEntity, managerMode = null) {
     const isBoilerOn = this._isEntityOn(boilerEntity);
     const timerActive = timerEntity?.state === "active" || timerEntity?.state === "paused";
+    const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
+    const timedActive = timerActive || builtInTimedActive;
     const pendingOff = this._offPendingUntil > Date.now();
-    const offSelected = pendingOff || (!isBoilerOn && !timerActive);
+    const offSelected = pendingOff || (!isBoilerOn && !timedActive);
     const noTimerSelected = this._isNoTimerOption(selected);
     // Highlight timed quick buttons only while a timer is actually running/paused.
     // This prevents false "30m selected" visual state after restart when boiler is ON in continuous mode.
-    const allowSelectedState = timerActive;
+    const allowSelectedState = timedActive;
     const buttons = this._elements.quickTimerBtns || [];
     buttons.forEach((button) => {
       if (button.dataset.action === "off") {
@@ -2839,14 +2843,21 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _selectedDurationOption(durationEntity, options) {
-    const selected = durationEntity?.state || "30m";
+    const selected = String(durationEntity?.state || this._selectedDurationOptionLocal || "30m").trim();
     if (options.includes(selected)) {
+      this._selectedDurationOptionLocal = selected;
       return selected;
     }
+    if (options.includes(this._selectedDurationOptionLocal)) {
+      return this._selectedDurationOptionLocal;
+    }
     if (options.includes("30m")) {
+      this._selectedDurationOptionLocal = "30m";
       return "30m";
     }
-    return options[0] || "30m";
+    const fallback = options[0] || "30m";
+    this._selectedDurationOptionLocal = fallback;
+    return fallback;
   }
 
   _renderTimerGrid(options, selected) {
@@ -2892,15 +2903,16 @@ class BoilerWaterCard extends HTMLElement {
     this._syncTimerPagerControls(pageCount);
   }
 
-  _syncStatus(boiler, timer) {
+  _syncStatus(boiler, timer, managerMode = null) {
     if (!boiler) {
       this._elements.subtitle.textContent = this._t("subtitle_check_entity");
       return;
     }
 
     const isOn = this._isEntityOn(boiler);
+    const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
 
-    if (timer?.state === "active") {
+    if (timer?.state === "active" || builtInTimedActive) {
       this._elements.subtitle.textContent = this._t("subtitle_heating_timer");
     } else if (isOn) {
       this._elements.subtitle.textContent = this._t("subtitle_heating_continuous");
@@ -2909,7 +2921,7 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
-  _syncCountdown(timer, boiler) {
+  _syncCountdown(timer, boiler, managerMode = null) {
     if (timer?.state === "active" || timer?.state === "paused") {
       const seconds = this._remainingSeconds(timer);
       this._elements.countdownLabel.textContent =
@@ -2917,6 +2929,13 @@ class BoilerWaterCard extends HTMLElement {
           ? this._t("countdown_paused")
           : this._t("countdown_remaining");
       this._elements.countdownValue.textContent = this._formatSeconds(seconds);
+      this._elements.countdownValue.classList.remove("continuous-active");
+      return;
+    }
+
+    if (this._isBuiltInTimedMode(managerMode)) {
+      this._elements.countdownLabel.textContent = this._t("countdown_remaining");
+      this._elements.countdownValue.textContent = this._formatSeconds(this._managerTimedRemainingSeconds(managerMode));
       this._elements.countdownValue.classList.remove("continuous-active");
       return;
     }
@@ -3093,19 +3112,20 @@ class BoilerWaterCard extends HTMLElement {
     const timer = this._hass.states[this._config.timer_entity];
     const boiler = this._hass.states[this._config.boiler_entity];
     const duration = this._hass.states[this._config.duration_entity];
-    this._syncCountdown(timer, boiler);
+    const managerMode = this._boilerManagerModeEntity();
+    this._syncCountdown(timer, boiler, managerMode);
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
-    this._syncHeatingVisual(boiler, timer, duration);
+    this._syncHeatingVisual(boiler, timer, duration, managerMode);
   }
 
-  _syncHeatingVisual(boiler, timer, durationEntity) {
+  _syncHeatingVisual(boiler, timer, durationEntity, managerMode = null) {
     if (!this._elements.boilerVisual) {
       return;
     }
 
     const isOn = this._isEntityOn(boiler);
-    const profile = this._heatingProfile(boiler, timer, durationEntity);
+    const profile = this._heatingProfile(boiler, timer, durationEntity, managerMode);
     this._elements.boilerVisual.classList.toggle("off", !isOn);
     this._elements.boilerVisual.classList.toggle("temp-driven", !!profile.isTemperatureDriven);
     this._elements.boilerVisual.style.setProperty("--heat-primary", profile.primaryColor);
@@ -3116,9 +3136,11 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.boilerStageSub.textContent = profile.subLabel;
   }
 
-  _heatingProfile(boiler, timer, durationEntity) {
+  _heatingProfile(boiler, timer, durationEntity, managerMode = null) {
     const isOn = this._isEntityOn(boiler);
     const timerActive = timer?.state === "active" || timer?.state === "paused";
+    const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
+    const timedActive = timerActive || builtInTimedActive;
     const liveTemp = this._liveTemperatureReading();
 
     if (liveTemp) {
@@ -3137,7 +3159,7 @@ class BoilerWaterCard extends HTMLElement {
       };
     }
 
-    if (!timerActive) {
+    if (!timedActive) {
       const profile = this._buildHeatingProfile(
         0.72,
         this._t("stage_continuous"),
@@ -3147,7 +3169,9 @@ class BoilerWaterCard extends HTMLElement {
       return profile;
     }
 
-    const remaining = this._remainingSeconds(timer);
+    const remaining = timerActive
+      ? this._remainingSeconds(timer)
+      : this._managerTimedRemainingSeconds(managerMode);
     const total = this._timerTotalSeconds(timer, durationEntity);
     const progress = total > 0 && remaining !== null ? this._clamp(1 - remaining / total, 0, 1) : 0;
     const percent = Math.round(progress * 100);
@@ -3357,7 +3381,7 @@ class BoilerWaterCard extends HTMLElement {
       return fromTimer;
     }
 
-    const selected = durationEntity?.state || "30m";
+    const selected = String(durationEntity?.state || this._selectedDurationOptionLocal || "30m").trim();
     const minutes = this._optionToMinutes(selected);
     if (minutes !== null && minutes > 0) {
       return minutes * 60;
@@ -3400,6 +3424,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    this._selectedDurationOptionLocal = option;
     const durationEntity = this._hass.states[this._config.duration_entity];
     if (durationEntity) {
       this._hass.callService("input_select", "select_option", {
@@ -3435,22 +3460,33 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    const useScripts = this._hasScriptControlServices();
+    const canUseBuiltIn = this._hasBuiltInControlServices();
+    const canUseScripts = this._hasScriptControlServices();
 
     if (this._isNoTimerOption(option)) {
-      if (useScripts) {
+      if (canUseBuiltIn) {
+        this._callConfiguredService(this._config.service_on_continuous, this._builtInServiceBaseData());
+      } else if (canUseScripts) {
         this._runScript(this._config.script_on_continuous, {
           boiler_entity: this._config.boiler_entity,
           turn_on_action: this._config.turn_on_action,
           turn_on_data: this._safeServiceData(this._config.turn_on_data),
         });
-      } else {
-        this._callConfiguredService(this._config.service_on_continuous, this._builtInServiceBaseData());
       }
       return;
     }
 
-    if (useScripts) {
+    if (canUseBuiltIn) {
+      const minutes = this._optionToMinutes(option);
+      this._callConfiguredService(this._config.service_run_timed, {
+        ...this._builtInServiceBaseData(),
+        duration: this._optionToHhMmSs(option) || "00:30:00",
+        ...(minutes ? { minutes } : {}),
+      });
+      return;
+    }
+
+    if (canUseScripts) {
       this._runScript(this._config.script_on_timed, {
         duration_option: option,
         duration: this._optionToHhMmSs(option) || "00:30:00",
@@ -3458,15 +3494,7 @@ class BoilerWaterCard extends HTMLElement {
         turn_on_action: this._config.turn_on_action,
         turn_on_data: this._safeServiceData(this._config.turn_on_data),
       });
-      return;
     }
-
-    const minutes = this._optionToMinutes(option);
-    this._callConfiguredService(this._config.service_run_timed, {
-      ...this._builtInServiceBaseData(),
-      duration: this._optionToHhMmSs(option) || "00:30:00",
-      ...(minutes ? { minutes } : {}),
-    });
   }
 
   _openTimerModal() {
@@ -5526,9 +5554,9 @@ class BoilerWaterCard extends HTMLElement {
       null
     );
 
-    // Then call integration/script off flows (for mode cleanup, timers, etc).
-    this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
-    if (this._hasScriptOffService()) {
+    // Then call integration off flow for state cleanup; script off is fallback only.
+    const usedBuiltInOff = this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
+    if (!usedBuiltInOff && this._hasScriptOffService()) {
       this._runScript(this._config.script_off, {
         boiler_entity: this._config.boiler_entity,
         turn_off_action: this._config.turn_off_action,
@@ -5899,6 +5927,59 @@ class BoilerWaterCard extends HTMLElement {
       off: this._hass.states[this._config.script_off],
     };
   }
+
+  _boilerManagerModeEntity() {
+    if (!this._hass?.states) {
+      return null;
+    }
+
+    const desiredEntryId = String(this._config.integration_entry_id || "").trim();
+    const desiredBoiler = String(this._config.boiler_entity || "").trim().toLowerCase();
+    const candidates = Object.values(this._hass.states)
+      .filter((state) => state?.entity_id?.startsWith("sensor."))
+      .filter((state) => {
+        const attrs = state?.attributes || {};
+        const boilerEntity = String(attrs.boiler_entity || "").trim();
+        if (!boilerEntity || !boilerEntity.includes(".")) {
+          return false;
+        }
+        return attrs.active_tasks_count !== undefined;
+      });
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    if (desiredEntryId) {
+      return candidates.find((state) => String(state?.attributes?.entry_id || "").trim() === desiredEntryId) || null;
+    }
+
+    if (desiredBoiler) {
+      return candidates.find(
+        (state) => String(state?.attributes?.boiler_entity || "").trim().toLowerCase() === desiredBoiler
+      ) || null;
+    }
+
+    return candidates[0] || null;
+  }
+
+  _isBuiltInTimedMode(managerMode) {
+    const mode = String(managerMode?.state || "").trim().toLowerCase();
+    return mode === "manual_timed";
+  }
+
+  _managerTimedRemainingSeconds(managerMode) {
+    const raw = String(managerMode?.attributes?.manual_until || "").trim();
+    if (!raw) {
+      return null;
+    }
+
+    const finishTs = new Date(raw).getTime();
+    if (!Number.isFinite(finishTs)) {
+      return null;
+    }
+    return Math.max(0, Math.ceil((finishTs - Date.now()) / 1000));
+  }
 }
 
 class BoilerWaterCardEditor extends HTMLElement {
@@ -5916,7 +5997,105 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._maybeApplyIntegrationDefaults();
     this._render();
+  }
+
+  _maybeApplyIntegrationDefaults() {
+    if (!this._hass || !this._shouldAutofillBoilerEntity()) {
+      return;
+    }
+
+    const defaults = this._integrationDefaultsFromStates();
+    if (!defaults || !defaults.boiler_entity) {
+      return;
+    }
+
+    const nextConfig = { ...this._config, ...defaults };
+    const changed = JSON.stringify(nextConfig) !== JSON.stringify(this._config);
+    if (!changed) {
+      return;
+    }
+
+    this._config = nextConfig;
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      detail: { config: nextConfig },
+    }));
+  }
+
+  _shouldAutofillBoilerEntity() {
+    const configured = String(this._config?.boiler_entity || "").trim();
+    if (!configured) {
+      return true;
+    }
+
+    if (this._hass?.states?.[configured]) {
+      return false;
+    }
+
+    return configured === DEFAULT_CONFIG.boiler_entity;
+  }
+
+  _integrationDefaultsFromStates() {
+    const candidates = this._boilerManagerCandidates();
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const desiredEntryId = String(this._config?.integration_entry_id || "").trim();
+    if (desiredEntryId) {
+      const byEntry = candidates.find((candidate) => candidate.entryId === desiredEntryId);
+      if (!byEntry) {
+        return null;
+      }
+      return {
+        boiler_entity: byEntry.boilerEntity,
+        ...(byEntry.entryId ? { integration_entry_id: byEntry.entryId } : {}),
+      };
+    }
+
+    if (candidates.length !== 1) {
+      return null;
+    }
+
+    const [candidate] = candidates;
+    return {
+      boiler_entity: candidate.boilerEntity,
+      ...(candidate.entryId ? { integration_entry_id: candidate.entryId } : {}),
+    };
+  }
+
+  _boilerManagerCandidates() {
+    const states = this._hass?.states;
+    if (!states) {
+      return [];
+    }
+
+    const candidates = new Map();
+    Object.values(states).forEach((stateObj) => {
+      const attrs = stateObj?.attributes || {};
+      const boilerEntity = String(attrs.boiler_entity || "").trim();
+      if (!boilerEntity || !boilerEntity.includes(".")) {
+        return;
+      }
+
+      const hasBoilerManagerMarkers = (
+        String(attrs.entry_id || "").trim()
+        || attrs.task_id !== undefined
+        || attrs.active_tasks_count !== undefined
+      );
+      if (!hasBoilerManagerMarkers) {
+        return;
+      }
+
+      const entryId = String(attrs.entry_id || "").trim();
+      const key = entryId ? `entry:${entryId}` : `boiler:${boilerEntity.toLowerCase()}`;
+      if (!candidates.has(key)) {
+        candidates.set(key, { entryId, boilerEntity });
+      }
+    });
+
+    return Array.from(candidates.values());
   }
 
   _render() {
