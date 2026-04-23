@@ -6,7 +6,9 @@ from pathlib import Path
 import json
 import logging
 from datetime import datetime, timezone
+from shutil import copy2
 from uuid import uuid4
+import yaml
 
 import voluptuous as vol
 
@@ -501,22 +503,52 @@ async def _async_install_frontend_card(hass: HomeAssistant) -> None:
         _LOGGER.error("Failed to install boiler frontend assets into www: %s", err)
         return
 
+    storage_resource_changed = False
+    yaml_resource_changed = False
+    backup_dir = Path(hass.config.path("boiler_manager_backups", "lovelace"))
+
     try:
         resources_path = Path(hass.config.path(".storage", "lovelace_resources"))
-        resource_changed = await hass.async_add_executor_job(
+        storage_resource_changed = await hass.async_add_executor_job(
             _ensure_lovelace_resource_entry,
             resources_path,
             FRONTEND_RESOURCE_URL,
             FRONTEND_RESOURCE_TYPE,
+            backup_dir,
         )
-        if resource_changed:
+        if storage_resource_changed:
             _LOGGER.info("Added Lovelace resource automatically: %s", FRONTEND_RESOURCE_URL)
             await _async_reload_lovelace_resources(hass)
     except (OSError, ValueError, TypeError) as err:
-        _LOGGER.warning(
+        _LOGGER.debug(
             "Failed to update Lovelace resources automatically (%s). "
+            "Will attempt YAML Lovelace fallback.",
+            err,
+        )
+
+    try:
+        yaml_path = Path(hass.config.path("ui-lovelace.yaml"))
+        if yaml_path.exists():
+            yaml_resource_changed = await hass.async_add_executor_job(
+                _ensure_lovelace_yaml_resource_entry,
+                yaml_path,
+                FRONTEND_RESOURCE_URL,
+                FRONTEND_RESOURCE_TYPE,
+                backup_dir,
+            )
+            if yaml_resource_changed:
+                _LOGGER.info("Added Lovelace YAML resource automatically: %s", FRONTEND_RESOURCE_URL)
+    except (OSError, ValueError, TypeError, yaml.YAMLError) as err:
+        _LOGGER.warning(
+            "Failed to update ui-lovelace.yaml automatically (%s). "
             "You can add %s manually in Dashboard resources.",
             err,
+            FRONTEND_RESOURCE_URL,
+        )
+
+    if not storage_resource_changed and not yaml_resource_changed:
+        _LOGGER.debug(
+            "Boiler card resource already present or Lovelace mode does not require changes: %s",
             FRONTEND_RESOURCE_URL,
         )
 
@@ -557,6 +589,7 @@ def _ensure_lovelace_resource_entry(
     storage_path: Path,
     resource_url: str,
     resource_type: str,
+    backup_dir: Path | None = None,
 ) -> bool:
     """Ensure a single Lovelace resource entry exists without overwriting others."""
     payload: dict
@@ -589,6 +622,7 @@ def _ensure_lovelace_resource_entry(
             item["type"] = resource_type
             changed = True
         if changed:
+            _backup_existing_file(storage_path, backup_dir)
             _write_json_file(storage_path, payload)
         return changed
 
@@ -600,6 +634,7 @@ def _ensure_lovelace_resource_entry(
         new_item["id"] = _next_resource_id(items)
 
     items.append(new_item)
+    _backup_existing_file(storage_path, backup_dir)
     _write_json_file(storage_path, payload)
     return True
 
@@ -651,6 +686,57 @@ def _next_resource_id(items: list) -> int | str:
     return uuid4().hex
 
 
+def _ensure_lovelace_yaml_resource_entry(
+    yaml_path: Path,
+    resource_url: str,
+    resource_type: str,
+    backup_dir: Path | None = None,
+) -> bool:
+    """Ensure ui-lovelace.yaml has the boiler card resource without removing existing ones."""
+    payload: dict
+    if yaml_path.exists():
+        with yaml_path.open("r", encoding="utf-8") as handle:
+            loaded = yaml.safe_load(handle) or {}
+        if not isinstance(loaded, dict):
+            raise ValueError("Invalid ui-lovelace.yaml format")
+        payload = loaded
+    else:
+        payload = {}
+
+    resources = payload.get("resources")
+    if resources is None:
+        resources = []
+        payload["resources"] = resources
+    elif not isinstance(resources, list):
+        raise ValueError("ui-lovelace.yaml resources must be a list")
+
+    desired_url = _normalize_resource_url(resource_url)
+    changed = False
+
+    for item in resources:
+        if not isinstance(item, dict):
+            continue
+        if _normalize_resource_url(item.get("url")) != desired_url:
+            continue
+        if item.get("type") != resource_type:
+            item["type"] = resource_type
+            changed = True
+        if changed:
+            _backup_existing_file(yaml_path, backup_dir)
+            _write_yaml_file(yaml_path, payload)
+        return changed
+
+    resources.append(
+        {
+            "url": resource_url,
+            "type": resource_type,
+        }
+    )
+    _backup_existing_file(yaml_path, backup_dir)
+    _write_yaml_file(yaml_path, payload)
+    return True
+
+
 def _utc_timestamp() -> str:
     """Return compact UTC timestamp for backup filenames."""
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -693,3 +779,24 @@ def _read_json_file(path: Path) -> dict | list:
         raise ServiceValidationError(f"Backup file not found: {path}")
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _write_yaml_file(path: Path, payload: dict) -> None:
+    """Write YAML payload to disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(payload, handle, allow_unicode=True, sort_keys=False)
+
+
+def _backup_existing_file(path: Path, backup_dir: Path | None = None) -> Path | None:
+    """Create timestamped backup copy only when source file already exists."""
+    if not path.exists():
+        return None
+
+    target_dir = backup_dir or path.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    backup_name = f"{path.name}.{stamp}.bak"
+    backup_path = target_dir / backup_name
+    copy2(path, backup_path)
+    return backup_path

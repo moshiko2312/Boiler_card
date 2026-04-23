@@ -77,7 +77,7 @@ Note:
 On integration startup, card assets are auto-copied to:
 - `/config/www/boiler-card/boiler-card.js`
 
-### 3) Lovelace Resource Registration (Automatic + Safe)
+### 3) Lovelace Resource Registration (Automatic + Safe + Backup)
 
 On integration startup, Boiler Manager also tries to auto-register this resource:
 - `/local/boiler-card/boiler-card.js` (`module`)
@@ -89,7 +89,15 @@ Behavior:
 
 Notes:
 - Works with Lovelace Storage mode (`.storage/lovelace_resources`)
-- If your dashboard/resources are YAML-managed, add resource manually
+- Works with YAML mode (`/config/ui-lovelace.yaml`) as well:
+  - If the resource exists, only that entry is updated
+  - If missing, a new resource entry is appended
+  - Unrelated resource entries are preserved
+- Before writing resources, integration creates a timestamped backup (when source file exists):
+  - `/config/boiler_manager_backups/lovelace/`
+  - Backup example:
+    - `lovelace_resources.20260423_071500_123456.bak`
+    - `ui-lovelace.yaml.20260423_071501_654321.bak`
 
 Manual fallback (if auto registration is blocked/fails):
 - `Settings -> Dashboards -> Resources -> Add Resource`
