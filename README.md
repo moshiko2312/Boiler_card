@@ -102,16 +102,7 @@ Custom boiler control solution for Home Assistant with:
   - Tasks are sorted by nearest next execution.
   - Actions are reflected in both card UI and integration state.
 
-### 4) Timer Tab (Alternate State)
-![Timer Tab Alternate](docs/screenshots/04-timer-tab-alt.png)
-
-- Same timer workflow in another runtime state.
-- Demonstrates:
-  - Tab persistence between openings.
-  - Consistent layout/spacing and active-state styling.
-  - Preset grid responsiveness.
-
-### 5) Import / Export Tab
+### 4) Import / Export Tab
 ![Import Export Tab](docs/screenshots/05-import-export-tab.png)
 
 - Purpose: task backup and restore operations.
@@ -124,7 +115,7 @@ Custom boiler control solution for Home Assistant with:
 - Design goal:
   - Safe maintenance operations separated from normal task editing.
 
-### 6) Replace Confirmation Dialog
+### 5) Replace Confirmation Dialog
 ![Replace Confirmation](docs/screenshots/06-replace-confirmation.png)
 
 - Purpose: guardrail before destructive import.
@@ -135,7 +126,7 @@ Custom boiler control solution for Home Assistant with:
 - Action:
   - Explicit confirmation required to proceed.
 
-### 7) Card Editor Configuration
+### 6) Card Editor Configuration
 ![Card Editor Configuration](docs/screenshots/07-card-editor.png)
 
 - Purpose: configure card behavior and data sources.
