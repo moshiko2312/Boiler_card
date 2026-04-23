@@ -489,6 +489,7 @@ const DEFAULT_CONFIG = {
   switcher_sensor_2: "",
   switcher_icon_sensor: "",
   switcher_timer_values: "15,30,45,60",
+  timer_values: "15,30,60",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "",
   timer_entity: "",
@@ -521,6 +522,7 @@ class BoilerWaterCard extends HTMLElement {
     this._timerPageIndex = 0;
     this._timerPageSize = 6;
     this._timerGridRenderKey = "";
+    this._quickTimersRenderKey = "";
     this._tasksListRenderKey = "";
     this._menuMode = "timer";
     this._importMode = "merge";
@@ -592,6 +594,7 @@ class BoilerWaterCard extends HTMLElement {
   _renderShell() {
     window.removeEventListener("keydown", this._handleEscapeKey);
     this._timerGridRenderKey = "";
+    this._quickTimersRenderKey = "";
     this._tasksListRenderKey = "";
     this.shadowRoot.innerHTML = `
       <style>
@@ -876,7 +879,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .quick-timers {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
           gap: 6px;
         }
 
@@ -1906,7 +1909,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .timer-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(110px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
           gap: 9px;
         }
 
@@ -2167,7 +2170,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .quick-timers {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
             gap: 6px;
           }
 
@@ -2276,7 +2279,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
             gap: 10px;
           }
 
@@ -2455,7 +2458,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
           }
 
           .timeline-point-row {
@@ -2586,7 +2589,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .quick-timers {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
             gap: 5px;
           }
 
@@ -2727,12 +2730,7 @@ class BoilerWaterCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="quick-timers" id="quick-timers">
-            <button type="button" class="quick-timer-btn" data-minutes="15">15</button>
-            <button type="button" class="quick-timer-btn" data-minutes="30">30</button>
-            <button type="button" class="quick-timer-btn" data-minutes="60">60</button>
-            <button type="button" class="quick-timer-btn off-action" id="quick-off-btn" data-action="off">Off</button>
-          </div>
+          <div class="quick-timers" id="quick-timers"></div>
 
           <p class="error" id="error" hidden></p>
         </div>
@@ -2971,8 +2969,9 @@ class BoilerWaterCard extends HTMLElement {
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       sensorsRow: this.shadowRoot.getElementById("sensors-row"),
-      quickTimerBtns: Array.from(this.shadowRoot.querySelectorAll(".quick-timer-btn")),
-      quickOffBtn: this.shadowRoot.getElementById("quick-off-btn"),
+      quickTimers: this.shadowRoot.getElementById("quick-timers"),
+      quickTimerBtns: [],
+      quickOffBtn: null,
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
       importExportTitle: this.shadowRoot.getElementById("import-export-title"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
@@ -3123,8 +3122,16 @@ class BoilerWaterCard extends HTMLElement {
       event.preventDefault();
       this._submitScheduleTask();
     });
-    this._elements.quickTimerBtns.forEach((button) => {
-      button.addEventListener("click", () => this._handleQuickTimerClick(button));
+    this._elements.quickTimers?.addEventListener("click", (event) => {
+      const target = event?.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const button = target.closest(".quick-timer-btn");
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      this._handleQuickTimerClick(button);
     });
     this._renderScheduleDayButtons();
     this._renderScheduleMonthButtons();
@@ -3392,6 +3399,8 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _syncQuickTimerButtons(options, selected, boilerEntity, timerEntity, managerMode = null) {
+    this._syncQuickTimerButtonPresets(options);
+
     const isBoilerOn = this._isEntityOn(boilerEntity);
     const scheduleActive = this._isBuiltInScheduleMode(managerMode);
     const timerActive = !scheduleActive && (timerEntity?.state === "active" || timerEntity?.state === "paused");
@@ -3410,14 +3419,59 @@ class BoilerWaterCard extends HTMLElement {
         button.classList.toggle("selected", offSelected);
         return;
       }
+      const presetOption = String(button.dataset.option || "").trim();
       const minutes = Number.parseInt(button.dataset.minutes || "", 10);
-      const option = this._optionByMinutes(minutes, options);
+      const option = presetOption || this._optionByMinutes(minutes, options);
       button.dataset.option = option || "";
       button.classList.toggle(
         "selected",
         !offSelected && !noTimerSelected && allowSelectedState && !!option && option === selected
       );
     });
+  }
+
+  _syncQuickTimerButtonPresets(options) {
+    const container = this._elements.quickTimers;
+    if (!container) {
+      return;
+    }
+
+    const timedOptions = (Array.isArray(options) ? options : [])
+      .map((option) => String(option || "").trim())
+      .filter((option) => !!option && !this._isNoTimerOption(option));
+    const renderKey = JSON.stringify({
+      lang: this._lang(),
+      options: timedOptions,
+    });
+    if (renderKey === this._quickTimersRenderKey && (this._elements.quickTimerBtns || []).length > 0) {
+      return;
+    }
+    this._quickTimersRenderKey = renderKey;
+
+    container.innerHTML = "";
+    timedOptions.forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-timer-btn";
+      const minutes = this._optionToMinutes(option);
+      button.dataset.option = option;
+      button.dataset.minutes = Number.isInteger(minutes) && minutes > 0 ? String(minutes) : "";
+      button.textContent = Number.isInteger(minutes) && minutes > 0
+        ? String(minutes)
+        : this._renderOptionLabel(option);
+      container.appendChild(button);
+    });
+
+    const offButton = document.createElement("button");
+    offButton.type = "button";
+    offButton.className = "quick-timer-btn off-action";
+    offButton.id = "quick-off-btn";
+    offButton.dataset.action = "off";
+    offButton.textContent = this._t("turn_off");
+    container.appendChild(offButton);
+
+    this._elements.quickTimerBtns = Array.from(container.querySelectorAll(".quick-timer-btn"));
+    this._elements.quickOffBtn = offButton;
   }
 
   _selectedDurationOption(durationEntity, options, managerMode = null) {
@@ -3697,19 +3751,31 @@ class BoilerWaterCard extends HTMLElement {
   _syncError(boiler) {
     const missing = [];
     const hasBuiltIn = this._hasBuiltInControlServices();
+    const runTimedService = this._resolvedControlService(
+      this._config.service_run_timed,
+      "service_run_timed"
+    );
+    const onContinuousService = this._resolvedControlService(
+      this._config.service_on_continuous,
+      "service_on_continuous"
+    );
+    const offService = this._resolvedControlService(
+      this._config.service_off,
+      "service_off"
+    );
 
     if (!boiler) {
       missing.push(this._config.boiler_entity);
     }
     if (!hasBuiltIn) {
-      if (!this._isServiceAvailable(this._config.service_run_timed)) {
-        missing.push(this._config.service_run_timed);
+      if (!this._isServiceAvailable(runTimedService)) {
+        missing.push(runTimedService || this._config.service_run_timed);
       }
-      if (!this._isServiceAvailable(this._config.service_on_continuous)) {
-        missing.push(this._config.service_on_continuous);
+      if (!this._isServiceAvailable(onContinuousService)) {
+        missing.push(onContinuousService || this._config.service_on_continuous);
       }
-      if (!this._isServiceAvailable(this._config.service_off)) {
-        missing.push(this._config.service_off);
+      if (!this._isServiceAvailable(offService)) {
+        missing.push(offService || this._config.service_off);
       }
     }
 
@@ -4136,6 +4202,11 @@ class BoilerWaterCard extends HTMLElement {
         return configured;
       }
       return ["15m", "30m", "45m", "60m", "No Timer"];
+    }
+
+    const configured = this._regularTimerOptionsFromConfig();
+    if (configured.length > 0) {
+      return configured;
     }
 
     const fromEntity = durationEntity?.attributes?.options;
@@ -6643,13 +6714,26 @@ class BoilerWaterCard extends HTMLElement {
 
   _builtInServiceBaseData() {
     const data = {};
-    if (this._config.integration_entry_id) {
-      data.entry_id = this._config.integration_entry_id;
+    const configuredEntryId = String(this._config.integration_entry_id || "").trim();
+    if (configuredEntryId && this._isKnownEntryId(configuredEntryId)) {
+      data.entry_id = configuredEntryId;
     }
     if (this._config.boiler_entity) {
       data.boiler_entity = this._config.boiler_entity;
     }
     return data;
+  }
+
+  _isKnownEntryId(entryId) {
+    const target = String(entryId || "").trim();
+    if (!target || !this._hass?.states) {
+      return false;
+    }
+
+    return Object.values(this._hass.states).some((state) => {
+      const candidate = String(state?.attributes?.entry_id || "").trim();
+      return candidate === target;
+    });
   }
 
   _controlServiceBaseData(serviceRef = "") {
@@ -6668,6 +6752,15 @@ class BoilerWaterCard extends HTMLElement {
     const raw = String(serviceRef || "").trim();
     const normalized = raw.toLowerCase();
 
+    if (
+      !this._isSwitcherMode()
+      && serviceKey === "service_run_timed"
+      && normalized === "switcher_kis.turn_on_with_timer"
+      && this._isServiceAvailable("boiler_manager.run_timed")
+    ) {
+      return "boiler_manager.run_timed";
+    }
+
     if (!this._isSwitcherMode()) {
       return raw;
     }
@@ -6679,9 +6772,13 @@ class BoilerWaterCard extends HTMLElement {
         || normalized === "switcher_kis.turn_on_with_timer"
         || normalized === String(DEFAULT_CONFIG.service_run_timed).toLowerCase()
       )
-      && this._isServiceAvailable("boiler_manager.run_timed")
     ) {
-      return "boiler_manager.run_timed";
+      if (this._isServiceAvailable("switcher_kis.turn_on_with_timer")) {
+        return "switcher_kis.turn_on_with_timer";
+      }
+      if (this._isServiceAvailable("boiler_manager.run_timed")) {
+        return "boiler_manager.run_timed";
+      }
     }
 
     if (
@@ -7189,7 +7286,16 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _switcherTimerOptionsFromConfig() {
-    const raw = this._config?.switcher_timer_values;
+    return this._timerOptionsFromConfigValues(this._config?.switcher_timer_values, 150);
+  }
+
+  _regularTimerOptionsFromConfig() {
+    const raw = String(this._config?.timer_values || "").trim();
+    const source = raw || DEFAULT_CONFIG.timer_values;
+    return this._timerOptionsFromConfigValues(source, 1440);
+  }
+
+  _timerOptionsFromConfigValues(raw, maxMinutes = 240) {
     const values = Array.isArray(raw)
       ? raw
       : String(raw || "")
@@ -7197,9 +7303,10 @@ class BoilerWaterCard extends HTMLElement {
         .map((item) => item.trim())
         .filter((item) => item.length > 0);
 
+    const safeMax = Number.isInteger(maxMinutes) && maxMinutes > 0 ? maxMinutes : 240;
     const minutes = Array.from(new Set(values
       .map((item) => Number.parseInt(String(item), 10))
-      .filter((item) => Number.isInteger(item) && item > 0 && item <= 150)))
+      .filter((item) => Number.isInteger(item) && item > 0 && item <= safeMax)))
       .sort((a, b) => a - b);
 
     if (minutes.length === 0) {
@@ -7301,7 +7408,7 @@ class BoilerWaterCardEditor extends HTMLElement {
     const currentRunService = String(next.service_run_timed || "").trim().toLowerCase();
     const currentOnService = String(next.service_on_continuous || "").trim().toLowerCase();
     const currentOffService = String(next.service_off || "").trim().toLowerCase();
-    const prefersManagerRunTimed = this._isServiceAvailable("boiler_manager.run_timed");
+    const prefersManagerRunTimed = false;
     const prefersManagerContinuous = this._isServiceAvailable("boiler_manager.turn_on_continuous");
     const prefersManagerOff = this._isServiceAvailable("boiler_manager.turn_off");
     const desiredRunService = prefersManagerRunTimed
@@ -7602,6 +7709,11 @@ class BoilerWaterCardEditor extends HTMLElement {
         ]
         : [
           {
+            name: "timer_values",
+            label: labels.timer_values,
+            selector: { text: {} },
+          },
+          {
             name: "temperature_sensor",
             label: labels.temperature_sensor,
             selector: { entity: { domain: "sensor" } },
@@ -7661,14 +7773,17 @@ class BoilerWaterCardEditor extends HTMLElement {
       nextConfig = this._withSwitcherModeDefaults(nextConfig, {
         preserveManualValues: true,
       });
-    } else if (hasSwitcherModeChange && prevSwitcherMode && !nextSwitcherMode) {
-      if (String(nextConfig.service_run_timed || "").trim().toLowerCase() === "switcher_kis.turn_on_with_timer") {
+    } else {
+      const runService = String(nextConfig.service_run_timed || "").trim().toLowerCase();
+      const onService = String(nextConfig.service_on_continuous || "").trim().toLowerCase();
+      const offService = String(nextConfig.service_off || "").trim().toLowerCase();
+      if (runService === "switcher_kis.turn_on_with_timer") {
         nextConfig.service_run_timed = DEFAULT_CONFIG.service_run_timed;
       }
-      if (String(nextConfig.service_on_continuous || "").trim().toLowerCase() === "homeassistant.turn_on") {
+      if (hasSwitcherModeChange && prevSwitcherMode && !nextSwitcherMode && onService === "homeassistant.turn_on") {
         nextConfig.service_on_continuous = DEFAULT_CONFIG.service_on_continuous;
       }
-      if (String(nextConfig.service_off || "").trim().toLowerCase() === "homeassistant.turn_off") {
+      if (hasSwitcherModeChange && prevSwitcherMode && !nextSwitcherMode && offService === "homeassistant.turn_off") {
         nextConfig.service_off = DEFAULT_CONFIG.service_off;
       }
     }
@@ -7731,6 +7846,7 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Sensor 2 - תמיד מוצג",
         switcher_icon_sensor: "סנסור טמפ׳ לאייקון/פרוגרס",
         switcher_timer_values: "ערכי טיימר בדקות (לדוגמה: 15,30,45,60)",
+        timer_values: "ערכי טיימר בדקות (גנרי, לדוגמה: 20,40,90)",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
       },
       en: {
@@ -7747,6 +7863,7 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Switcher Sensor 2 (Always)",
         switcher_icon_sensor: "Switcher Icon Temperature Sensor",
         switcher_timer_values: "Switcher Timer Values in minutes (e.g. 15,30,45,60)",
+        timer_values: "Timer Values in minutes (generic, e.g. 20,40,90)",
         boiler_flow_image: "Water Flow Image (path / URL)",
       },
       ru: {
@@ -7763,6 +7880,7 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Switcher датчик 2 (всегда)",
         switcher_icon_sensor: "Switcher датчик температуры иконки",
         switcher_timer_values: "Значения таймера Switcher в минутах (например 15,30,45,60)",
+        timer_values: "Значения таймера в минутах (общие, например 20,40,90)",
         boiler_flow_image: "Изображение потока (путь / URL)",
       },
       fr: {
@@ -7779,6 +7897,7 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Capteur Switcher 2 (toujours)",
         switcher_icon_sensor: "Capteur température icône Switcher",
         switcher_timer_values: "Valeurs minuterie Switcher en minutes (ex: 15,30,45,60)",
+        timer_values: "Valeurs minuterie en minutes (générique, ex: 20,40,90)",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
       },
     };

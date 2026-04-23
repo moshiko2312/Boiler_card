@@ -18,7 +18,9 @@ Custom boiler control solution for Home Assistant with:
 
 ## What You Get
 
-- Quick buttons: `15 / 30 / 60 / Off`
+- Quick buttons:
+  - Default: `15 / 30 / 60 / Off`
+  - Fully dynamic from configured timer values (adds/removes buttons automatically)
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
 - Separate `Import/Export` tab in the same menu
@@ -45,6 +47,10 @@ Custom boiler control solution for Home Assistant with:
 - Tasks list sorted by the **next upcoming event** (chronological order)
 - Active task notice in card with current task end time
 - Vacation mode toggle directly in Tasks tab
+- Vacation mode safety behavior:
+  - Immediate forced OFF when enabled
+  - Timed/continuous activation is blocked while active
+  - Menu remains usable so vacation mode can always be disabled
 - Scheduler tick every second for near-immediate start/stop transitions
 - Runtime state restore on Home Assistant restart (active manual timed/continuous sessions are recovered)
 - Mobile-first schedule/task modals:
@@ -109,7 +115,7 @@ Custom boiler control solution for Home Assistant with:
 
 ### 4) Import / Export Tab
 ![Import Export Tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/05-import-export-tab.png)
-![Import Task Selection List](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots_template/04-import-export-list.jpeg)
+![Import Task Selection List](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/04-import-export-list.jpeg)
 
 - Purpose: task backup and restore operations.
 - Mode buttons:
@@ -146,6 +152,10 @@ Custom boiler control solution for Home Assistant with:
     - When `Title` is still a default card title, changing `Language` auto-updates `Title` to that language's default.
     - Custom user-entered titles are preserved and are not overwritten by language changes.
   - Boiler entity
+  - Timer values (`timer_values`) for regular mode
+    - Default: `15,30,60`
+    - If edited manually, quick buttons and timer grid are regenerated automatically
+  - Switcher timer values (`switcher_timer_values`) for Switcher mode
   - Temperature sensor
   - Power sensor (`W`)
   - Current sensor
@@ -239,6 +249,10 @@ service_import_tasks: boiler_manager.import_tasks
 service_export_tasks: boiler_manager.export_tasks
 service_set_vacation_mode: boiler_manager.set_vacation_mode
 
+# Optional regular-mode timer list (minutes, comma-separated)
+# Default is "15,30,60" when empty
+timer_values: "15,30,60,90"
+
 # Optional card sensors (card-only configuration)
 temperature_sensor: sensor.boiler_temperature
 power_sensor: sensor.boiler_power
@@ -249,6 +263,7 @@ voltage_sensor: sensor.boiler_voltage
 Notes:
 - `integration_entry_id` is optional if you have only one Boiler Manager entry.
 - Built-in integration mode is the supported/default runtime path.
+- If `timer_values` is edited manually, the bottom quick buttons and timer modal grid are updated automatically.
 
 ### 4.1) Optional: Switcher Mode Card Configuration
 
@@ -311,6 +326,9 @@ switcher_timer_values: "15,30,45,60,90,120"
 - Pick duration option
 - Boiler starts immediately via integration service
 - Timed buttons remain usable even when a task exists (subject to normal entity/service availability)
+- Duration source priority:
+  - Regular mode: `timer_values` (if set) -> `duration_entity` options -> internal defaults
+  - Switcher mode: `switcher_timer_values` (if set) -> Switcher defaults
 
 ### Tasks Mode
 
@@ -642,12 +660,19 @@ data:
 
 ## Versioning & Changelog
 
-- Tag `v0.1.4`:
-  - GitHub release tag for Switcher adapter + docs update stream.
-- Integration manifest `0.1.4`:
-  - Aligned with `v0.1.4` tag.
+- Tag `v0.1.5`:
+  - GitHub release tag for dynamic timers, modal/mobile UX refinements, and vacation/switcher flow hardening.
+- Integration manifest `0.1.5`:
+  - Aligned with `v0.1.5` tag.
 
 Recent highlights:
+- `0.1.5`
+  - Added generic regular-mode timer configuration (`timer_values`) with default `15,30,60`.
+  - Dynamic quick-button row and timer grid layout now auto-adjust to configured timer count.
+  - Added import task selection list screenshot/docs update for Import/Export flow.
+  - Improved modal/tab/header behavior for mobile + RTL/LTR layouts (close button and controls consistency).
+  - Vacation mode UX hardening: forced OFF + keep menu usable to disable vacation mode.
+  - Safer service resolution when stale Switcher timed service is present in regular mode.
 - `0.1.4`
   - Metadata/version alignment and documentation cleanup.
 - `0.1.3`
