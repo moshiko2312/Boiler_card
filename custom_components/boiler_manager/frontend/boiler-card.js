@@ -79,6 +79,7 @@ const I18N = {
     task_edit: "עריכה",
     menu_timers: "טיימר",
     menu_tasks: "משימות",
+    menu_import_export: "ייבוא/ייצוא",
     recurrence_label: "מחזוריות",
     recurrence_forever: "קבוע",
     recurrence_once: "פעם אחת (מחיקה אוטומטית)",
@@ -109,6 +110,7 @@ const I18N = {
     active_task_ends_at: "מסתיימת ב",
     upcoming_task_starts_in: "מתחיל בעוד",
     sensor_temperature: "טמפרטורה",
+    sensor_power: "צריכה",
     sensor_current: "זרם",
     sensor_voltage: "מתח",
     sensor_unavailable: "לא זמין",
@@ -178,6 +180,7 @@ const I18N = {
     task_edit: "Edit",
     menu_timers: "Timer",
     menu_tasks: "Tasks",
+    menu_import_export: "Import/Export",
     recurrence_label: "Recurrence",
     recurrence_forever: "Forever",
     recurrence_once: "One Time (auto delete)",
@@ -208,6 +211,7 @@ const I18N = {
     active_task_ends_at: "Ends at",
     upcoming_task_starts_in: "Starts in",
     sensor_temperature: "Temperature",
+    sensor_power: "Power",
     sensor_current: "Current",
     sensor_voltage: "Voltage",
     sensor_unavailable: "Unavailable",
@@ -277,6 +281,7 @@ const I18N = {
     task_edit: "Изменить",
     menu_timers: "Таймер",
     menu_tasks: "Задачи",
+    menu_import_export: "Импорт/Экспорт",
     recurrence_label: "Повтор",
     recurrence_forever: "Постоянно",
     recurrence_once: "Один раз (автоудаление)",
@@ -307,6 +312,7 @@ const I18N = {
     active_task_ends_at: "Заканчивается в",
     upcoming_task_starts_in: "Запуск через",
     sensor_temperature: "Температура",
+    sensor_power: "Мощность",
     sensor_current: "Ток",
     sensor_voltage: "Напряжение",
     sensor_unavailable: "Недоступно",
@@ -325,11 +331,9 @@ const DEFAULT_CONFIG = {
   language: "he",
   boiler_entity: "",
   temperature_sensor: "",
-  temperature_sensor_name: "",
+  power_sensor: "",
   current_sensor: "",
-  current_sensor_name: "",
   voltage_sensor: "",
-  voltage_sensor_name: "",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "",
   timer_entity: "",
@@ -708,12 +712,13 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .sensors-row {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
+          align-items: stretch;
+          justify-items: stretch;
           gap: 6px;
           margin-bottom: 2px;
+          width: 100%;
         }
 
         .sensor-pill {
@@ -723,7 +728,10 @@ class BoilerWaterCard extends HTMLElement {
           padding: 0;
           display: inline-flex;
           align-items: center;
+          justify-content: center;
+          text-align: center;
           gap: 0;
+          width: 100%;
           min-height: 0;
           box-shadow: none;
         }
@@ -741,6 +749,8 @@ class BoilerWaterCard extends HTMLElement {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-align: center;
+          width: 100%;
         }
 
         .quick-timer-btn {
@@ -869,6 +879,27 @@ class BoilerWaterCard extends HTMLElement {
           gap: 6px;
           flex-wrap: wrap;
           justify-content: flex-end;
+        }
+
+        .import-export-card {
+          gap: 10px;
+        }
+
+        .import-export-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          direction: ltr;
+        }
+
+        .import-export-grid .tasks-mode-btn,
+        .import-export-grid .tasks-import-btn,
+        .import-export-grid .tasks-export-btn {
+          min-height: 76px;
+          border-radius: 18px;
+          font-size: 1.05rem;
+          font-weight: 800;
+          padding: 10px 14px;
         }
 
         .tasks-import-mode {
@@ -1229,7 +1260,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .schedule-condition-state-row {
           display: grid;
-          grid-template-columns: minmax(84px, 104px) minmax(0, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 8px;
           align-items: center;
           min-width: 0;
@@ -1499,13 +1530,15 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .menu-mode-toggle {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
+          display: inline-grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          align-items: stretch;
+          gap: 4px;
           background: linear-gradient(165deg, rgba(114, 130, 156, 0.84), rgba(84, 99, 123, 0.78));
           border: 1px solid rgba(176, 197, 223, 0.6);
           border-radius: 14px;
           padding: 4px;
+          width: min(100%, 420px);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
         }
 
@@ -1513,9 +1546,9 @@ class BoilerWaterCard extends HTMLElement {
           border: 1px solid rgba(172, 197, 223, 0.55);
           border-radius: 10px;
           min-height: 42px;
-          min-width: 110px;
-          padding: 8px 16px;
-          font-size: 1rem;
+          min-width: 0;
+          padding: 8px 12px;
+          font-size: 0.92rem;
           font-weight: 800;
           color: #ffffff;
           text-shadow: 0 1px 2px rgba(11, 28, 45, 0.5);
@@ -1788,7 +1821,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .sensors-row {
-            grid-template-columns: minmax(0, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(98px, 1fr));
           }
 
           .timer-modal {
@@ -1849,11 +1882,10 @@ class BoilerWaterCard extends HTMLElement {
 
           .menu-mode-toggle {
             flex: 1 1 100%;
-            justify-content: stretch;
+            width: 100%;
           }
 
           .menu-mode-btn {
-            flex: 1 1 0;
             min-width: 0;
           }
 
@@ -1905,6 +1937,14 @@ class BoilerWaterCard extends HTMLElement {
 
           .schedule-action-btn {
             min-height: 42px;
+          }
+
+          .import-export-grid .tasks-mode-btn,
+          .import-export-grid .tasks-import-btn,
+          .import-export-grid .tasks-export-btn {
+            min-height: 58px;
+            border-radius: 14px;
+            font-size: 1.01rem;
           }
 
           .schedule-input,
@@ -2271,6 +2311,7 @@ class BoilerWaterCard extends HTMLElement {
             <div class="menu-mode-toggle">
               <button type="button" class="menu-mode-btn" id="modal-mode-timer-btn">Timer</button>
               <button type="button" class="menu-mode-btn" id="modal-mode-tasks-btn">Tasks</button>
+              <button type="button" class="menu-mode-btn" id="modal-mode-import-export-btn">Import/Export</button>
             </div>
             <div class="timer-modal-actions">
               <div class="timer-page-controls" id="timer-page-controls">
@@ -2289,17 +2330,22 @@ class BoilerWaterCard extends HTMLElement {
               <div class="tasks-head">
                 <p class="tasks-title" id="tasks-title">Tasks</p>
                 <div class="tasks-head-actions">
-                  <div class="tasks-import-mode" id="tasks-import-mode">
-                    <button type="button" class="tasks-mode-btn" id="tasks-mode-merge-btn" data-import-mode="merge">Merge</button>
-                    <button type="button" class="tasks-mode-btn" id="tasks-mode-replace-btn" data-import-mode="replace">Replace</button>
-                  </div>
-                  <button type="button" class="tasks-import-btn" id="tasks-import-btn">Import</button>
-                  <button type="button" class="tasks-export-btn" id="tasks-export-btn">Export</button>
                   <button type="button" class="tasks-add-btn" id="tasks-add-btn">Add</button>
                 </div>
               </div>
-              <input type="file" id="tasks-import-file" accept="application/json,.json" hidden />
               <div class="tasks-list" id="tasks-list"></div>
+            </div>
+          </div>
+          <div class="menu-view" id="modal-import-export-view" hidden>
+            <div class="tasks-card import-export-card">
+              <p class="tasks-title" id="import-export-title">Import/Export</p>
+              <div class="import-export-grid">
+                <button type="button" class="tasks-mode-btn" id="tasks-mode-replace-btn" data-import-mode="replace">Replace</button>
+                <button type="button" class="tasks-mode-btn" id="tasks-mode-merge-btn" data-import-mode="merge">Merge</button>
+                <button type="button" class="tasks-export-btn" id="tasks-export-btn">Export</button>
+                <button type="button" class="tasks-import-btn" id="tasks-import-btn">Import</button>
+              </div>
+              <input type="file" id="tasks-import-file" accept="application/json,.json" hidden />
             </div>
           </div>
         </div>
@@ -2474,10 +2520,10 @@ class BoilerWaterCard extends HTMLElement {
       quickTimerBtns: Array.from(this.shadowRoot.querySelectorAll(".quick-timer-btn")),
       quickOffBtn: this.shadowRoot.getElementById("quick-off-btn"),
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
+      importExportTitle: this.shadowRoot.getElementById("import-export-title"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
       tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
       tasksExportBtn: this.shadowRoot.getElementById("tasks-export-btn"),
-      tasksImportMode: this.shadowRoot.getElementById("tasks-import-mode"),
       tasksModeMergeBtn: this.shadowRoot.getElementById("tasks-mode-merge-btn"),
       tasksModeReplaceBtn: this.shadowRoot.getElementById("tasks-mode-replace-btn"),
       tasksImportFile: this.shadowRoot.getElementById("tasks-import-file"),
@@ -2495,8 +2541,10 @@ class BoilerWaterCard extends HTMLElement {
       timerPageIndicator: this.shadowRoot.getElementById("timer-page-indicator"),
       modalModeTimerBtn: this.shadowRoot.getElementById("modal-mode-timer-btn"),
       modalModeTasksBtn: this.shadowRoot.getElementById("modal-mode-tasks-btn"),
+      modalModeImportExportBtn: this.shadowRoot.getElementById("modal-mode-import-export-btn"),
       modalTimerView: this.shadowRoot.getElementById("modal-timer-view"),
       modalTasksView: this.shadowRoot.getElementById("modal-tasks-view"),
+      modalImportExportView: this.shadowRoot.getElementById("modal-import-export-view"),
       timerGrid: this.shadowRoot.getElementById("timer-grid"),
       scheduleModal: this.shadowRoot.getElementById("schedule-modal"),
       scheduleModalBackdrop: this.shadowRoot.getElementById("schedule-modal-backdrop"),
@@ -2574,6 +2622,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.timerPageNextBtn.addEventListener("click", () => this._changeTimerPage(1));
     this._elements.modalModeTimerBtn?.addEventListener("click", () => this._setMenuMode("timer"));
     this._elements.modalModeTasksBtn?.addEventListener("click", () => this._setMenuMode("tasks"));
+    this._elements.modalModeImportExportBtn?.addEventListener("click", () => this._setMenuMode("import_export"));
     this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
     this._elements.tasksImportBtn?.addEventListener("click", () => this._openImportTasksFilePicker());
     this._elements.tasksExportBtn?.addEventListener("click", () => this._exportTasksFromCard());
@@ -2652,6 +2701,9 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.tasksTitle) {
       this._elements.tasksTitle.textContent = this._t("tasks_title");
     }
+    if (this._elements.importExportTitle) {
+      this._elements.importExportTitle.textContent = this._t("menu_import_export");
+    }
     if (this._elements.tasksAddBtn) {
       this._elements.tasksAddBtn.textContent = this._t("tasks_add");
       this._elements.tasksAddBtn.disabled = !this._hasAnyTaskCreateService();
@@ -2690,6 +2742,9 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.modalModeTasksBtn) {
       this._elements.modalModeTasksBtn.textContent = this._t("menu_tasks");
+    }
+    if (this._elements.modalModeImportExportBtn) {
+      this._elements.modalModeImportExportBtn.textContent = this._t("menu_import_export");
     }
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
@@ -3021,22 +3076,27 @@ class BoilerWaterCard extends HTMLElement {
   _configuredSensors() {
     const defs = [
       {
+        key: "temperature_sensor",
+        fallbackLabel: this._t("sensor_temperature"),
+      },
+      {
+        key: "power_sensor",
+        fallbackLabel: this._t("sensor_power"),
+      },
+      {
         key: "current_sensor",
-        nameKey: "current_sensor_name",
         fallbackLabel: this._t("sensor_current"),
       },
       {
         key: "voltage_sensor",
-        nameKey: "voltage_sensor_name",
         fallbackLabel: this._t("sensor_voltage"),
       },
     ];
 
     return defs
-      .map(({ key, nameKey, fallbackLabel }) => {
+      .map(({ key, fallbackLabel }) => {
         const entityId = String(this._config?.[key] || "").trim();
-        const customName = String(this._config?.[nameKey] || "").trim();
-        return { label: customName || fallbackLabel, entityId };
+        return { label: fallbackLabel, entityId };
       })
       .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
   }
@@ -3186,8 +3246,12 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     if (!timedActive) {
+      const hasRealTemperatureSensor = this._isConfiguredSensorEntity(
+        String(this._config?.temperature_sensor || "").trim()
+      );
+      const continuousProgress = hasRealTemperatureSensor ? 0.72 : 1;
       const profile = this._buildHeatingProfile(
-        0.72,
+        continuousProgress,
         this._t("stage_continuous"),
         this._t("no_timer_mode")
       );
@@ -3518,23 +3582,33 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _setMenuMode(mode) {
-    this._menuMode = mode === "tasks" ? "tasks" : "timer";
+    const normalized = mode === "tasks" || mode === "import_export" ? mode : "timer";
+    this._menuMode = normalized;
     const isTimer = this._menuMode === "timer";
+    const isTasks = this._menuMode === "tasks";
+    const isImportExport = this._menuMode === "import_export";
     if (this._elements.timerModalPanel) {
-      this._elements.timerModalPanel.classList.toggle("menu-mode-tasks", !isTimer);
+      this._elements.timerModalPanel.classList.toggle("menu-mode-tasks", isTasks);
+      this._elements.timerModalPanel.classList.toggle("menu-mode-import-export", isImportExport);
       this._elements.timerModalPanel.classList.toggle("menu-mode-timer", isTimer);
     }
     if (this._elements.modalTimerView) {
       this._elements.modalTimerView.hidden = !isTimer;
     }
     if (this._elements.modalTasksView) {
-      this._elements.modalTasksView.hidden = isTimer;
+      this._elements.modalTasksView.hidden = !isTasks;
+    }
+    if (this._elements.modalImportExportView) {
+      this._elements.modalImportExportView.hidden = !isImportExport;
     }
     if (this._elements.modalModeTimerBtn) {
       this._elements.modalModeTimerBtn.classList.toggle("active", isTimer);
     }
     if (this._elements.modalModeTasksBtn) {
-      this._elements.modalModeTasksBtn.classList.toggle("active", !isTimer);
+      this._elements.modalModeTasksBtn.classList.toggle("active", isTasks);
+    }
+    if (this._elements.modalModeImportExportBtn) {
+      this._elements.modalModeImportExportBtn.classList.toggle("active", isImportExport);
     }
     if (this._elements.timerPageControls) {
       const duration = this._hass?.states[this._config.duration_entity];
@@ -6151,9 +6225,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { entity: { domain: "sensor" } },
       },
       {
-        name: "temperature_sensor_name",
-        label: labels.temperature_sensor_name,
-        selector: { text: {} },
+        name: "power_sensor",
+        label: labels.power_sensor,
+        selector: { entity: { domain: "sensor" } },
       },
       {
         name: "current_sensor",
@@ -6161,19 +6235,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { entity: { domain: "sensor" } },
       },
       {
-        name: "current_sensor_name",
-        label: labels.current_sensor_name,
-        selector: { text: {} },
-      },
-      {
         name: "voltage_sensor",
         label: labels.voltage_sensor,
         selector: { entity: { domain: "sensor" } },
-      },
-      {
-        name: "voltage_sensor_name",
-        label: labels.voltage_sensor_name,
-        selector: { text: {} },
       },
       {
         name: "boiler_flow_image",
@@ -6207,11 +6271,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "כותרת",
         boiler_entity: "ישות דוד",
         temperature_sensor: "סנסור טמפרטורה",
-        temperature_sensor_name: "שם תצוגה לסנסור טמפרטורה",
+        power_sensor: "סנסור צריכה (W)",
         current_sensor: "סנסור זרם",
-        current_sensor_name: "שם תצוגה לסנסור זרם",
         voltage_sensor: "סנסור מתח",
-        voltage_sensor_name: "שם תצוגה לסנסור מתח",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
       },
       en: {
@@ -6219,11 +6281,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Title",
         boiler_entity: "Boiler Entity",
         temperature_sensor: "Temperature Sensor",
-        temperature_sensor_name: "Temperature Sensor Display Name",
+        power_sensor: "Power Sensor (W)",
         current_sensor: "Current Sensor",
-        current_sensor_name: "Current Sensor Display Name",
         voltage_sensor: "Voltage Sensor",
-        voltage_sensor_name: "Voltage Sensor Display Name",
         boiler_flow_image: "Water Flow Image (path / URL)",
       },
       ru: {
@@ -6231,11 +6291,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Заголовок",
         boiler_entity: "Сущность бойлера",
         temperature_sensor: "Датчик температуры",
-        temperature_sensor_name: "Отображаемое имя датчика температуры",
+        power_sensor: "Датчик мощности (W)",
         current_sensor: "Датчик тока",
-        current_sensor_name: "Отображаемое имя датчика тока",
         voltage_sensor: "Датчик напряжения",
-        voltage_sensor_name: "Отображаемое имя датчика напряжения",
         boiler_flow_image: "Изображение потока (путь / URL)",
       },
     };
