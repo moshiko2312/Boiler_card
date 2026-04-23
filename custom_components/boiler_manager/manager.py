@@ -77,6 +77,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STATE_KEY_MANUAL_CONTINUOUS = "manual_continuous"
 STATE_KEY_MANUAL_UNTIL = "manual_until"
+STATE_KEY_MANUAL_DURATION_SECONDS = "manual_duration_seconds"
 
 
 class BoilerManagerError(HomeAssistantError):
@@ -160,6 +161,7 @@ class BoilerManager:
 
         self._manual_continuous = False
         self._manual_until: datetime | None = None
+        self._manual_duration_seconds: int | None = None
         self._schedule_driven = False
         self._active_task_ids: set[str] = set()
         # Task ids temporarily skipped until the current active segment ends
@@ -233,6 +235,7 @@ class BoilerManager:
             attrs["manual_until"] = dt_util.as_local(self._manual_until).isoformat()
         else:
             attrs["manual_until"] = None
+        attrs["manual_duration_seconds"] = self._manual_duration_seconds
         return attrs
 
     @property
@@ -675,6 +678,7 @@ class BoilerManager:
         """Turn on boiler and keep it running until explicit off."""
         self._manual_continuous = True
         self._manual_until = None
+        self._manual_duration_seconds = None
         self._schedule_driven = False
         self._cancel_timed_off()
         await self._async_save()
@@ -693,6 +697,7 @@ class BoilerManager:
         now = dt_util.now()
         self._manual_continuous = False
         self._manual_until = now + timedelta(seconds=seconds)
+        self._manual_duration_seconds = seconds
         self._schedule_driven = False
 
         self._cancel_timed_off()
@@ -709,6 +714,7 @@ class BoilerManager:
         self._async_snooze_active_tasks_until_segment_end(now)
         self._manual_continuous = False
         self._manual_until = None
+        self._manual_duration_seconds = None
         self._schedule_driven = False
         self._cancel_timed_off()
         await self._async_save()
@@ -719,6 +725,7 @@ class BoilerManager:
     async def _async_handle_timed_finished(self) -> None:
         """Handle end of timed operation."""
         self._manual_until = None
+        self._manual_duration_seconds = None
         self._cancel_timed_off()
         await self._async_save()
         await self._async_apply_schedule_state()
@@ -738,6 +745,8 @@ class BoilerManager:
 
         if self._manual_until and now >= self._manual_until:
             self._manual_until = None
+            self._manual_duration_seconds = None
+            self._cancel_timed_off()
             manual_timed_expired = True
             await self._async_save()
 
@@ -772,6 +781,14 @@ class BoilerManager:
             storage_changed = True
 
         if storage_changed:
+            await self._async_save()
+
+        # If a scheduled task becomes active while manual timed mode is running,
+        # schedule should take over immediately.
+        if self._manual_until and self._active_task_ids:
+            self._manual_until = None
+            self._manual_duration_seconds = None
+            self._cancel_timed_off()
             await self._async_save()
 
         manual_active = self._manual_continuous or self._manual_until is not None
@@ -991,9 +1008,11 @@ class BoilerManager:
         self._tasks = loaded
         self._manual_continuous = bool(raw.get(STATE_KEY_MANUAL_CONTINUOUS, False))
         self._manual_until = _parse_stored_datetime(raw.get(STATE_KEY_MANUAL_UNTIL))
+        self._manual_duration_seconds = _parse_positive_int(raw.get(STATE_KEY_MANUAL_DURATION_SECONDS))
         if self._manual_continuous:
             # Continuous and timed are mutually exclusive.
             self._manual_until = None
+            self._manual_duration_seconds = None
 
     async def _async_save(self) -> None:
         """Persist tasks to storage."""
@@ -1003,6 +1022,7 @@ class BoilerManager:
             STATE_KEY_MANUAL_UNTIL: (
                 dt_util.as_utc(self._manual_until).isoformat() if self._manual_until else None
             ),
+            STATE_KEY_MANUAL_DURATION_SECONDS: self._manual_duration_seconds,
         }
         await self._store.async_save(payload)
 
@@ -1232,6 +1252,19 @@ def _parse_stored_datetime(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return dt_util.as_utc(parsed)
+
+
+def _parse_positive_int(value: int | str | None) -> int | None:
+    """Parse positive integer from storage payload."""
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
 
 
 def _normalize_days(value: list[int | str] | None) -> list[int]:

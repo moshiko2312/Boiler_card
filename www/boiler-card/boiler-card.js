@@ -331,11 +331,11 @@ const DEFAULT_CONFIG = {
   voltage_sensor: "",
   voltage_sensor_name: "",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
-  duration_entity: "input_select.boiler_duration",
-  timer_entity: "timer.boiler_runtime",
-  script_on_timed: "script.boiler_turn_on_timed",
-  script_on_continuous: "script.boiler_turn_on_continuous",
-  script_off: "script.boiler_turn_off",
+  duration_entity: "",
+  timer_entity: "",
+  script_on_timed: "",
+  script_on_continuous: "",
+  script_off: "",
   integration_entry_id: "",
   service_run_timed: "boiler_manager.run_timed",
   service_on_continuous: "boiler_manager.turn_on_continuous",
@@ -346,10 +346,6 @@ const DEFAULT_CONFIG = {
   service_delete_schedule: "boiler_manager.delete_schedule",
   service_import_tasks: "boiler_manager.import_tasks",
   service_export_tasks: "boiler_manager.export_tasks",
-  turn_on_action: "homeassistant.turn_on",
-  turn_off_action: "homeassistant.turn_off",
-  turn_on_data: {},
-  turn_off_data: {},
   state_on_values: ["on"],
   state_off_values: ["off", "idle", "standby", "unavailable", "unknown"],
 };
@@ -373,6 +369,8 @@ class BoilerWaterCard extends HTMLElement {
     this._editingTaskId = null;
     this._offPendingUntil = 0;
     this._selectedDurationOptionLocal = "30m";
+    this._lastLegacyTimerCancelAt = 0;
+    this._lastLegacyTimerCancelEntity = "";
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
@@ -1096,6 +1094,21 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.9rem;
           box-sizing: border-box;
           width: 100%;
+        }
+
+        .schedule-time-input {
+          direction: ltr;
+          text-align: left;
+          unicode-bidi: isolate;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .schedule-time-input::-webkit-datetime-edit,
+        .schedule-time-input::-webkit-datetime-edit-fields-wrapper,
+        .schedule-time-input::-webkit-datetime-edit-hour-field,
+        .schedule-time-input::-webkit-datetime-edit-minute-field,
+        .schedule-time-input::-webkit-datetime-edit-text {
+          direction: ltr;
         }
 
         .schedule-select {
@@ -2325,14 +2338,14 @@ class BoilerWaterCard extends HTMLElement {
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-start-input" id="schedule-start-label">Start</label>
                   <div class="schedule-control-row">
-                    <input class="schedule-input" id="schedule-start-input" type="time" />
+                    <input class="schedule-input schedule-time-input" id="schedule-start-input" type="time" dir="ltr" />
                     <button type="button" class="schedule-clear-btn" id="schedule-start-clear-btn" aria-label="Clear">✕</button>
                   </div>
                 </div>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-end-input" id="schedule-end-label">End</label>
                   <div class="schedule-control-row">
-                    <input class="schedule-input" id="schedule-end-input" type="time" />
+                    <input class="schedule-input schedule-time-input" id="schedule-end-input" type="time" dir="ltr" />
                     <button type="button" class="schedule-clear-btn" id="schedule-end-clear-btn" aria-label="Clear">✕</button>
                   </div>
                 </div>
@@ -2611,7 +2624,7 @@ class BoilerWaterCard extends HTMLElement {
     const duration = this._hass.states[cfg.duration_entity];
     const timer = this._hass.states[cfg.timer_entity];
     const managerMode = this._boilerManagerModeEntity();
-    const scripts = this._scriptEntities();
+    this._maybeCancelLegacyTimerForSchedule(managerMode);
 
     const title = typeof cfg.title === "string" && cfg.title.trim()
       ? cfg.title.trim()
@@ -2794,14 +2807,14 @@ class BoilerWaterCard extends HTMLElement {
     this._syncSensors();
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
-    this._syncError(boiler, duration, timer, scripts);
-    this._syncControls(boiler, duration, timer, scripts);
+    this._syncError(boiler);
+    this._syncControls(boiler);
     this._syncScheduleList();
   }
 
   _syncTimerPicker(durationEntity, boilerEntity, timerEntity, managerMode = null) {
     const options = this._durationOptions(durationEntity);
-    const selected = this._selectedDurationOption(durationEntity, options);
+    const selected = this._selectedDurationOption(durationEntity, options, managerMode);
     this._timerPageIndex = this._clamp(this._timerPageIndex, 0, this._timerPageCount(options) - 1);
 
     if (this._elements.timerMenuBtn) {
@@ -2816,7 +2829,8 @@ class BoilerWaterCard extends HTMLElement {
 
   _syncQuickTimerButtons(options, selected, boilerEntity, timerEntity, managerMode = null) {
     const isBoilerOn = this._isEntityOn(boilerEntity);
-    const timerActive = timerEntity?.state === "active" || timerEntity?.state === "paused";
+    const scheduleActive = this._isBuiltInScheduleMode(managerMode);
+    const timerActive = !scheduleActive && (timerEntity?.state === "active" || timerEntity?.state === "paused");
     const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
     const timedActive = timerActive || builtInTimedActive;
     const pendingOff = this._offPendingUntil > Date.now();
@@ -2842,7 +2856,18 @@ class BoilerWaterCard extends HTMLElement {
     });
   }
 
-  _selectedDurationOption(durationEntity, options) {
+  _selectedDurationOption(durationEntity, options, managerMode = null) {
+    if (this._isBuiltInTimedMode(managerMode)) {
+      const timedSeconds = this._managerManualDurationSeconds(managerMode);
+      if (timedSeconds) {
+        const optionFromTimed = this._optionByMinutes(Math.max(1, Math.round(timedSeconds / 60)), options);
+        if (optionFromTimed) {
+          this._selectedDurationOptionLocal = optionFromTimed;
+          return optionFromTimed;
+        }
+      }
+    }
+
     const selected = String(durationEntity?.state || this._selectedDurationOptionLocal || "30m").trim();
     if (options.includes(selected)) {
       this._selectedDurationOptionLocal = selected;
@@ -2910,9 +2935,11 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const isOn = this._isEntityOn(boiler);
+    const scheduleActive = this._isBuiltInScheduleMode(managerMode);
     const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
+    const legacyTimerActive = !scheduleActive && timer?.state === "active";
 
-    if (timer?.state === "active" || builtInTimedActive) {
+    if (legacyTimerActive || builtInTimedActive) {
       this._elements.subtitle.textContent = this._t("subtitle_heating_timer");
     } else if (isOn) {
       this._elements.subtitle.textContent = this._t("subtitle_heating_continuous");
@@ -2922,7 +2949,8 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _syncCountdown(timer, boiler, managerMode = null) {
-    if (timer?.state === "active" || timer?.state === "paused") {
+    const scheduleActive = this._isBuiltInScheduleMode(managerMode);
+    if (!scheduleActive && (timer?.state === "active" || timer?.state === "paused")) {
       const seconds = this._remainingSeconds(timer);
       this._elements.countdownLabel.textContent =
         timer.state === "paused"
@@ -3048,24 +3076,23 @@ class BoilerWaterCard extends HTMLElement {
     return `${rawState} ${unit}`;
   }
 
-  _syncError(boiler, duration, timer, scripts) {
+  _syncError(boiler) {
     const missing = [];
     const hasBuiltIn = this._hasBuiltInControlServices();
 
     if (!boiler) {
       missing.push(this._config.boiler_entity);
     }
-    if (!duration && !hasBuiltIn) {
-      missing.push(this._config.duration_entity);
-    }
-    if (!timer && !hasBuiltIn) {
-      missing.push(this._config.timer_entity);
-    }
-    if (!scripts.onTimed && !hasBuiltIn) {
-      missing.push(this._config.script_on_timed);
-    }
-    if (!scripts.onContinuous && !hasBuiltIn) {
-      missing.push(this._config.script_on_continuous);
+    if (!hasBuiltIn) {
+      if (!this._isServiceAvailable(this._config.service_run_timed)) {
+        missing.push(this._config.service_run_timed);
+      }
+      if (!this._isServiceAvailable(this._config.service_on_continuous)) {
+        missing.push(this._config.service_on_continuous);
+      }
+      if (!this._isServiceAvailable(this._config.service_off)) {
+        missing.push(this._config.service_off);
+      }
     }
 
     if (missing.length === 0) {
@@ -3078,18 +3105,15 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.error.textContent = `${this._t("missing_entity")}: ${missing.join(", ")}`;
   }
 
-  _syncControls(boiler, duration, timer, scripts) {
+  _syncControls(boiler) {
     const hasHass = !!this._hass;
-    const hasCoreEntities = !!boiler && !!duration && !!timer;
-    const hasOnScripts = !!scripts.onTimed && !!scripts.onContinuous;
     const hasBuiltIn = this._hasBuiltInControlServices();
-    const canUseScripts = hasCoreEntities && hasOnScripts;
     const canUseBuiltIn = hasBuiltIn && !!boiler;
-    const hasDuration = !!duration || hasBuiltIn;
+    const hasDuration = hasBuiltIn;
 
-    const timedButtonsDisabled = !hasHass || (!canUseScripts && !canUseBuiltIn);
+    const timedButtonsDisabled = !hasHass || !canUseBuiltIn;
     const offButtonDisabled = !hasHass || !boiler;
-    this._elements.timerMenuBtn.disabled = !hasHass || !hasDuration;
+    this._elements.timerMenuBtn.disabled = !hasHass || !hasDuration || !boiler;
     this._elements.quickTimerBtns.forEach((button) => {
       const hasOption = !!button.dataset.option;
       const isOffAction = button.dataset.action === "off";
@@ -3113,6 +3137,7 @@ class BoilerWaterCard extends HTMLElement {
     const boiler = this._hass.states[this._config.boiler_entity];
     const duration = this._hass.states[this._config.duration_entity];
     const managerMode = this._boilerManagerModeEntity();
+    this._maybeCancelLegacyTimerForSchedule(managerMode);
     this._syncCountdown(timer, boiler, managerMode);
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
@@ -3138,7 +3163,8 @@ class BoilerWaterCard extends HTMLElement {
 
   _heatingProfile(boiler, timer, durationEntity, managerMode = null) {
     const isOn = this._isEntityOn(boiler);
-    const timerActive = timer?.state === "active" || timer?.state === "paused";
+    const scheduleActive = this._isBuiltInScheduleMode(managerMode);
+    const timerActive = !scheduleActive && (timer?.state === "active" || timer?.state === "paused");
     const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
     const timedActive = timerActive || builtInTimedActive;
     const liveTemp = this._liveTemperatureReading();
@@ -3172,7 +3198,7 @@ class BoilerWaterCard extends HTMLElement {
     const remaining = timerActive
       ? this._remainingSeconds(timer)
       : this._managerTimedRemainingSeconds(managerMode);
-    const total = this._timerTotalSeconds(timer, durationEntity);
+    const total = this._timerTotalSeconds(timer, durationEntity, managerMode);
     const progress = total > 0 && remaining !== null ? this._clamp(1 - remaining / total, 0, 1) : 0;
     const percent = Math.round(progress * 100);
 
@@ -3375,10 +3401,15 @@ class BoilerWaterCard extends HTMLElement {
     return this._t("sensor_unavailable");
   }
 
-  _timerTotalSeconds(timer, durationEntity) {
+  _timerTotalSeconds(timer, durationEntity, managerMode = null) {
     const fromTimer = this._parseDurationString(timer?.attributes?.duration);
     if (fromTimer !== null && fromTimer > 0) {
       return fromTimer;
+    }
+
+    const fromManager = this._managerManualDurationSeconds(managerMode);
+    if (fromManager !== null && fromManager > 0) {
+      return fromManager;
     }
 
     const selected = String(durationEntity?.state || this._selectedDurationOptionLocal || "30m").trim();
@@ -3425,14 +3456,6 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     this._selectedDurationOptionLocal = option;
-    const durationEntity = this._hass.states[this._config.duration_entity];
-    if (durationEntity) {
-      this._hass.callService("input_select", "select_option", {
-        entity_id: this._config.duration_entity,
-        option,
-      });
-    }
-
     this._activateSelectedDuration(option);
   }
 
@@ -3461,17 +3484,10 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const canUseBuiltIn = this._hasBuiltInControlServices();
-    const canUseScripts = this._hasScriptControlServices();
 
     if (this._isNoTimerOption(option)) {
       if (canUseBuiltIn) {
         this._callConfiguredService(this._config.service_on_continuous, this._builtInServiceBaseData());
-      } else if (canUseScripts) {
-        this._runScript(this._config.script_on_continuous, {
-          boiler_entity: this._config.boiler_entity,
-          turn_on_action: this._config.turn_on_action,
-          turn_on_data: this._safeServiceData(this._config.turn_on_data),
-        });
       }
       return;
     }
@@ -3482,17 +3498,6 @@ class BoilerWaterCard extends HTMLElement {
         ...this._builtInServiceBaseData(),
         duration: this._optionToHhMmSs(option) || "00:30:00",
         ...(minutes ? { minutes } : {}),
-      });
-      return;
-    }
-
-    if (canUseScripts) {
-      this._runScript(this._config.script_on_timed, {
-        duration_option: option,
-        duration: this._optionToHhMmSs(option) || "00:30:00",
-        boiler_entity: this._config.boiler_entity,
-        turn_on_action: this._config.turn_on_action,
-        turn_on_data: this._safeServiceData(this._config.turn_on_data),
       });
     }
   }
@@ -4457,7 +4462,8 @@ class BoilerWaterCard extends HTMLElement {
 
     const atInput = document.createElement("input");
     atInput.type = "time";
-    atInput.className = "schedule-input timeline-point-time";
+    atInput.className = "schedule-input schedule-time-input timeline-point-time";
+    atInput.setAttribute("dir", "ltr");
     atInput.value = point?.at || "06:00";
 
     const durationSelect = document.createElement("select");
@@ -5554,34 +5560,14 @@ class BoilerWaterCard extends HTMLElement {
       null
     );
 
-    // Then call integration off flow for state cleanup; script off is fallback only.
-    const usedBuiltInOff = this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
-    if (!usedBuiltInOff && this._hasScriptOffService()) {
-      this._runScript(this._config.script_off, {
-        boiler_entity: this._config.boiler_entity,
-        turn_off_action: this._config.turn_off_action,
-        turn_off_data: this._safeServiceData(this._config.turn_off_data),
-      });
-    }
+    // Then call integration off flow for state cleanup.
+    this._callConfiguredService(this._config.service_off, this._builtInServiceBaseData());
 
     if (this._config.timer_entity) {
       this._hass?.callService("timer", "cancel", {
         entity_id: this._config.timer_entity,
       });
     }
-  }
-
-  _runScript(entityId, variables = null) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    const data = { entity_id: entityId };
-    if (variables && Object.keys(variables).length > 0) {
-      data.variables = variables;
-    }
-
-    this._hass.callService("script", "turn_on", data);
   }
 
   _callConfiguredService(serviceRef, data = null) {
@@ -5611,16 +5597,6 @@ class BoilerWaterCard extends HTMLElement {
       data.boiler_entity = this._config.boiler_entity;
     }
     return data;
-  }
-
-  _hasScriptControlServices() {
-    const scripts = this._scriptEntities();
-    return !!scripts.onTimed && !!scripts.onContinuous;
-  }
-
-  _hasScriptOffService() {
-    const scripts = this._scriptEntities();
-    return !!scripts.off;
   }
 
   _hasBuiltInControlServices() {
@@ -5916,18 +5892,6 @@ class BoilerWaterCard extends HTMLElement {
     return false;
   }
 
-  _scriptEntities() {
-    if (!this._hass) {
-      return { onTimed: null, onContinuous: null, off: null };
-    }
-
-    return {
-      onTimed: this._hass.states[this._config.script_on_timed],
-      onContinuous: this._hass.states[this._config.script_on_continuous],
-      off: this._hass.states[this._config.script_off],
-    };
-  }
-
   _boilerManagerModeEntity() {
     if (!this._hass?.states) {
       return null;
@@ -5968,6 +5932,39 @@ class BoilerWaterCard extends HTMLElement {
     return mode === "manual_timed";
   }
 
+  _isBuiltInScheduleMode(managerMode) {
+    const mode = String(managerMode?.state || "").trim().toLowerCase();
+    return mode === "schedule";
+  }
+
+  _maybeCancelLegacyTimerForSchedule(managerMode) {
+    if (!this._hass || !this._isBuiltInScheduleMode(managerMode)) {
+      return;
+    }
+
+    const timerEntityId = String(this._config?.timer_entity || "").trim();
+    if (!timerEntityId) {
+      return;
+    }
+
+    const timerState = this._hass.states?.[timerEntityId];
+    if (timerState?.state !== "active" && timerState?.state !== "paused") {
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      this._lastLegacyTimerCancelEntity === timerEntityId
+      && now - this._lastLegacyTimerCancelAt < 1500
+    ) {
+      return;
+    }
+
+    this._lastLegacyTimerCancelEntity = timerEntityId;
+    this._lastLegacyTimerCancelAt = now;
+    this._hass.callService("timer", "cancel", { entity_id: timerEntityId });
+  }
+
   _managerTimedRemainingSeconds(managerMode) {
     const raw = String(managerMode?.attributes?.manual_until || "").trim();
     if (!raw) {
@@ -5979,6 +5976,14 @@ class BoilerWaterCard extends HTMLElement {
       return null;
     }
     return Math.max(0, Math.ceil((finishTs - Date.now()) / 1000));
+  }
+
+  _managerManualDurationSeconds(managerMode) {
+    const raw = Number.parseInt(String(managerMode?.attributes?.manual_duration_seconds ?? ""), 10);
+    if (!Number.isInteger(raw) || raw <= 0) {
+      return null;
+    }
+    return raw;
   }
 }
 

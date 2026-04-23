@@ -136,7 +136,7 @@ voltage_sensor_name: מתח קו
 
 Notes:
 - `integration_entry_id` is optional if you have only one Boiler Manager entry.
-- The card can also run in script mode (legacy), but built-in integration mode is recommended.
+- Built-in integration mode is the supported/default runtime path.
 
 ## Card Usage Guide
 
@@ -214,6 +214,12 @@ Import confirmation:
 - The currently running segment is skipped until its natural end
 - The task itself is **not** deleted or disabled
 - The task resumes automatically on its **next scheduled event**
+
+### Schedule vs Manual Timer Priority
+
+- If a scheduled task becomes active while a manual timed run is in progress, schedule mode takes priority
+- Manual timed state is canceled automatically so task logic controls ON/OFF behavior
+- In card UI, legacy `timer` helper countdown is ignored/canceled while schedule mode is active
 
 ### Edit Existing Task
 
