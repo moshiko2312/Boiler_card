@@ -70,6 +70,7 @@ const I18N = {
     task_days: "ימים",
     task_cancel: "ביטול",
     task_save: "שמירה",
+    clear_value: "נקה",
     task_delete: "מחיקה",
     task_enabled: "פעיל",
     task_disabled: "כבוי",
@@ -168,6 +169,7 @@ const I18N = {
     task_days: "Days",
     task_cancel: "Cancel",
     task_save: "Save",
+    clear_value: "Clear",
     task_delete: "Delete",
     task_enabled: "Enabled",
     task_disabled: "Disabled",
@@ -266,6 +268,7 @@ const I18N = {
     task_days: "Дни",
     task_cancel: "Отмена",
     task_save: "Сохранить",
+    clear_value: "Очистить",
     task_delete: "Удалить",
     task_enabled: "Включено",
     task_disabled: "Выключено",
@@ -1058,13 +1061,21 @@ class BoilerWaterCard extends HTMLElement {
           display: grid;
           gap: 10px;
           min-width: 0;
-          padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+          padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
           box-sizing: border-box;
         }
 
         .schedule-field {
           display: grid;
           gap: 4px;
+          min-width: 0;
+        }
+
+        .schedule-control-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 6px;
+          align-items: center;
           min-width: 0;
         }
 
@@ -1096,6 +1107,37 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.9rem;
           box-sizing: border-box;
           width: 100%;
+        }
+
+        .schedule-clear-btn {
+          border: 1px solid rgba(180, 196, 217, 0.72);
+          border-radius: 10px;
+          width: 36px;
+          min-width: 36px;
+          height: 36px;
+          min-height: 36px;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
+          color: #2b3f5a;
+          font-size: 1rem;
+          font-weight: 900;
+          line-height: 1;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow:
+            0 2px 6px rgba(16, 30, 50, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.62);
+        }
+
+        .schedule-clear-btn:hover {
+          filter: brightness(1.04);
+          transform: translateY(-1px);
+        }
+
+        .schedule-clear-btn:focus-visible {
+          outline: 2px solid rgba(165, 232, 255, 0.95);
+          outline-offset: 2px;
         }
 
         .schedule-type-toggle {
@@ -1169,6 +1211,21 @@ class BoilerWaterCard extends HTMLElement {
 
         .schedule-condition-row {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        .schedule-condition-state-row {
+          display: grid;
+          grid-template-columns: minmax(84px, 104px) minmax(0, 1fr);
+          gap: 8px;
+          align-items: center;
+          min-width: 0;
+        }
+
+        .schedule-condition-state-row .schedule-select,
+        .schedule-condition-state-row .schedule-input {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
         }
 
         .schedule-window-fields[hidden],
@@ -1277,18 +1334,20 @@ class BoilerWaterCard extends HTMLElement {
           justify-content: center;
           align-items: center;
           gap: 10px;
-          margin-top: 6px;
+          margin-top: 10px;
           position: sticky;
           bottom: 0;
           z-index: 4;
           background: linear-gradient(
             180deg,
-            rgba(19, 25, 41, 0),
-            rgba(19, 25, 41, 0.22) 28%,
-            rgba(19, 25, 41, 0.32)
+            rgba(68, 80, 101, 0.96),
+            rgba(59, 70, 90, 0.98)
           );
+          border-top: 1px solid rgba(166, 191, 219, 0.34);
+          box-shadow: 0 -6px 18px rgba(18, 28, 44, 0.24);
           padding-top: 10px;
           padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+          padding-inline: 8px;
           box-sizing: border-box;
         }
 
@@ -1999,7 +2058,7 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .schedule-form {
-            padding-bottom: calc(98px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(146px + env(safe-area-inset-bottom, 0px));
           }
 
           .schedule-modal-actions {
@@ -2242,7 +2301,10 @@ class BoilerWaterCard extends HTMLElement {
           <form class="schedule-form" id="schedule-form">
             <div class="schedule-field">
               <label class="schedule-label" for="schedule-name-input" id="schedule-name-label">Task Name</label>
-              <input class="schedule-input" id="schedule-name-input" type="text" maxlength="80" />
+              <div class="schedule-control-row">
+                <input class="schedule-input" id="schedule-name-input" type="text" maxlength="80" />
+                <button type="button" class="schedule-clear-btn" id="schedule-name-clear-btn" aria-label="Clear">✕</button>
+              </div>
             </div>
             <div class="schedule-field">
               <label class="schedule-label" id="schedule-type-label">Type</label>
@@ -2261,11 +2323,17 @@ class BoilerWaterCard extends HTMLElement {
               <div class="schedule-time-row">
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-start-input" id="schedule-start-label">Start</label>
-                  <input class="schedule-input" id="schedule-start-input" type="time" />
+                  <div class="schedule-control-row">
+                    <input class="schedule-input" id="schedule-start-input" type="time" />
+                    <button type="button" class="schedule-clear-btn" id="schedule-start-clear-btn" aria-label="Clear">✕</button>
+                  </div>
                 </div>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-end-input" id="schedule-end-label">End</label>
-                  <input class="schedule-input" id="schedule-end-input" type="time" />
+                  <div class="schedule-control-row">
+                    <input class="schedule-input" id="schedule-end-input" type="time" />
+                    <button type="button" class="schedule-clear-btn" id="schedule-end-clear-btn" aria-label="Clear">✕</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2289,42 +2357,56 @@ class BoilerWaterCard extends HTMLElement {
               <div class="schedule-time-row schedule-date-row" id="schedule-date-row">
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-start-date-input" id="schedule-date-start-label">From Date</label>
-                  <input class="schedule-input" id="schedule-start-date-input" type="date" />
+                  <div class="schedule-control-row">
+                    <input class="schedule-input" id="schedule-start-date-input" type="date" />
+                    <button type="button" class="schedule-clear-btn" id="schedule-start-date-clear-btn" aria-label="Clear">✕</button>
+                  </div>
                 </div>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-end-date-input" id="schedule-date-end-label">To Date</label>
-                  <input class="schedule-input" id="schedule-end-date-input" type="date" />
+                  <div class="schedule-control-row">
+                    <input class="schedule-input" id="schedule-end-date-input" type="date" />
+                    <button type="button" class="schedule-clear-btn" id="schedule-end-date-clear-btn" aria-label="Clear">✕</button>
+                  </div>
                 </div>
               </div>
               <div class="schedule-time-row schedule-condition-row" id="schedule-condition-row">
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-condition-entity-input" id="schedule-condition-entity-label">Condition Entity</label>
-                  <input
-                    class="schedule-input"
-                    id="schedule-condition-entity-input"
-                    type="text"
-                    list="schedule-condition-entity-list"
-                    placeholder="input_boolean.boiler_block"
-                    autocomplete="off"
-                  />
+                  <div class="schedule-control-row">
+                    <input
+                      class="schedule-input"
+                      id="schedule-condition-entity-input"
+                      type="text"
+                      list="schedule-condition-entity-list"
+                      placeholder="input_boolean.boiler_block"
+                      autocomplete="off"
+                    />
+                    <button type="button" class="schedule-clear-btn" id="schedule-condition-entity-clear-btn" aria-label="Clear">✕</button>
+                  </div>
                   <datalist id="schedule-condition-entity-list"></datalist>
                 </div>
                 <div class="schedule-field">
-                  <label class="schedule-label" for="schedule-condition-operator-input" id="schedule-condition-operator-label">Operator</label>
-                  <select
-                    class="schedule-select"
-                    id="schedule-condition-operator-input"
-                  ></select>
-                </div>
-                <div class="schedule-field">
                   <label class="schedule-label" for="schedule-condition-state-input" id="schedule-condition-state-label">Skip If State</label>
-                  <input
-                    class="schedule-input"
-                    id="schedule-condition-state-input"
-                    type="text"
-                    list="schedule-condition-state-list"
-                    autocomplete="off"
-                  />
+                  <div class="schedule-condition-state-row">
+                    <div class="schedule-control-row">
+                      <select
+                        class="schedule-select"
+                        id="schedule-condition-operator-input"
+                      ></select>
+                      <button type="button" class="schedule-clear-btn" id="schedule-condition-operator-clear-btn" aria-label="Clear">✕</button>
+                    </div>
+                    <div class="schedule-control-row">
+                      <input
+                        class="schedule-input"
+                        id="schedule-condition-state-input"
+                        type="text"
+                        list="schedule-condition-state-list"
+                        autocomplete="off"
+                      />
+                      <button type="button" class="schedule-clear-btn" id="schedule-condition-state-clear-btn" aria-label="Clear">✕</button>
+                    </div>
+                  </div>
                   <datalist id="schedule-condition-state-list"></datalist>
                 </div>
               </div>
@@ -2431,22 +2513,29 @@ class BoilerWaterCard extends HTMLElement {
       scheduleDateStartLabel: this.shadowRoot.getElementById("schedule-date-start-label"),
       scheduleDateEndLabel: this.shadowRoot.getElementById("schedule-date-end-label"),
       scheduleConditionEntityLabel: this.shadowRoot.getElementById("schedule-condition-entity-label"),
-      scheduleConditionOperatorLabel: this.shadowRoot.getElementById("schedule-condition-operator-label"),
       scheduleConditionStateLabel: this.shadowRoot.getElementById("schedule-condition-state-label"),
       timelinePointsLabel: this.shadowRoot.getElementById("timeline-points-label"),
       scheduleNameInput: this.shadowRoot.getElementById("schedule-name-input"),
+      scheduleNameClearBtn: this.shadowRoot.getElementById("schedule-name-clear-btn"),
       scheduleTypeInput: this.shadowRoot.getElementById("schedule-type-input"),
       scheduleWindowFields: this.shadowRoot.getElementById("schedule-window-fields"),
       scheduleTimelineFields: this.shadowRoot.getElementById("schedule-timeline-fields"),
       scheduleStartInput: this.shadowRoot.getElementById("schedule-start-input"),
+      scheduleStartClearBtn: this.shadowRoot.getElementById("schedule-start-clear-btn"),
       scheduleEndInput: this.shadowRoot.getElementById("schedule-end-input"),
+      scheduleEndClearBtn: this.shadowRoot.getElementById("schedule-end-clear-btn"),
       scheduleRecurrenceInput: this.shadowRoot.getElementById("schedule-recurrence-input"),
       scheduleDateRow: this.shadowRoot.getElementById("schedule-date-row"),
       scheduleStartDateInput: this.shadowRoot.getElementById("schedule-start-date-input"),
+      scheduleStartDateClearBtn: this.shadowRoot.getElementById("schedule-start-date-clear-btn"),
       scheduleEndDateInput: this.shadowRoot.getElementById("schedule-end-date-input"),
+      scheduleEndDateClearBtn: this.shadowRoot.getElementById("schedule-end-date-clear-btn"),
       scheduleConditionEntityInput: this.shadowRoot.getElementById("schedule-condition-entity-input"),
+      scheduleConditionEntityClearBtn: this.shadowRoot.getElementById("schedule-condition-entity-clear-btn"),
       scheduleConditionOperatorInput: this.shadowRoot.getElementById("schedule-condition-operator-input"),
+      scheduleConditionOperatorClearBtn: this.shadowRoot.getElementById("schedule-condition-operator-clear-btn"),
       scheduleConditionStateInput: this.shadowRoot.getElementById("schedule-condition-state-input"),
+      scheduleConditionStateClearBtn: this.shadowRoot.getElementById("schedule-condition-state-clear-btn"),
       scheduleConditionStateList: this.shadowRoot.getElementById("schedule-condition-state-list"),
       scheduleConditionEntityList: this.shadowRoot.getElementById("schedule-condition-entity-list"),
       scheduleDays: this.shadowRoot.getElementById("schedule-days"),
@@ -2491,9 +2580,10 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.scheduleRecurrenceForeverBtn?.addEventListener("click", () => this._setScheduleRecurrence("forever"));
     this._elements.scheduleRecurrenceOnceBtn?.addEventListener("click", () => this._setScheduleRecurrence("once"));
     this._elements.scheduleRecurrenceRangeBtn?.addEventListener("click", () => this._setScheduleRecurrence("range"));
-    this._elements.scheduleConditionEntityInput?.addEventListener("input", () => this._onConditionEntityChanged());
+    this._elements.scheduleConditionEntityInput?.addEventListener("input", () => this._onConditionEntityInputChanged());
     this._elements.scheduleConditionEntityInput?.addEventListener("change", () => this._onConditionEntityChanged());
     this._elements.scheduleConditionOperatorInput?.addEventListener("change", () => this._onConditionOperatorChanged());
+    this._wireScheduleClearButtons();
     this._elements.timelinePointAddBtn?.addEventListener("click", () => this._addTimelinePointRow());
     this._elements.scheduleForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -2648,11 +2738,12 @@ class BoilerWaterCard extends HTMLElement {
       if (this._elements.scheduleConditionEntityLabel) {
         this._elements.scheduleConditionEntityLabel.textContent = this._t("condition_entity_label");
       }
-      if (this._elements.scheduleConditionOperatorLabel) {
-        this._elements.scheduleConditionOperatorLabel.textContent = this._t("condition_operator_label");
-      }
       if (this._elements.scheduleConditionStateLabel) {
         this._elements.scheduleConditionStateLabel.textContent = this._t("condition_state_label");
+      }
+      if (this._elements.scheduleConditionOperatorInput) {
+        this._elements.scheduleConditionOperatorInput.setAttribute("aria-label", this._t("condition_operator_label"));
+        this._elements.scheduleConditionOperatorInput.setAttribute("title", this._t("condition_operator_label"));
       }
       if (this._elements.timelinePointsLabel) {
         this._elements.timelinePointsLabel.textContent = this._t("timeline_points");
@@ -2666,6 +2757,23 @@ class BoilerWaterCard extends HTMLElement {
       if (this._elements.scheduleSaveBtn) {
         this._elements.scheduleSaveBtn.textContent = this._t("task_save");
       }
+      const clearLabel = this._t("clear_value");
+      [
+        this._elements.scheduleNameClearBtn,
+        this._elements.scheduleStartClearBtn,
+        this._elements.scheduleEndClearBtn,
+        this._elements.scheduleStartDateClearBtn,
+        this._elements.scheduleEndDateClearBtn,
+        this._elements.scheduleConditionEntityClearBtn,
+        this._elements.scheduleConditionOperatorClearBtn,
+        this._elements.scheduleConditionStateClearBtn,
+      ].forEach((button) => {
+        if (!button) {
+          return;
+        }
+        button.setAttribute("aria-label", clearLabel);
+        button.setAttribute("title", clearLabel);
+      });
       this._updateScheduleDayLabels();
       this._updateScheduleMonthLabels();
       this._syncScheduleTypeFields({ refreshTimelineOptions: true });
@@ -3770,6 +3878,87 @@ class BoilerWaterCard extends HTMLElement {
     window.addEventListener("keydown", this._handleEscapeKey);
   }
 
+  _wireScheduleClearButtons() {
+    const bindClear = (button, field) => {
+      button?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this._clearScheduleField(field);
+      });
+    };
+
+    bindClear(this._elements.scheduleNameClearBtn, "name");
+    bindClear(this._elements.scheduleStartClearBtn, "start_time");
+    bindClear(this._elements.scheduleEndClearBtn, "end_time");
+    bindClear(this._elements.scheduleStartDateClearBtn, "start_date");
+    bindClear(this._elements.scheduleEndDateClearBtn, "end_date");
+    bindClear(this._elements.scheduleConditionEntityClearBtn, "condition_entity");
+    bindClear(this._elements.scheduleConditionOperatorClearBtn, "condition_operator");
+    bindClear(this._elements.scheduleConditionStateClearBtn, "condition_state");
+  }
+
+  _clearScheduleField(field) {
+    const key = String(field || "").trim().toLowerCase();
+
+    if (key === "name" && this._elements.scheduleNameInput) {
+      this._elements.scheduleNameInput.value = "";
+      this._elements.scheduleNameInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "start_time" && this._elements.scheduleStartInput) {
+      this._elements.scheduleStartInput.value = "";
+      this._elements.scheduleStartInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "end_time" && this._elements.scheduleEndInput) {
+      this._elements.scheduleEndInput.value = "";
+      this._elements.scheduleEndInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "start_date" && this._elements.scheduleStartDateInput) {
+      this._elements.scheduleStartDateInput.value = "";
+      this._elements.scheduleStartDateInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "end_date" && this._elements.scheduleEndDateInput) {
+      this._elements.scheduleEndDateInput.value = "";
+      this._elements.scheduleEndDateInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "condition_entity" && this._elements.scheduleConditionEntityInput) {
+      this._elements.scheduleConditionEntityInput.value = "";
+      if (this._elements.scheduleConditionOperatorInput) {
+        this._elements.scheduleConditionOperatorInput.value = "eq";
+      }
+      if (this._elements.scheduleConditionStateInput) {
+        this._elements.scheduleConditionStateInput.value = "";
+      }
+      this._refreshConditionEntityOptions("");
+      this._refreshConditionOperatorOptions("");
+      this._refreshConditionStateOptions("");
+      this._elements.scheduleConditionEntityInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "condition_operator" && this._elements.scheduleConditionOperatorInput) {
+      this._elements.scheduleConditionOperatorInput.value = "eq";
+      this._refreshConditionOperatorOptions();
+      this._refreshConditionStateOptions();
+      this._elements.scheduleConditionOperatorInput.focus({ preventScroll: true });
+      return;
+    }
+
+    if (key === "condition_state" && this._elements.scheduleConditionStateInput) {
+      this._elements.scheduleConditionStateInput.value = "";
+      this._elements.scheduleConditionStateInput.focus({ preventScroll: true });
+    }
+  }
+
   _renderScheduleDayButtons() {
     const container = this._elements.scheduleDays;
     if (!container) {
@@ -3862,15 +4051,16 @@ class BoilerWaterCard extends HTMLElement {
     });
   }
 
-  _refreshConditionEntityOptions() {
+  _refreshConditionEntityOptions(query = null) {
     const list = this._elements.scheduleConditionEntityList;
     if (!list || !this._hass?.states) {
       return;
     }
 
-    const options = Object.keys(this._hass.states)
-      .filter((entityId) => typeof entityId === "string" && entityId.includes("."))
-      .sort((a, b) => a.localeCompare(b));
+    const resolvedQuery = String(
+      query ?? this._elements.scheduleConditionEntityInput?.value ?? ""
+    ).trim();
+    const options = this._matchingConditionEntities(resolvedQuery);
 
     list.innerHTML = "";
     options.forEach((entityId) => {
@@ -3880,10 +4070,79 @@ class BoilerWaterCard extends HTMLElement {
     });
   }
 
-  _onConditionEntityChanged() {
-    const entityId = String(this._elements.scheduleConditionEntityInput?.value || "").trim();
+  _allConditionEntities() {
+    if (!this._hass?.states) {
+      return [];
+    }
+    return Object.keys(this._hass.states)
+      .filter((entityId) => typeof entityId === "string" && entityId.includes("."))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  _matchingConditionEntities(query = "") {
+    const all = this._allConditionEntities();
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) {
+      return all.slice(0, 250);
+    }
+
+    const starts = [];
+    const includes = [];
+    all.forEach((entityId) => {
+      const normalized = entityId.toLowerCase();
+      if (normalized.startsWith(q)) {
+        starts.push(entityId);
+      } else if (normalized.includes(q)) {
+        includes.push(entityId);
+      }
+    });
+    return [...starts, ...includes].slice(0, 250);
+  }
+
+  _onConditionEntityInputChanged() {
+    const input = this._elements.scheduleConditionEntityInput;
+    if (!input) {
+      return;
+    }
+
+    const rawValue = String(input.value || "").trim();
+    this._refreshConditionEntityOptions(rawValue);
+
+    if (rawValue) {
+      const matches = this._matchingConditionEntities(rawValue);
+      if (matches.length === 1) {
+        const match = matches[0];
+        const rawLower = rawValue.toLowerCase();
+        if (match.toLowerCase().startsWith(rawLower) && match.length > rawValue.length) {
+          input.value = match;
+          try {
+            input.setSelectionRange(rawValue.length, match.length);
+          } catch (_error) {
+            // Selection range may fail on some mobile browsers; autocomplete text still helps.
+          }
+        }
+      }
+    }
+
+    const entityId = String(input.value || "").trim();
     this._refreshConditionOperatorOptions(entityId);
     this._refreshConditionStateOptions(entityId);
+  }
+
+  _onConditionEntityChanged() {
+    const input = this._elements.scheduleConditionEntityInput;
+    const entityId = String(input?.value || "").trim();
+    const matches = this._matchingConditionEntities(entityId);
+    const exact = matches.find((candidate) => candidate.toLowerCase() === entityId.toLowerCase()) || null;
+    const bestMatch = exact || (matches.length === 1 ? matches[0] : null);
+    if (bestMatch && input) {
+      input.value = bestMatch;
+    }
+
+    const resolvedEntity = bestMatch || entityId;
+    this._refreshConditionEntityOptions(resolvedEntity);
+    this._refreshConditionOperatorOptions(resolvedEntity);
+    this._refreshConditionStateOptions(resolvedEntity);
     const stateInput = this._elements.scheduleConditionStateInput;
     if (!stateInput) {
       return;
