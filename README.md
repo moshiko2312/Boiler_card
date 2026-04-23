@@ -249,6 +249,13 @@ Notes:
 
 `switcher_mode` is intended for users with Switcher devices who still want full in-card time management.
 
+#### Switcher mode behavior matrix
+
+| Mode | Timed ON | Continuous ON / OFF | Tasks / Import-Export / Vacation |
+|---|---|---|---|
+| Adapter (recommended) | `boiler_manager.run_timed` (uses native `switcher_kis.turn_on_with_timer` when available) | `boiler_manager.turn_on_continuous` / `boiler_manager.turn_off` | Full support |
+| Direct fallback | `switcher_kis.turn_on_with_timer` | `homeassistant.turn_on` / `homeassistant.turn_off` | Limited (depends on Boiler Manager services configured) |
+
 ```yaml
 type: custom:boiler-water-card
 language: he
@@ -617,6 +624,20 @@ data:
 - Manual continuous mode is restored and boiler stays ON until explicit OFF
 - For timed runs, when the managed entity is a Switcher switch and `switcher_kis.turn_on_with_timer` is available,
   Boiler Manager uses native Switcher timer service (up to 150 minutes) to keep device-side remaining-time behavior aligned.
+
+## Versioning & Changelog
+
+- Tag `v0.1.4`:
+  - GitHub release tag for Switcher adapter + docs update stream.
+- Integration manifest `0.1.4`:
+  - Aligned with `v0.1.4` tag.
+
+Recent highlights:
+- `0.1.4`
+  - Metadata/version alignment and documentation cleanup.
+- `0.1.3`
+  - Switcher adapter behavior for timed control paths.
+  - Enabled full time-management workflow in Switcher mode when Boiler Manager services are available.
 
 ## Troubleshooting
 
