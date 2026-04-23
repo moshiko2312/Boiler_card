@@ -67,6 +67,7 @@ const I18N = {
     import_select_all: "בחר הכל",
     import_clear_all: "נקה הכל",
     import_no_tasks_selected: "לא נבחרו משימות לייבוא",
+    import_no_new_tasks: "כל המשימות שנבחרו כבר קיימות (או כפולות), אין משימות חדשות לייבוא",
     import_task_unnamed: "משימה ללא שם",
     dialog_title: "אישור פעולה",
     dialog_ok: "אישור",
@@ -179,6 +180,7 @@ const I18N = {
     import_select_all: "Select All",
     import_clear_all: "Clear All",
     import_no_tasks_selected: "No tasks were selected for import",
+    import_no_new_tasks: "All selected tasks already exist (or are duplicates), no new tasks to import",
     import_task_unnamed: "Unnamed task",
     dialog_title: "Confirm Action",
     dialog_ok: "OK",
@@ -291,6 +293,7 @@ const I18N = {
     import_select_all: "Выбрать все",
     import_clear_all: "Снять выбор",
     import_no_tasks_selected: "Не выбраны задачи для импорта",
+    import_no_new_tasks: "Все выбранные задачи уже существуют (или являются дубликатами), новых задач для импорта нет",
     import_task_unnamed: "Задача без названия",
     dialog_title: "Подтверждение",
     dialog_ok: "ОК",
@@ -403,6 +406,7 @@ const I18N = {
     import_select_all: "Tout sélectionner",
     import_clear_all: "Tout désélectionner",
     import_no_tasks_selected: "Aucune tâche sélectionnée pour l'import",
+    import_no_new_tasks: "Toutes les tâches sélectionnées existent déjà (ou sont des doublons), aucune nouvelle tâche à importer",
     import_task_unnamed: "Tâche sans nom",
     dialog_title: "Confirmer l'action",
     dialog_ok: "OK",
@@ -1708,10 +1712,11 @@ class BoilerWaterCard extends HTMLElement {
 
         .timer-modal-head {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr);
           grid-template-areas:
-            "title title"
-            "toggle actions";
+            "title"
+            "toggle"
+            "actions";
           align-items: center;
           gap: 10px;
           margin: 0 0 10px;
@@ -1743,19 +1748,21 @@ class BoilerWaterCard extends HTMLElement {
           gap: 6px;
           margin-inline-start: 0;
           justify-self: end;
+          width: 100%;
+          justify-content: flex-end;
         }
 
         .menu-mode-toggle {
           grid-area: toggle;
           display: inline-grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
           align-items: stretch;
           gap: 4px;
           background: linear-gradient(165deg, rgba(114, 130, 156, 0.84), rgba(84, 99, 123, 0.78));
           border: 1px solid rgba(176, 197, 223, 0.6);
           border-radius: 14px;
           padding: 4px;
-          width: min(100%, 420px);
+          width: 100%;
           min-width: 0;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
         }
@@ -1769,8 +1776,9 @@ class BoilerWaterCard extends HTMLElement {
           font-size: 0.9rem;
           font-weight: 800;
           line-height: 1.2;
-          white-space: normal;
+          white-space: normal !important;
           overflow-wrap: anywhere;
+          overflow: hidden;
           color: #ffffff;
           text-shadow: 0 1px 2px rgba(11, 28, 45, 0.5);
           background: linear-gradient(165deg, rgba(106, 125, 150, 0.9), rgba(86, 102, 126, 0.82));
@@ -4203,6 +4211,14 @@ class BoilerWaterCard extends HTMLElement {
         await this._showInfoModal(this._t("import_no_tasks_selected"));
         return;
       }
+      const preparedImport = this._prepareImportTasks(
+        selectedTasks,
+        { againstExisting: this._importMode === "merge" },
+      );
+      if (preparedImport.tasks.length === 0) {
+        await this._showInfoModal(this._t("import_no_new_tasks"));
+        return;
+      }
 
       if (this._importMode === "replace") {
         const approved = await this._openConfirmModal(this._t("import_replace_confirm"));
@@ -4214,7 +4230,7 @@ class BoilerWaterCard extends HTMLElement {
       this._callConfiguredService(this._config.service_import_tasks, {
         ...this._builtInServiceBaseData(),
         mode: this._importMode,
-        tasks: selectedTasks,
+        tasks: preparedImport.tasks,
       });
     } catch (_error) {
       await this._showInfoModal(this._t("import_invalid_file"));
@@ -4620,6 +4636,36 @@ class BoilerWaterCard extends HTMLElement {
       : [];
     this._pendingImportTasks = null;
     resolver(selectedTasks);
+  }
+
+  _prepareImportTasks(tasks, { againstExisting = false } = {}) {
+    const inputTasks = Array.isArray(tasks) ? tasks : [];
+    const existingKeys = new Set();
+    if (againstExisting) {
+      this._taskSwitchEntities().forEach((taskState) => {
+        const key = this._taskDuplicateKeyFromPayload(taskState?.attributes || {});
+        if (key) {
+          existingKeys.add(key);
+        }
+      });
+    }
+
+    const importKeys = new Set();
+    const filteredTasks = [];
+    inputTasks.forEach((task) => {
+      const key = this._taskDuplicateKeyFromPayload(task);
+      if (!key) {
+        filteredTasks.push(task);
+        return;
+      }
+      if (existingKeys.has(key) || importKeys.has(key)) {
+        return;
+      }
+      importKeys.add(key);
+      filteredTasks.push(task);
+    });
+
+    return { tasks: filteredTasks };
   }
 
   _isAnyModalOpen() {
