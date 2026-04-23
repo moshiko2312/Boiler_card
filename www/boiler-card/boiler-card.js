@@ -97,6 +97,29 @@ const I18N = {
     menu_timers: "טיימר",
     menu_tasks: "משימות",
     menu_import_export: "ייבוא/ייצוא",
+    menu_holidays_shabbat: "חגים ושבתות",
+    holidays_shabbat_title: "חגים ושבתות",
+    holidays_shabbat_description: "ניהול מקורות וכללים לחגים ושבתות עבור טיימרים ומשימות.",
+    holidays_shabbat_status_label: "סטטוס",
+    holidays_shabbat_sources_label: "מקורות",
+    holidays_shabbat_timer_rule_label: "כלל טיימרים",
+    holidays_shabbat_task_rule_label: "כלל משימות",
+    holidays_shabbat_status_active: "פעיל עכשיו",
+    holidays_shabbat_status_inactive: "לא פעיל",
+    holidays_shabbat_source_holiday: "חג",
+    holidays_shabbat_source_shabbat: "שבת",
+    holidays_shabbat_source_not_set: "לא הוגדר",
+    holiday_policy_allow: "ללא הגבלה",
+    holiday_policy_block: "חסימה",
+    holiday_policy_postpone: "דחייה",
+    holiday_policy_force_off: "כיבוי כללי",
+    holiday_timer_rule_block_notice: "טיימרים חסומים בזמן חג/שבת.",
+    holiday_timer_rule_postpone_notice: "טיימרים במצב דחייה בזמן חג/שבת.",
+    holiday_timer_rule_force_off_notice: "בזמן חג/שבת מופעל כיבוי כללי.",
+    holiday_task_rule_block_notice: "הפעלת משימות חסומה בזמן חג/שבת.",
+    holiday_task_rule_postpone_notice: "משימות במצב דחייה בזמן חג/שבת.",
+    holiday_task_rule_force_off_notice: "בזמן חג/שבת מופעל כיבוי כללי על משימות.",
+    holiday_runtime_notice: "חג/שבת פעיל • כללי ההגבלה חלים",
     recurrence_label: "מחזוריות",
     recurrence_forever: "קבוע",
     recurrence_once: "פעם אחת (מחיקה אוטומטית)",
@@ -218,6 +241,29 @@ const I18N = {
     menu_timers: "Timer",
     menu_tasks: "Tasks",
     menu_import_export: "Import/Export",
+    menu_holidays_shabbat: "Holidays & Shabbat",
+    holidays_shabbat_title: "Holidays & Shabbat",
+    holidays_shabbat_description: "Manage holiday and Shabbat sources and rules for timers and tasks.",
+    holidays_shabbat_status_label: "Status",
+    holidays_shabbat_sources_label: "Sources",
+    holidays_shabbat_timer_rule_label: "Timer Rule",
+    holidays_shabbat_task_rule_label: "Task Rule",
+    holidays_shabbat_status_active: "Active now",
+    holidays_shabbat_status_inactive: "Inactive",
+    holidays_shabbat_source_holiday: "Holiday",
+    holidays_shabbat_source_shabbat: "Shabbat",
+    holidays_shabbat_source_not_set: "Not set",
+    holiday_policy_allow: "No restriction",
+    holiday_policy_block: "Block",
+    holiday_policy_postpone: "Postpone",
+    holiday_policy_force_off: "Force Off",
+    holiday_timer_rule_block_notice: "Timers are blocked during holiday/Shabbat.",
+    holiday_timer_rule_postpone_notice: "Timers are postponed during holiday/Shabbat.",
+    holiday_timer_rule_force_off_notice: "Holiday/Shabbat rule forced a full shutdown.",
+    holiday_task_rule_block_notice: "Task activation is blocked during holiday/Shabbat.",
+    holiday_task_rule_postpone_notice: "Tasks are postponed during holiday/Shabbat.",
+    holiday_task_rule_force_off_notice: "Holiday/Shabbat rule forced task shutdown.",
+    holiday_runtime_notice: "Holiday/Shabbat is active • restriction rules are applied",
     recurrence_label: "Recurrence",
     recurrence_forever: "Forever",
     recurrence_once: "One Time (auto delete)",
@@ -339,6 +385,29 @@ const I18N = {
     menu_timers: "Таймер",
     menu_tasks: "Задачи",
     menu_import_export: "Импорт/Экспорт",
+    menu_holidays_shabbat: "Праздники и Шаббат",
+    holidays_shabbat_title: "Праздники и Шаббат",
+    holidays_shabbat_description: "Управление источниками и правилами праздников/Шаббата для таймеров и задач.",
+    holidays_shabbat_status_label: "Статус",
+    holidays_shabbat_sources_label: "Источники",
+    holidays_shabbat_timer_rule_label: "Правило таймера",
+    holidays_shabbat_task_rule_label: "Правило задач",
+    holidays_shabbat_status_active: "Сейчас активно",
+    holidays_shabbat_status_inactive: "Не активно",
+    holidays_shabbat_source_holiday: "Праздник",
+    holidays_shabbat_source_shabbat: "Шаббат",
+    holidays_shabbat_source_not_set: "Не задано",
+    holiday_policy_allow: "Без ограничений",
+    holiday_policy_block: "Блокировать",
+    holiday_policy_postpone: "Отложить",
+    holiday_policy_force_off: "Принудительно выключить",
+    holiday_timer_rule_block_notice: "Таймеры заблокированы во время праздника/Шаббата.",
+    holiday_timer_rule_postpone_notice: "Таймеры отложены во время праздника/Шаббата.",
+    holiday_timer_rule_force_off_notice: "Правило праздника/Шаббата выполнило общее отключение.",
+    holiday_task_rule_block_notice: "Запуск задач заблокирован во время праздника/Шаббата.",
+    holiday_task_rule_postpone_notice: "Задачи отложены во время праздника/Шаббата.",
+    holiday_task_rule_force_off_notice: "Правило праздника/Шаббата отключило задачи.",
+    holiday_runtime_notice: "Праздник/Шаббат активен • применяются правила ограничений",
     recurrence_label: "Повтор",
     recurrence_forever: "Постоянно",
     recurrence_once: "Один раз (автоудаление)",
@@ -460,6 +529,29 @@ const I18N = {
     menu_timers: "Minuterie",
     menu_tasks: "Tâches",
     menu_import_export: "Import/Export",
+    menu_holidays_shabbat: "Fetes et Shabbat",
+    holidays_shabbat_title: "Fetes et Shabbat",
+    holidays_shabbat_description: "Gestion des sources et regles fetes/Chabbat pour minuteries et taches.",
+    holidays_shabbat_status_label: "Statut",
+    holidays_shabbat_sources_label: "Sources",
+    holidays_shabbat_timer_rule_label: "Regle minuterie",
+    holidays_shabbat_task_rule_label: "Regle taches",
+    holidays_shabbat_status_active: "Actif maintenant",
+    holidays_shabbat_status_inactive: "Inactif",
+    holidays_shabbat_source_holiday: "Fete",
+    holidays_shabbat_source_shabbat: "Chabbat",
+    holidays_shabbat_source_not_set: "Non defini",
+    holiday_policy_allow: "Sans restriction",
+    holiday_policy_block: "Bloquer",
+    holiday_policy_postpone: "Reporter",
+    holiday_policy_force_off: "Arret force",
+    holiday_timer_rule_block_notice: "Les minuteries sont bloquees pendant fete/Chabbat.",
+    holiday_timer_rule_postpone_notice: "Les minuteries sont reportees pendant fete/Chabbat.",
+    holiday_timer_rule_force_off_notice: "La regle fete/Chabbat a force l'arret general.",
+    holiday_task_rule_block_notice: "L'activation des taches est bloquee pendant fete/Chabbat.",
+    holiday_task_rule_postpone_notice: "Les taches sont reportees pendant fete/Chabbat.",
+    holiday_task_rule_force_off_notice: "La regle fete/Chabbat a arrete les taches.",
+    holiday_runtime_notice: "Fete/Chabbat actif • regles de restriction appliquees",
     recurrence_label: "Récurrence",
     recurrence_forever: "Toujours",
     recurrence_once: "Une fois (suppression auto)",
@@ -522,6 +614,11 @@ const DEFAULT_CONFIG = {
   switcher_icon_sensor: "",
   switcher_timer_values: "15,30,45,60",
   timer_values: "15,30,60",
+  holiday_entity: "",
+  shabbat_entity: "",
+  holiday_active_states: "on,home,active,true",
+  holiday_timer_policy: "allow",
+  holiday_task_policy: "allow",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "",
   timer_entity: "",
@@ -565,6 +662,8 @@ class BoilerWaterCard extends HTMLElement {
     this._editingTaskId = null;
     this._offPendingUntil = 0;
     this._lastVacationForceOffAt = 0;
+    this._lastHolidayForceOffAt = 0;
+    this._lastHolidayTasksOffAt = 0;
     this._selectedDurationOptionLocal = "30m";
     this._lastLegacyTimerCancelAt = 0;
     this._lastLegacyTimerCancelEntity = "";
@@ -783,6 +882,20 @@ class BoilerWaterCard extends HTMLElement {
           text-align: center;
           letter-spacing: 0.01em;
           text-shadow: 0 1px 1px rgba(56, 24, 2, 0.45);
+        }
+
+        .holiday-shabbat-notice {
+          margin: 0 0 4px;
+          padding: 6px 10px;
+          border-radius: 9px;
+          border: 1px solid rgba(143, 192, 255, 0.78);
+          background: linear-gradient(165deg, rgba(86, 146, 222, 0.3), rgba(43, 102, 176, 0.26));
+          color: #f2f8ff;
+          font-size: 0.74rem;
+          font-weight: 900;
+          text-align: center;
+          letter-spacing: 0.01em;
+          text-shadow: 0 1px 1px rgba(12, 31, 58, 0.45);
         }
 
         .boiler-progress-row {
@@ -1087,6 +1200,62 @@ class BoilerWaterCard extends HTMLElement {
 
         .import-export-card {
           gap: 10px;
+        }
+
+        .holidays-shabbat-card {
+          gap: 10px;
+          min-height: 120px;
+        }
+
+        .holidays-shabbat-status {
+          margin: 0;
+          padding: 6px 10px;
+          border-radius: 9px;
+          border: 1px solid rgba(143, 192, 255, 0.68);
+          background: linear-gradient(165deg, rgba(90, 155, 231, 0.25), rgba(38, 99, 175, 0.24));
+          color: #eff7ff;
+          font-size: 0.85rem;
+          font-weight: 800;
+          text-align: center;
+        }
+
+        .holidays-shabbat-status.inactive {
+          border-color: rgba(170, 187, 208, 0.52);
+          background: linear-gradient(165deg, rgba(145, 160, 183, 0.2), rgba(101, 117, 140, 0.2));
+          color: rgba(234, 241, 252, 0.86);
+        }
+
+        .holidays-shabbat-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .holidays-shabbat-field {
+          margin: 0;
+          display: grid;
+          gap: 3px;
+        }
+
+        .holidays-shabbat-label {
+          font-size: 0.74rem;
+          font-weight: 700;
+          color: rgba(202, 220, 244, 0.9);
+        }
+
+        .holidays-shabbat-value {
+          font-size: 0.86rem;
+          font-weight: 800;
+          color: #eef5ff;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+
+        .holidays-shabbat-description {
+          margin: 0;
+          font-size: 0.8rem;
+          line-height: 1.4;
+          color: rgba(211, 225, 245, 0.84);
         }
 
         .import-export-grid {
@@ -1842,8 +2011,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .menu-mode-toggle {
           grid-area: toggle;
-          display: inline-grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+          display: flex;
           align-items: stretch;
           gap: 4px;
           background: linear-gradient(165deg, rgba(114, 130, 156, 0.84), rgba(84, 99, 123, 0.78));
@@ -1856,6 +2024,7 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .menu-mode-btn {
+          flex: 1 1 0;
           border: 1px solid rgba(172, 197, 223, 0.55);
           border-radius: 10px;
           min-height: 42px;
@@ -1905,7 +2074,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks .timer-modal-head,
-        .timer-modal-panel.menu-mode-import-export .timer-modal-head {
+        .timer-modal-panel.menu-mode-import-export .timer-modal-head,
+        .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-head {
           grid-template-areas:
             "title"
             "toggle";
@@ -1914,7 +2084,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks .timer-modal-actions,
-        .timer-modal-panel.menu-mode-import-export .timer-modal-actions {
+        .timer-modal-panel.menu-mode-import-export .timer-modal-actions,
+        .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-actions {
           position: static;
           width: 100%;
           height: 0;
@@ -1926,7 +2097,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks #timer-close-btn,
-        .timer-modal-panel.menu-mode-import-export #timer-close-btn {
+        .timer-modal-panel.menu-mode-import-export #timer-close-btn,
+        .timer-modal-panel.menu-mode-holidays-shabbat #timer-close-btn {
           pointer-events: auto;
         }
 
@@ -2361,7 +2533,8 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-modal-panel.menu-mode-tasks .timer-modal-head,
-          .timer-modal-panel.menu-mode-import-export .timer-modal-head {
+          .timer-modal-panel.menu-mode-import-export .timer-modal-head,
+          .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-head {
             row-gap: 6px;
             margin-bottom: 6px;
           }
@@ -2496,6 +2669,18 @@ class BoilerWaterCard extends HTMLElement {
           .tasks-head-actions .tasks-add-btn,
           .tasks-head-actions .tasks-vacation-btn {
             grid-column: 1 / -1;
+          }
+
+          .holidays-shabbat-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .holidays-shabbat-status {
+            font-size: 0.8rem;
+          }
+
+          .holidays-shabbat-value {
+            font-size: 0.82rem;
           }
 
           #import-select-modal-panel {
@@ -2814,6 +2999,7 @@ class BoilerWaterCard extends HTMLElement {
               <p class="upcoming-task-notice" id="upcoming-task-notice" hidden></p>
               <p class="active-task-notice" id="active-task-notice" hidden></p>
               <p class="vacation-notice" id="vacation-notice" hidden></p>
+              <p class="holiday-shabbat-notice" id="holiday-shabbat-notice" hidden></p>
               <div class="sensors-row" id="sensors-row" hidden></div>
               <div class="boiler-progress-row">
                 <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed</p>
@@ -2842,6 +3028,7 @@ class BoilerWaterCard extends HTMLElement {
               <button type="button" class="menu-mode-btn" id="modal-mode-timer-btn">Timer</button>
               <button type="button" class="menu-mode-btn" id="modal-mode-tasks-btn">Tasks</button>
               <button type="button" class="menu-mode-btn" id="modal-mode-import-export-btn">Import/Export</button>
+              <button type="button" class="menu-mode-btn" id="modal-mode-holidays-shabbat-btn">Holidays &amp; Shabbat</button>
             </div>
             <div class="timer-modal-actions">
               <div class="timer-page-controls" id="timer-page-controls">
@@ -2877,6 +3064,27 @@ class BoilerWaterCard extends HTMLElement {
                 <button type="button" class="tasks-import-btn" id="tasks-import-btn">Import</button>
               </div>
               <input type="file" id="tasks-import-file" accept="application/json,.json" hidden />
+            </div>
+          </div>
+          <div class="menu-view" id="modal-holidays-shabbat-view" hidden>
+            <div class="tasks-card holidays-shabbat-card">
+              <p class="tasks-title" id="holidays-shabbat-title">Holidays &amp; Shabbat</p>
+              <p class="holidays-shabbat-status inactive" id="holidays-shabbat-status">Inactive</p>
+              <div class="holidays-shabbat-grid">
+                <p class="holidays-shabbat-field">
+                  <span class="holidays-shabbat-label" id="holidays-shabbat-sources-label">Sources</span>
+                  <span class="holidays-shabbat-value" id="holidays-shabbat-sources-value">Not set</span>
+                </p>
+                <p class="holidays-shabbat-field">
+                  <span class="holidays-shabbat-label" id="holidays-shabbat-timer-rule-label">Timer Rule</span>
+                  <span class="holidays-shabbat-value" id="holidays-shabbat-timer-rule-value">No restriction</span>
+                </p>
+                <p class="holidays-shabbat-field">
+                  <span class="holidays-shabbat-label" id="holidays-shabbat-task-rule-label">Task Rule</span>
+                  <span class="holidays-shabbat-value" id="holidays-shabbat-task-rule-value">No restriction</span>
+                </p>
+              </div>
+              <p class="holidays-shabbat-description" id="holidays-shabbat-description">This tab is ready for Hebcal settings and holiday/shabbat rules for timers and tasks.</p>
             </div>
           </div>
         </div>
@@ -3117,6 +3325,7 @@ class BoilerWaterCard extends HTMLElement {
       upcomingTaskNotice: this.shadowRoot.getElementById("upcoming-task-notice"),
       activeTaskNotice: this.shadowRoot.getElementById("active-task-notice"),
       vacationNotice: this.shadowRoot.getElementById("vacation-notice"),
+      holidayShabbatNotice: this.shadowRoot.getElementById("holiday-shabbat-notice"),
       boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
       boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
@@ -3127,6 +3336,15 @@ class BoilerWaterCard extends HTMLElement {
       quickOffBtn: null,
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
       importExportTitle: this.shadowRoot.getElementById("import-export-title"),
+      holidaysShabbatTitle: this.shadowRoot.getElementById("holidays-shabbat-title"),
+      holidaysShabbatStatus: this.shadowRoot.getElementById("holidays-shabbat-status"),
+      holidaysShabbatSourcesLabel: this.shadowRoot.getElementById("holidays-shabbat-sources-label"),
+      holidaysShabbatSourcesValue: this.shadowRoot.getElementById("holidays-shabbat-sources-value"),
+      holidaysShabbatTimerRuleLabel: this.shadowRoot.getElementById("holidays-shabbat-timer-rule-label"),
+      holidaysShabbatTimerRuleValue: this.shadowRoot.getElementById("holidays-shabbat-timer-rule-value"),
+      holidaysShabbatTaskRuleLabel: this.shadowRoot.getElementById("holidays-shabbat-task-rule-label"),
+      holidaysShabbatTaskRuleValue: this.shadowRoot.getElementById("holidays-shabbat-task-rule-value"),
+      holidaysShabbatDescription: this.shadowRoot.getElementById("holidays-shabbat-description"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
       tasksVacationBtn: this.shadowRoot.getElementById("tasks-vacation-btn"),
       tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
@@ -3149,9 +3367,11 @@ class BoilerWaterCard extends HTMLElement {
       modalModeTimerBtn: this.shadowRoot.getElementById("modal-mode-timer-btn"),
       modalModeTasksBtn: this.shadowRoot.getElementById("modal-mode-tasks-btn"),
       modalModeImportExportBtn: this.shadowRoot.getElementById("modal-mode-import-export-btn"),
+      modalModeHolidaysShabbatBtn: this.shadowRoot.getElementById("modal-mode-holidays-shabbat-btn"),
       modalTimerView: this.shadowRoot.getElementById("modal-timer-view"),
       modalTasksView: this.shadowRoot.getElementById("modal-tasks-view"),
       modalImportExportView: this.shadowRoot.getElementById("modal-import-export-view"),
+      modalHolidaysShabbatView: this.shadowRoot.getElementById("modal-holidays-shabbat-view"),
       timerGrid: this.shadowRoot.getElementById("timer-grid"),
       scheduleModal: this.shadowRoot.getElementById("schedule-modal"),
       scheduleModalBackdrop: this.shadowRoot.getElementById("schedule-modal-backdrop"),
@@ -3255,6 +3475,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.modalModeTimerBtn?.addEventListener("click", () => this._setMenuMode("timer"));
     this._elements.modalModeTasksBtn?.addEventListener("click", () => this._setMenuMode("tasks"));
     this._elements.modalModeImportExportBtn?.addEventListener("click", () => this._setMenuMode("import_export"));
+    this._elements.modalModeHolidaysShabbatBtn?.addEventListener("click", () => this._setMenuMode("holidays_shabbat"));
     this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
     this._elements.tasksVacationBtn?.addEventListener("click", () => this._toggleVacationMode());
     this._elements.tasksImportBtn?.addEventListener("click", () => this._openImportTasksFilePicker());
@@ -3334,6 +3555,7 @@ class BoilerWaterCard extends HTMLElement {
     const managerMode = this._boilerManagerModeEntity();
     this._maybeCancelLegacyTimerForSchedule(managerMode);
     this._maybeEnforceVacationShutdown(managerMode, boiler, timer);
+    this._maybeEnforceHolidayRules(managerMode, boiler, timer);
 
     const hasExplicitTitle = typeof cfg.title === "string";
     const title = hasExplicitTitle
@@ -3366,8 +3588,24 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.importExportTitle) {
       this._elements.importExportTitle.textContent = this._t("menu_import_export");
     }
+    if (this._elements.holidaysShabbatTitle) {
+      this._elements.holidaysShabbatTitle.textContent = this._t("holidays_shabbat_title");
+    }
+    if (this._elements.holidaysShabbatSourcesLabel) {
+      this._elements.holidaysShabbatSourcesLabel.textContent = this._t("holidays_shabbat_sources_label");
+    }
+    if (this._elements.holidaysShabbatTimerRuleLabel) {
+      this._elements.holidaysShabbatTimerRuleLabel.textContent = this._t("holidays_shabbat_timer_rule_label");
+    }
+    if (this._elements.holidaysShabbatTaskRuleLabel) {
+      this._elements.holidaysShabbatTaskRuleLabel.textContent = this._t("holidays_shabbat_task_rule_label");
+    }
+    if (this._elements.holidaysShabbatDescription) {
+      this._elements.holidaysShabbatDescription.textContent = this._t("holidays_shabbat_description");
+    }
     const hasTasksView = this._hasTasksView();
     const hasImportExportView = this._hasImportExportView();
+    const hasHolidaysShabbatView = this._hasHolidaysShabbatView();
     if (this._elements.tasksAddBtn) {
       this._elements.tasksAddBtn.textContent = this._t("tasks_add");
       this._elements.tasksAddBtn.disabled = !this._hasAnyTaskCreateService();
@@ -3442,6 +3680,11 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.modalModeImportExportBtn.textContent = this._t("menu_import_export");
       this._elements.modalModeImportExportBtn.hidden = !hasImportExportView;
     }
+    if (this._elements.modalModeHolidaysShabbatBtn) {
+      this._elements.modalModeHolidaysShabbatBtn.textContent = this._t("menu_holidays_shabbat");
+      this._elements.modalModeHolidaysShabbatBtn.hidden = !hasHolidaysShabbatView;
+    }
+    this._syncHolidaysShabbatPanel();
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
       this._syncScheduleSunModeOptionLabels();
@@ -3599,6 +3842,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncStatus(boiler, timer, managerMode);
     this._syncCountdown(timer, boiler, managerMode);
     this._syncVacationNotice(managerMode);
+    this._syncHolidayShabbatNotice();
     this._syncSensors();
     this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
@@ -3752,10 +3996,13 @@ class BoilerWaterCard extends HTMLElement {
     this._timerGridRenderKey = renderKey;
 
     grid.innerHTML = "";
+    const timerSelectionBlocked = this._isVacationModeEnabled(this._boilerManagerModeEntity())
+      || this._timerActionBlockedByHoliday();
     pageOptions.forEach((option) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "timer-option-btn";
+      button.disabled = timerSelectionBlocked;
       if (option === selected) {
         button.classList.add("selected");
       }
@@ -4482,6 +4729,9 @@ class BoilerWaterCard extends HTMLElement {
     if (this._isVacationModeEnabled(this._boilerManagerModeEntity())) {
       return;
     }
+    if (this._timerActionBlockedByHoliday({ showMessage: true })) {
+      return;
+    }
 
     this._selectedDurationOptionLocal = option;
     this._activateSelectedDuration(option);
@@ -4499,6 +4749,9 @@ class BoilerWaterCard extends HTMLElement {
     if (this._isVacationModeEnabled(this._boilerManagerModeEntity())) {
       return;
     }
+    if (this._timerActionBlockedByHoliday({ showMessage: true })) {
+      return;
+    }
     this._offPendingUntil = 0;
 
     const option = button.dataset.option;
@@ -4514,6 +4767,9 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
     if (this._isVacationModeEnabled(this._boilerManagerModeEntity())) {
+      return;
+    }
+    if (this._timerActionBlockedByHoliday()) {
       return;
     }
 
@@ -4589,6 +4845,306 @@ class BoilerWaterCard extends HTMLElement {
     return this._hasTaskImportService() || this._taskSwitchEntities().length > 0;
   }
 
+  _hasHolidaysShabbatView() {
+    return true;
+  }
+
+  _normalizeHolidayPolicy(value) {
+    const normalized = String(value || "allow").trim().toLowerCase();
+    if (normalized === "block" || normalized === "deny") {
+      return "block";
+    }
+    if (normalized === "postpone" || normalized === "delay" || normalized === "defer") {
+      return "postpone";
+    }
+    if (normalized === "force_off" || normalized === "off" || normalized === "turn_off" || normalized === "shutdown") {
+      return "force_off";
+    }
+    return "allow";
+  }
+
+  _holidayTimerPolicy() {
+    return this._normalizeHolidayPolicy(this._config?.holiday_timer_policy);
+  }
+
+  _holidayTaskPolicy() {
+    return this._normalizeHolidayPolicy(this._config?.holiday_task_policy);
+  }
+
+  _holidayActiveStateList() {
+    const raw = this._config?.holiday_active_states;
+    const values = Array.isArray(raw)
+      ? raw
+      : String(raw || "")
+          .split(/[,\s]+/)
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+    const normalized = values
+      .map((item) => String(item || "").trim().toLowerCase())
+      .filter((item) => item.length > 0);
+    return normalized.length > 0
+      ? normalized
+      : ["on", "home", "active", "true"];
+  }
+
+  _isHolidaySourceActiveState(stateValue) {
+    const activeStates = this._holidayActiveStateList();
+    const state = String(stateValue ?? "").trim().toLowerCase();
+    if (!state) {
+      return false;
+    }
+    if (activeStates.includes(state)) {
+      return true;
+    }
+    const numericState = Number.parseFloat(state);
+    if (Number.isFinite(numericState) && numericState !== 0) {
+      return activeStates.includes("1")
+        || activeStates.includes("true")
+        || activeStates.includes("on")
+        || activeStates.includes("active");
+    }
+    return false;
+  }
+
+  _holidaySourceStatus(entityId) {
+    const normalizedId = String(entityId || "").trim();
+    if (!normalizedId) {
+      return {
+        configured: false,
+        entityId: "",
+        stateObj: null,
+        active: false,
+      };
+    }
+    const stateObj = this._hass?.states?.[normalizedId] || null;
+    return {
+      configured: true,
+      entityId: normalizedId,
+      stateObj,
+      active: this._isHolidaySourceActiveState(stateObj?.state),
+    };
+  }
+
+  _holidayShabbatStatus() {
+    const holiday = this._holidaySourceStatus(this._config?.holiday_entity);
+    const shabbat = this._holidaySourceStatus(this._config?.shabbat_entity);
+    return {
+      holiday,
+      shabbat,
+      active: holiday.active || shabbat.active,
+    };
+  }
+
+  _holidayPolicyLabel(policy) {
+    const normalized = this._normalizeHolidayPolicy(policy);
+    if (normalized === "block") {
+      return this._t("holiday_policy_block");
+    }
+    if (normalized === "postpone") {
+      return this._t("holiday_policy_postpone");
+    }
+    if (normalized === "force_off") {
+      return this._t("holiday_policy_force_off");
+    }
+    return this._t("holiday_policy_allow");
+  }
+
+  _holidaySourceDisplayName(source) {
+    if (!source?.configured) {
+      return this._t("holidays_shabbat_source_not_set");
+    }
+    const stateObj = source.stateObj;
+    if (!stateObj) {
+      return `${source.entityId} (${this._t("status_unavailable")})`;
+    }
+    const friendly = String(stateObj.attributes?.friendly_name || "").trim();
+    const entityName = friendly || source.entityId;
+    const stateText = String(stateObj.state || "").trim();
+    return `${entityName} (${stateText || this._t("status_unavailable")})`;
+  }
+
+  _holidaySourceSummaryLine(kind, source) {
+    const label = kind === "shabbat"
+      ? this._t("holidays_shabbat_source_shabbat")
+      : this._t("holidays_shabbat_source_holiday");
+    return `${label}: ${this._holidaySourceDisplayName(source)}`;
+  }
+
+  _syncHolidaysShabbatPanel() {
+    const status = this._holidayShabbatStatus();
+    const timerPolicy = this._holidayTimerPolicy();
+    const taskPolicy = this._holidayTaskPolicy();
+
+    if (this._elements.holidaysShabbatStatus) {
+      this._elements.holidaysShabbatStatus.textContent = status.active
+        ? this._t("holidays_shabbat_status_active")
+        : this._t("holidays_shabbat_status_inactive");
+      this._elements.holidaysShabbatStatus.classList.toggle("inactive", !status.active);
+    }
+    if (this._elements.holidaysShabbatSourcesValue) {
+      const holidayLine = this._holidaySourceSummaryLine("holiday", status.holiday);
+      const shabbatLine = this._holidaySourceSummaryLine("shabbat", status.shabbat);
+      this._elements.holidaysShabbatSourcesValue.textContent = `${holidayLine} • ${shabbatLine}`;
+    }
+    if (this._elements.holidaysShabbatTimerRuleValue) {
+      this._elements.holidaysShabbatTimerRuleValue.textContent = this._holidayPolicyLabel(timerPolicy);
+    }
+    if (this._elements.holidaysShabbatTaskRuleValue) {
+      this._elements.holidaysShabbatTaskRuleValue.textContent = this._holidayPolicyLabel(taskPolicy);
+    }
+  }
+
+  _syncHolidayShabbatNotice() {
+    const notice = this._elements.holidayShabbatNotice;
+    if (!notice) {
+      return;
+    }
+    const status = this._holidayShabbatStatus();
+    if (!status.active) {
+      notice.hidden = true;
+      notice.textContent = "";
+      return;
+    }
+    const timerPolicy = this._holidayPolicyLabel(this._holidayTimerPolicy());
+    const taskPolicy = this._holidayPolicyLabel(this._holidayTaskPolicy());
+    notice.textContent = `${this._t("holiday_runtime_notice")} • ${this._t("holidays_shabbat_timer_rule_label")}: ${timerPolicy} • ${this._t("holidays_shabbat_task_rule_label")}: ${taskPolicy}`;
+    notice.hidden = false;
+  }
+
+  _isTimerBlockedByHoliday(status = null) {
+    const sourceStatus = status || this._holidayShabbatStatus();
+    if (!sourceStatus.active) {
+      return false;
+    }
+    return this._holidayTimerPolicy() !== "allow";
+  }
+
+  _isTaskBlockedByHoliday(status = null) {
+    const sourceStatus = status || this._holidayShabbatStatus();
+    if (!sourceStatus.active) {
+      return false;
+    }
+    return this._holidayTaskPolicy() !== "allow";
+  }
+
+  _maybeExplainTimerHolidayBlock(policy) {
+    const normalized = this._normalizeHolidayPolicy(policy);
+    if (normalized === "force_off") {
+      this._showInfoModal(this._t("holiday_timer_rule_force_off_notice"), this._t("holidays_shabbat_title"));
+      return;
+    }
+    if (normalized === "postpone") {
+      this._showInfoModal(this._t("holiday_timer_rule_postpone_notice"), this._t("holidays_shabbat_title"));
+      return;
+    }
+    this._showInfoModal(this._t("holiday_timer_rule_block_notice"), this._t("holidays_shabbat_title"));
+  }
+
+  _maybeExplainTaskHolidayBlock(policy) {
+    const normalized = this._normalizeHolidayPolicy(policy);
+    if (normalized === "force_off") {
+      this._showInfoModal(this._t("holiday_task_rule_force_off_notice"), this._t("holidays_shabbat_title"));
+      return;
+    }
+    if (normalized === "postpone") {
+      this._showInfoModal(this._t("holiday_task_rule_postpone_notice"), this._t("holidays_shabbat_title"));
+      return;
+    }
+    this._showInfoModal(this._t("holiday_task_rule_block_notice"), this._t("holidays_shabbat_title"));
+  }
+
+  _timerActionBlockedByHoliday({ showMessage = false } = {}) {
+    const status = this._holidayShabbatStatus();
+    if (!status.active) {
+      return false;
+    }
+    const policy = this._holidayTimerPolicy();
+    if (policy === "allow") {
+      return false;
+    }
+    if (policy === "force_off") {
+      const boiler = this._hass?.states?.[this._config?.boiler_entity];
+      const timer = this._hass?.states?.[this._config?.timer_entity];
+      const managerMode = this._boilerManagerModeEntity();
+      this._forceHolidayShutdown(boiler, timer, managerMode);
+    }
+    if (showMessage) {
+      this._maybeExplainTimerHolidayBlock(policy);
+    }
+    return true;
+  }
+
+  _taskActionBlockedByHoliday({ showMessage = false } = {}) {
+    const status = this._holidayShabbatStatus();
+    if (!status.active) {
+      return false;
+    }
+    const policy = this._holidayTaskPolicy();
+    if (policy === "allow") {
+      return false;
+    }
+    if (policy === "force_off") {
+      const boiler = this._hass?.states?.[this._config?.boiler_entity];
+      const timer = this._hass?.states?.[this._config?.timer_entity];
+      const managerMode = this._boilerManagerModeEntity();
+      this._forceHolidayShutdown(boiler, timer, managerMode);
+    }
+    if (showMessage) {
+      this._maybeExplainTaskHolidayBlock(policy);
+    }
+    return true;
+  }
+
+  _maybeEnforceHolidayRules(managerMode, boiler, timer) {
+    const status = this._holidayShabbatStatus();
+    if (!status.active) {
+      return;
+    }
+    const timerPolicy = this._holidayTimerPolicy();
+    const taskPolicy = this._holidayTaskPolicy();
+    if (timerPolicy === "force_off" || taskPolicy === "force_off") {
+      this._forceHolidayShutdown(boiler, timer, managerMode);
+    }
+    if (taskPolicy !== "allow") {
+      this._forceHolidayTasksOff();
+    }
+  }
+
+  _forceHolidayShutdown(boiler, timer, managerMode = null) {
+    const now = Date.now();
+    if (now - this._lastHolidayForceOffAt < 2500) {
+      return;
+    }
+    const isOn = this._isEntityOn(boiler);
+    const legacyTimerActive = timer?.state === "active" || timer?.state === "paused";
+    const builtInTimedActive = this._isBuiltInTimedMode(managerMode);
+    const scheduleActive = this._isBuiltInScheduleMode(managerMode);
+    const shouldForceOff = isOn || builtInTimedActive || (!scheduleActive && legacyTimerActive);
+    if (!shouldForceOff) {
+      return;
+    }
+    this._lastHolidayForceOffAt = now;
+    this._handleTurnOff();
+  }
+
+  _forceHolidayTasksOff() {
+    const now = Date.now();
+    if (now - this._lastHolidayTasksOffAt < 4000) {
+      return;
+    }
+    const activeTaskEntities = this._taskSwitchEntities()
+      .filter((taskState) => String(taskState?.state || "").toLowerCase() === "on")
+      .map((taskState) => String(taskState?.entity_id || "").trim())
+      .filter((entityId) => !!entityId);
+    if (activeTaskEntities.length === 0) {
+      return;
+    }
+    this._lastHolidayTasksOffAt = now;
+    activeTaskEntities.forEach((entityId) => {
+      this._callEntityAction("homeassistant.turn_off", entityId, null);
+    });
+  }
+
   _availableMenuModes() {
     const modes = ["timer"];
     if (this._hasTasksView()) {
@@ -4597,20 +5153,25 @@ class BoilerWaterCard extends HTMLElement {
     if (this._hasImportExportView()) {
       modes.push("import_export");
     }
+    if (this._hasHolidaysShabbatView()) {
+      modes.push("holidays_shabbat");
+    }
     return modes;
   }
 
   _setMenuMode(mode) {
-    const requested = mode === "tasks" || mode === "import_export" ? mode : "timer";
+    const requested = mode === "tasks" || mode === "import_export" || mode === "holidays_shabbat" ? mode : "timer";
     const availableModes = this._availableMenuModes();
     const normalized = availableModes.includes(requested) ? requested : "timer";
     this._menuMode = normalized;
     const isTimer = this._menuMode === "timer";
     const isTasks = this._menuMode === "tasks";
     const isImportExport = this._menuMode === "import_export";
+    const isHolidaysShabbat = this._menuMode === "holidays_shabbat";
     if (this._elements.timerModalPanel) {
       this._elements.timerModalPanel.classList.toggle("menu-mode-tasks", isTasks);
       this._elements.timerModalPanel.classList.toggle("menu-mode-import-export", isImportExport);
+      this._elements.timerModalPanel.classList.toggle("menu-mode-holidays-shabbat", isHolidaysShabbat);
       this._elements.timerModalPanel.classList.toggle("menu-mode-timer", isTimer);
     }
     if (this._elements.modalTimerView) {
@@ -4622,6 +5183,9 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.modalImportExportView) {
       this._elements.modalImportExportView.hidden = !isImportExport;
     }
+    if (this._elements.modalHolidaysShabbatView) {
+      this._elements.modalHolidaysShabbatView.hidden = !isHolidaysShabbat;
+    }
     if (this._elements.modalModeTimerBtn) {
       this._elements.modalModeTimerBtn.classList.toggle("active", isTimer);
     }
@@ -4630,6 +5194,9 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.modalModeImportExportBtn) {
       this._elements.modalModeImportExportBtn.classList.toggle("active", isImportExport);
+    }
+    if (this._elements.modalModeHolidaysShabbatBtn) {
+      this._elements.modalModeHolidaysShabbatBtn.classList.toggle("active", isHolidaysShabbat);
     }
     if (this._elements.timerPageControls) {
       const duration = this._hass?.states[this._config.duration_entity];

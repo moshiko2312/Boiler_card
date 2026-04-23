@@ -97,6 +97,9 @@ const I18N = {
     menu_timers: "טיימר",
     menu_tasks: "משימות",
     menu_import_export: "ייבוא/ייצוא",
+    menu_holidays_shabbat: "חגים ושבתות",
+    holidays_shabbat_title: "חגים ושבתות",
+    holidays_shabbat_description: "טאב זה מוכן לחיבור הגדרות Hebcal וכללי שבת/חג עבור טיימרים ומשימות.",
     recurrence_label: "מחזוריות",
     recurrence_forever: "קבוע",
     recurrence_once: "פעם אחת (מחיקה אוטומטית)",
@@ -218,6 +221,9 @@ const I18N = {
     menu_timers: "Timer",
     menu_tasks: "Tasks",
     menu_import_export: "Import/Export",
+    menu_holidays_shabbat: "Holidays & Shabbat",
+    holidays_shabbat_title: "Holidays & Shabbat",
+    holidays_shabbat_description: "This tab is ready for Hebcal settings and holiday/shabbat rules for timers and tasks.",
     recurrence_label: "Recurrence",
     recurrence_forever: "Forever",
     recurrence_once: "One Time (auto delete)",
@@ -339,6 +345,9 @@ const I18N = {
     menu_timers: "Таймер",
     menu_tasks: "Задачи",
     menu_import_export: "Импорт/Экспорт",
+    menu_holidays_shabbat: "Праздники и Шаббат",
+    holidays_shabbat_title: "Праздники и Шаббат",
+    holidays_shabbat_description: "Эта вкладка подготовлена для настроек Hebcal и правил Шаббата/праздников для таймеров и задач.",
     recurrence_label: "Повтор",
     recurrence_forever: "Постоянно",
     recurrence_once: "Один раз (автоудаление)",
@@ -460,6 +469,9 @@ const I18N = {
     menu_timers: "Minuterie",
     menu_tasks: "Tâches",
     menu_import_export: "Import/Export",
+    menu_holidays_shabbat: "Fetes et Shabbat",
+    holidays_shabbat_title: "Fetes et Shabbat",
+    holidays_shabbat_description: "Cet onglet est pret pour les reglages Hebcal et les regles Chabbat/fetes pour les minuteries et les taches.",
     recurrence_label: "Récurrence",
     recurrence_forever: "Toujours",
     recurrence_once: "Une fois (suppression auto)",
@@ -1087,6 +1099,18 @@ class BoilerWaterCard extends HTMLElement {
 
         .import-export-card {
           gap: 10px;
+        }
+
+        .holidays-shabbat-card {
+          gap: 10px;
+          min-height: 120px;
+        }
+
+        .holidays-shabbat-description {
+          margin: 0;
+          font-size: 0.9rem;
+          line-height: 1.45;
+          color: rgba(230, 239, 252, 0.9);
         }
 
         .import-export-grid {
@@ -1842,8 +1866,7 @@ class BoilerWaterCard extends HTMLElement {
 
         .menu-mode-toggle {
           grid-area: toggle;
-          display: inline-grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+          display: flex;
           align-items: stretch;
           gap: 4px;
           background: linear-gradient(165deg, rgba(114, 130, 156, 0.84), rgba(84, 99, 123, 0.78));
@@ -1856,6 +1879,7 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .menu-mode-btn {
+          flex: 1 1 0;
           border: 1px solid rgba(172, 197, 223, 0.55);
           border-radius: 10px;
           min-height: 42px;
@@ -1905,7 +1929,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks .timer-modal-head,
-        .timer-modal-panel.menu-mode-import-export .timer-modal-head {
+        .timer-modal-panel.menu-mode-import-export .timer-modal-head,
+        .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-head {
           grid-template-areas:
             "title"
             "toggle";
@@ -1914,7 +1939,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks .timer-modal-actions,
-        .timer-modal-panel.menu-mode-import-export .timer-modal-actions {
+        .timer-modal-panel.menu-mode-import-export .timer-modal-actions,
+        .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-actions {
           position: static;
           width: 100%;
           height: 0;
@@ -1926,7 +1952,8 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-panel.menu-mode-tasks #timer-close-btn,
-        .timer-modal-panel.menu-mode-import-export #timer-close-btn {
+        .timer-modal-panel.menu-mode-import-export #timer-close-btn,
+        .timer-modal-panel.menu-mode-holidays-shabbat #timer-close-btn {
           pointer-events: auto;
         }
 
@@ -2361,7 +2388,8 @@ class BoilerWaterCard extends HTMLElement {
           }
 
           .timer-modal-panel.menu-mode-tasks .timer-modal-head,
-          .timer-modal-panel.menu-mode-import-export .timer-modal-head {
+          .timer-modal-panel.menu-mode-import-export .timer-modal-head,
+          .timer-modal-panel.menu-mode-holidays-shabbat .timer-modal-head {
             row-gap: 6px;
             margin-bottom: 6px;
           }
@@ -2842,6 +2870,7 @@ class BoilerWaterCard extends HTMLElement {
               <button type="button" class="menu-mode-btn" id="modal-mode-timer-btn">Timer</button>
               <button type="button" class="menu-mode-btn" id="modal-mode-tasks-btn">Tasks</button>
               <button type="button" class="menu-mode-btn" id="modal-mode-import-export-btn">Import/Export</button>
+              <button type="button" class="menu-mode-btn" id="modal-mode-holidays-shabbat-btn">Holidays &amp; Shabbat</button>
             </div>
             <div class="timer-modal-actions">
               <div class="timer-page-controls" id="timer-page-controls">
@@ -2877,6 +2906,12 @@ class BoilerWaterCard extends HTMLElement {
                 <button type="button" class="tasks-import-btn" id="tasks-import-btn">Import</button>
               </div>
               <input type="file" id="tasks-import-file" accept="application/json,.json" hidden />
+            </div>
+          </div>
+          <div class="menu-view" id="modal-holidays-shabbat-view" hidden>
+            <div class="tasks-card holidays-shabbat-card">
+              <p class="tasks-title" id="holidays-shabbat-title">Holidays &amp; Shabbat</p>
+              <p class="holidays-shabbat-description" id="holidays-shabbat-description">This tab is ready for Hebcal settings and holiday/shabbat rules for timers and tasks.</p>
             </div>
           </div>
         </div>
@@ -3127,6 +3162,8 @@ class BoilerWaterCard extends HTMLElement {
       quickOffBtn: null,
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
       importExportTitle: this.shadowRoot.getElementById("import-export-title"),
+      holidaysShabbatTitle: this.shadowRoot.getElementById("holidays-shabbat-title"),
+      holidaysShabbatDescription: this.shadowRoot.getElementById("holidays-shabbat-description"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
       tasksVacationBtn: this.shadowRoot.getElementById("tasks-vacation-btn"),
       tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
@@ -3149,9 +3186,11 @@ class BoilerWaterCard extends HTMLElement {
       modalModeTimerBtn: this.shadowRoot.getElementById("modal-mode-timer-btn"),
       modalModeTasksBtn: this.shadowRoot.getElementById("modal-mode-tasks-btn"),
       modalModeImportExportBtn: this.shadowRoot.getElementById("modal-mode-import-export-btn"),
+      modalModeHolidaysShabbatBtn: this.shadowRoot.getElementById("modal-mode-holidays-shabbat-btn"),
       modalTimerView: this.shadowRoot.getElementById("modal-timer-view"),
       modalTasksView: this.shadowRoot.getElementById("modal-tasks-view"),
       modalImportExportView: this.shadowRoot.getElementById("modal-import-export-view"),
+      modalHolidaysShabbatView: this.shadowRoot.getElementById("modal-holidays-shabbat-view"),
       timerGrid: this.shadowRoot.getElementById("timer-grid"),
       scheduleModal: this.shadowRoot.getElementById("schedule-modal"),
       scheduleModalBackdrop: this.shadowRoot.getElementById("schedule-modal-backdrop"),
@@ -3255,6 +3294,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.modalModeTimerBtn?.addEventListener("click", () => this._setMenuMode("timer"));
     this._elements.modalModeTasksBtn?.addEventListener("click", () => this._setMenuMode("tasks"));
     this._elements.modalModeImportExportBtn?.addEventListener("click", () => this._setMenuMode("import_export"));
+    this._elements.modalModeHolidaysShabbatBtn?.addEventListener("click", () => this._setMenuMode("holidays_shabbat"));
     this._elements.tasksAddBtn.addEventListener("click", () => this._openScheduleModal());
     this._elements.tasksVacationBtn?.addEventListener("click", () => this._toggleVacationMode());
     this._elements.tasksImportBtn?.addEventListener("click", () => this._openImportTasksFilePicker());
@@ -3366,8 +3406,15 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.importExportTitle) {
       this._elements.importExportTitle.textContent = this._t("menu_import_export");
     }
+    if (this._elements.holidaysShabbatTitle) {
+      this._elements.holidaysShabbatTitle.textContent = this._t("holidays_shabbat_title");
+    }
+    if (this._elements.holidaysShabbatDescription) {
+      this._elements.holidaysShabbatDescription.textContent = this._t("holidays_shabbat_description");
+    }
     const hasTasksView = this._hasTasksView();
     const hasImportExportView = this._hasImportExportView();
+    const hasHolidaysShabbatView = this._hasHolidaysShabbatView();
     if (this._elements.tasksAddBtn) {
       this._elements.tasksAddBtn.textContent = this._t("tasks_add");
       this._elements.tasksAddBtn.disabled = !this._hasAnyTaskCreateService();
@@ -3441,6 +3488,10 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.modalModeImportExportBtn) {
       this._elements.modalModeImportExportBtn.textContent = this._t("menu_import_export");
       this._elements.modalModeImportExportBtn.hidden = !hasImportExportView;
+    }
+    if (this._elements.modalModeHolidaysShabbatBtn) {
+      this._elements.modalModeHolidaysShabbatBtn.textContent = this._t("menu_holidays_shabbat");
+      this._elements.modalModeHolidaysShabbatBtn.hidden = !hasHolidaysShabbatView;
     }
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
@@ -4589,6 +4640,10 @@ class BoilerWaterCard extends HTMLElement {
     return this._hasTaskImportService() || this._taskSwitchEntities().length > 0;
   }
 
+  _hasHolidaysShabbatView() {
+    return true;
+  }
+
   _availableMenuModes() {
     const modes = ["timer"];
     if (this._hasTasksView()) {
@@ -4597,20 +4652,25 @@ class BoilerWaterCard extends HTMLElement {
     if (this._hasImportExportView()) {
       modes.push("import_export");
     }
+    if (this._hasHolidaysShabbatView()) {
+      modes.push("holidays_shabbat");
+    }
     return modes;
   }
 
   _setMenuMode(mode) {
-    const requested = mode === "tasks" || mode === "import_export" ? mode : "timer";
+    const requested = mode === "tasks" || mode === "import_export" || mode === "holidays_shabbat" ? mode : "timer";
     const availableModes = this._availableMenuModes();
     const normalized = availableModes.includes(requested) ? requested : "timer";
     this._menuMode = normalized;
     const isTimer = this._menuMode === "timer";
     const isTasks = this._menuMode === "tasks";
     const isImportExport = this._menuMode === "import_export";
+    const isHolidaysShabbat = this._menuMode === "holidays_shabbat";
     if (this._elements.timerModalPanel) {
       this._elements.timerModalPanel.classList.toggle("menu-mode-tasks", isTasks);
       this._elements.timerModalPanel.classList.toggle("menu-mode-import-export", isImportExport);
+      this._elements.timerModalPanel.classList.toggle("menu-mode-holidays-shabbat", isHolidaysShabbat);
       this._elements.timerModalPanel.classList.toggle("menu-mode-timer", isTimer);
     }
     if (this._elements.modalTimerView) {
@@ -4622,6 +4682,9 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.modalImportExportView) {
       this._elements.modalImportExportView.hidden = !isImportExport;
     }
+    if (this._elements.modalHolidaysShabbatView) {
+      this._elements.modalHolidaysShabbatView.hidden = !isHolidaysShabbat;
+    }
     if (this._elements.modalModeTimerBtn) {
       this._elements.modalModeTimerBtn.classList.toggle("active", isTimer);
     }
@@ -4630,6 +4693,9 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.modalModeImportExportBtn) {
       this._elements.modalModeImportExportBtn.classList.toggle("active", isImportExport);
+    }
+    if (this._elements.modalModeHolidaysShabbatBtn) {
+      this._elements.modalModeHolidaysShabbatBtn.classList.toggle("active", isHolidaysShabbat);
     }
     if (this._elements.timerPageControls) {
       const duration = this._hass?.states[this._config.duration_entity];
