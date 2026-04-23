@@ -77,6 +77,13 @@ const I18N = {
     task_name: "שם משימה",
     task_start: "התחלה",
     task_end: "סיום",
+    schedule_time_mode: "סוג זמן",
+    schedule_time_mode_fixed: "שעה קבועה",
+    schedule_time_mode_sunrise: "זריחה",
+    schedule_time_mode_sunset: "שקיעה",
+    schedule_time_offset: "אופסט (דקות)",
+    schedule_sun_toggle: "שימוש בזריחה/שקיעה",
+    invalid_schedule_time: "זמן משימה לא תקין",
     task_days: "ימים",
     task_cancel: "ביטול",
     task_save: "שמירה",
@@ -108,6 +115,7 @@ const I18N = {
     timeline_time: "שעה",
     timeline_timer: "טיימר",
     condition_entity_label: "ישות תנאי",
+    condition_enabled_toggle: "הפעל תנאי",
     condition_operator_label: "אופרטור",
     condition_state_label: "דלג אם מצב",
     condition_state_placeholder: "on",
@@ -190,6 +198,13 @@ const I18N = {
     task_name: "Task Name",
     task_start: "Start",
     task_end: "End",
+    schedule_time_mode: "Time Type",
+    schedule_time_mode_fixed: "Fixed Time",
+    schedule_time_mode_sunrise: "Sunrise",
+    schedule_time_mode_sunset: "Sunset",
+    schedule_time_offset: "Offset (minutes)",
+    schedule_sun_toggle: "Use sunrise/sunset",
+    invalid_schedule_time: "Invalid schedule time",
     task_days: "Days",
     task_cancel: "Cancel",
     task_save: "Save",
@@ -221,6 +236,7 @@ const I18N = {
     timeline_time: "Time",
     timeline_timer: "Timer",
     condition_entity_label: "Condition Entity",
+    condition_enabled_toggle: "Enable Condition",
     condition_operator_label: "Operator",
     condition_state_label: "Skip If State",
     condition_state_placeholder: "on",
@@ -303,6 +319,13 @@ const I18N = {
     task_name: "Название задачи",
     task_start: "Начало",
     task_end: "Окончание",
+    schedule_time_mode: "Тип времени",
+    schedule_time_mode_fixed: "Фиксированное время",
+    schedule_time_mode_sunrise: "Восход",
+    schedule_time_mode_sunset: "Закат",
+    schedule_time_offset: "Смещение (минуты)",
+    schedule_sun_toggle: "Использовать восход/закат",
+    invalid_schedule_time: "Некорректное время задачи",
     task_days: "Дни",
     task_cancel: "Отмена",
     task_save: "Сохранить",
@@ -334,6 +357,7 @@ const I18N = {
     timeline_time: "Время",
     timeline_timer: "Таймер",
     condition_entity_label: "Сущность условия",
+    condition_enabled_toggle: "Включить условие",
     condition_operator_label: "Оператор",
     condition_state_label: "Пропускать при состоянии",
     condition_state_placeholder: "on",
@@ -416,6 +440,13 @@ const I18N = {
     task_name: "Nom de la tâche",
     task_start: "Début",
     task_end: "Fin",
+    schedule_time_mode: "Type d'heure",
+    schedule_time_mode_fixed: "Heure fixe",
+    schedule_time_mode_sunrise: "Lever du soleil",
+    schedule_time_mode_sunset: "Coucher du soleil",
+    schedule_time_offset: "Décalage (minutes)",
+    schedule_sun_toggle: "Utiliser lever/coucher",
+    invalid_schedule_time: "Heure de tâche invalide",
     task_days: "Jours",
     task_cancel: "Annuler",
     task_save: "Enregistrer",
@@ -447,6 +478,7 @@ const I18N = {
     timeline_time: "Heure",
     timeline_timer: "Minuterie",
     condition_entity_label: "Entité de condition",
+    condition_enabled_toggle: "Activer la condition",
     condition_operator_label: "Opérateur",
     condition_state_label: "Ignorer si état",
     condition_state_placeholder: "on",
@@ -1310,6 +1342,42 @@ class BoilerWaterCard extends HTMLElement {
           min-width: 0;
         }
 
+        .schedule-time-meta-row {
+          grid-template-columns: minmax(0, 1fr) minmax(96px, 120px);
+          position: relative;
+          z-index: 2;
+        }
+
+        .schedule-time-offset-input {
+          direction: ltr;
+          text-align: center;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .schedule-inline-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 26px;
+          user-select: none;
+        }
+
+        .schedule-inline-toggle-input {
+          width: 16px;
+          height: 16px;
+          margin: 0;
+          accent-color: #5fb5df;
+          cursor: pointer;
+          flex: 0 0 auto;
+        }
+
+        .schedule-inline-toggle-text {
+          font-size: 0.73rem;
+          color: #dce7f5;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
         .schedule-label {
           font-size: 0.77rem;
           color: var(--boiler-muted);
@@ -1476,7 +1544,10 @@ class BoilerWaterCard extends HTMLElement {
 
         .schedule-window-fields[hidden],
         .schedule-timeline-fields[hidden],
-        .schedule-date-row[hidden] {
+        .schedule-date-row[hidden],
+        .schedule-condition-row[hidden],
+        .schedule-time-meta-row[hidden],
+        .timeline-point-mode-row[hidden] {
           display: none;
         }
 
@@ -1492,10 +1563,20 @@ class BoilerWaterCard extends HTMLElement {
 
         .timeline-point-row {
           display: grid;
-          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(86px, 96px);
+          grid-template-columns: minmax(0, 1fr) minmax(118px, 154px) minmax(74px, 86px);
           gap: 6px;
           align-items: center;
           min-width: 0;
+        }
+
+        .timeline-point-time-group {
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .timeline-point-time-row[hidden] {
+          display: none;
         }
 
         .timeline-point-time,
@@ -1504,6 +1585,12 @@ class BoilerWaterCard extends HTMLElement {
           width: 100%;
           min-width: 0;
           box-sizing: border-box;
+        }
+
+        .timeline-point-duration {
+          max-width: 154px;
+          justify-self: stretch;
+          align-self: end;
         }
 
         .timeline-point-remove {
@@ -1516,6 +1603,7 @@ class BoilerWaterCard extends HTMLElement {
           color: #7b2323;
           background: linear-gradient(165deg, #f7dddd, #f2c7c7);
           cursor: pointer;
+          align-self: end;
         }
 
         .timeline-point-add {
@@ -2335,6 +2423,15 @@ class BoilerWaterCard extends HTMLElement {
             min-height: 46px;
           }
 
+          .timeline-point-duration {
+            max-width: none;
+            align-self: stretch;
+          }
+
+          .schedule-inline-toggle {
+            min-height: 30px;
+          }
+
           .schedule-day,
           .schedule-month {
             min-height: 38px;
@@ -2817,14 +2914,62 @@ class BoilerWaterCard extends HTMLElement {
               <div class="schedule-time-row">
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-start-input" id="schedule-start-label">Start</label>
-                  <div class="schedule-control-row">
+                  <label class="schedule-inline-toggle" for="schedule-start-sun-enabled-input">
+                    <input
+                      class="schedule-inline-toggle-input"
+                      id="schedule-start-sun-enabled-input"
+                      type="checkbox"
+                    />
+                    <span class="schedule-inline-toggle-text" id="schedule-start-sun-enabled-label">Use sunrise/sunset</span>
+                  </label>
+                  <div class="schedule-control-row schedule-time-meta-row" id="schedule-start-meta-row" hidden>
+                    <select class="schedule-select schedule-time-mode-input" id="schedule-start-mode-input">
+                      <option value="fixed">Fixed Time</option>
+                      <option value="sunrise">Sunrise</option>
+                      <option value="sunset">Sunset</option>
+                    </select>
+                    <input
+                      class="schedule-input schedule-time-offset-input"
+                      id="schedule-start-offset-input"
+                      type="number"
+                      min="-120"
+                      max="120"
+                      step="1"
+                      value="0"
+                    />
+                  </div>
+                  <div class="schedule-control-row schedule-time-input-row" id="schedule-start-time-row">
                     <input class="schedule-input schedule-time-input" id="schedule-start-input" type="time" dir="ltr" />
                     <button type="button" class="schedule-clear-btn" id="schedule-start-clear-btn" aria-label="Clear">✕</button>
                   </div>
                 </div>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-end-input" id="schedule-end-label">End</label>
-                  <div class="schedule-control-row">
+                  <label class="schedule-inline-toggle" for="schedule-end-sun-enabled-input">
+                    <input
+                      class="schedule-inline-toggle-input"
+                      id="schedule-end-sun-enabled-input"
+                      type="checkbox"
+                    />
+                    <span class="schedule-inline-toggle-text" id="schedule-end-sun-enabled-label">Use sunrise/sunset</span>
+                  </label>
+                  <div class="schedule-control-row schedule-time-meta-row" id="schedule-end-meta-row" hidden>
+                    <select class="schedule-select schedule-time-mode-input" id="schedule-end-mode-input">
+                      <option value="fixed">Fixed Time</option>
+                      <option value="sunrise">Sunrise</option>
+                      <option value="sunset">Sunset</option>
+                    </select>
+                    <input
+                      class="schedule-input schedule-time-offset-input"
+                      id="schedule-end-offset-input"
+                      type="number"
+                      min="-120"
+                      max="120"
+                      step="1"
+                      value="0"
+                    />
+                  </div>
+                  <div class="schedule-control-row schedule-time-input-row" id="schedule-end-time-row">
                     <input class="schedule-input schedule-time-input" id="schedule-end-input" type="time" dir="ltr" />
                     <button type="button" class="schedule-clear-btn" id="schedule-end-clear-btn" aria-label="Clear">✕</button>
                   </div>
@@ -2864,7 +3009,15 @@ class BoilerWaterCard extends HTMLElement {
                   </div>
                 </div>
               </div>
-              <div class="schedule-time-row schedule-condition-row" id="schedule-condition-row">
+              <label class="schedule-inline-toggle" for="schedule-condition-enabled-input">
+                <input
+                  class="schedule-inline-toggle-input"
+                  id="schedule-condition-enabled-input"
+                  type="checkbox"
+                />
+                <span class="schedule-inline-toggle-text" id="schedule-condition-enabled-label">Enable Condition</span>
+              </label>
+              <div class="schedule-time-row schedule-condition-row" id="schedule-condition-row" hidden>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-condition-entity-input" id="schedule-condition-entity-label">Condition Entity</label>
                   <div class="schedule-control-row">
@@ -3019,6 +3172,18 @@ class BoilerWaterCard extends HTMLElement {
       schedulePanelMonths: this.shadowRoot.getElementById("schedule-panel-months"),
       scheduleStartLabel: this.shadowRoot.getElementById("schedule-start-label"),
       scheduleEndLabel: this.shadowRoot.getElementById("schedule-end-label"),
+      scheduleStartSunEnabledInput: this.shadowRoot.getElementById("schedule-start-sun-enabled-input"),
+      scheduleStartSunEnabledLabel: this.shadowRoot.getElementById("schedule-start-sun-enabled-label"),
+      scheduleStartMetaRow: this.shadowRoot.getElementById("schedule-start-meta-row"),
+      scheduleStartModeInput: this.shadowRoot.getElementById("schedule-start-mode-input"),
+      scheduleStartOffsetInput: this.shadowRoot.getElementById("schedule-start-offset-input"),
+      scheduleStartTimeRow: this.shadowRoot.getElementById("schedule-start-time-row"),
+      scheduleEndSunEnabledInput: this.shadowRoot.getElementById("schedule-end-sun-enabled-input"),
+      scheduleEndSunEnabledLabel: this.shadowRoot.getElementById("schedule-end-sun-enabled-label"),
+      scheduleEndMetaRow: this.shadowRoot.getElementById("schedule-end-meta-row"),
+      scheduleEndModeInput: this.shadowRoot.getElementById("schedule-end-mode-input"),
+      scheduleEndOffsetInput: this.shadowRoot.getElementById("schedule-end-offset-input"),
+      scheduleEndTimeRow: this.shadowRoot.getElementById("schedule-end-time-row"),
       scheduleDaysLabel: this.shadowRoot.getElementById("schedule-days-label"),
       scheduleMonthsLabel: this.shadowRoot.getElementById("schedule-months-label"),
       scheduleRecurrenceLabel: this.shadowRoot.getElementById("schedule-recurrence-label"),
@@ -3029,6 +3194,9 @@ class BoilerWaterCard extends HTMLElement {
       scheduleDateStartLabel: this.shadowRoot.getElementById("schedule-date-start-label"),
       scheduleDateEndLabel: this.shadowRoot.getElementById("schedule-date-end-label"),
       scheduleConditionEntityLabel: this.shadowRoot.getElementById("schedule-condition-entity-label"),
+      scheduleConditionEnabledInput: this.shadowRoot.getElementById("schedule-condition-enabled-input"),
+      scheduleConditionEnabledLabel: this.shadowRoot.getElementById("schedule-condition-enabled-label"),
+      scheduleConditionRow: this.shadowRoot.getElementById("schedule-condition-row"),
       scheduleConditionStateLabel: this.shadowRoot.getElementById("schedule-condition-state-label"),
       timelinePointsLabel: this.shadowRoot.getElementById("timeline-points-label"),
       scheduleNameInput: this.shadowRoot.getElementById("schedule-name-input"),
@@ -3116,6 +3284,18 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.scheduleConditionEntityInput?.addEventListener("input", () => this._onConditionEntityInputChanged());
     this._elements.scheduleConditionEntityInput?.addEventListener("change", () => this._onConditionEntityChanged());
     this._elements.scheduleConditionOperatorInput?.addEventListener("change", () => this._onConditionOperatorChanged());
+    this._elements.scheduleConditionEnabledInput?.addEventListener("change", () => this._syncScheduleConditionFields());
+    this._elements.scheduleConditionEnabledInput?.addEventListener("input", () => this._syncScheduleConditionFields());
+    this._elements.scheduleStartSunEnabledInput?.addEventListener("change", () => this._syncScheduleSunTimeFields("start"));
+    this._elements.scheduleStartSunEnabledInput?.addEventListener("input", () => this._syncScheduleSunTimeFields("start"));
+    this._elements.scheduleEndSunEnabledInput?.addEventListener("change", () => this._syncScheduleSunTimeFields("end"));
+    this._elements.scheduleEndSunEnabledInput?.addEventListener("input", () => this._syncScheduleSunTimeFields("end"));
+    this._elements.scheduleStartModeInput?.addEventListener("change", () => this._syncScheduleSunTimeFields("start"));
+    this._elements.scheduleStartModeInput?.addEventListener("input", () => this._syncScheduleSunTimeFields("start"));
+    this._elements.scheduleEndModeInput?.addEventListener("change", () => this._syncScheduleSunTimeFields("end"));
+    this._elements.scheduleEndModeInput?.addEventListener("input", () => this._syncScheduleSunTimeFields("end"));
+    this._elements.scheduleStartOffsetInput?.addEventListener("input", () => this._clampScheduleSunOffset("start"));
+    this._elements.scheduleEndOffsetInput?.addEventListener("input", () => this._clampScheduleSunOffset("end"));
     this._wireScheduleClearButtons();
     this._elements.timelinePointAddBtn?.addEventListener("click", () => this._addTimelinePointRow());
     this._elements.scheduleForm.addEventListener("submit", (event) => {
@@ -3136,6 +3316,7 @@ class BoilerWaterCard extends HTMLElement {
     this._renderScheduleDayButtons();
     this._renderScheduleMonthButtons();
     this._resetTimelinePoints();
+    this._syncScheduleConditionFields();
     this._setSchedulePanel(this._schedulePanel);
     this._setImportMode(this._importMode);
     this._setMenuMode(this._menuMode);
@@ -3263,6 +3444,7 @@ class BoilerWaterCard extends HTMLElement {
     }
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
+      this._syncScheduleSunModeOptionLabels();
       if (this._elements.scheduleModalPanel) {
         this._elements.scheduleModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
       }
@@ -3296,6 +3478,42 @@ class BoilerWaterCard extends HTMLElement {
       if (this._elements.scheduleEndLabel) {
         this._elements.scheduleEndLabel.textContent = this._t("task_end");
       }
+      if (this._elements.scheduleStartSunEnabledLabel) {
+        this._elements.scheduleStartSunEnabledLabel.textContent = this._t("schedule_sun_toggle");
+      }
+      if (this._elements.scheduleEndSunEnabledLabel) {
+        this._elements.scheduleEndSunEnabledLabel.textContent = this._t("schedule_sun_toggle");
+      }
+      if (this._elements.scheduleStartSunEnabledInput) {
+        this._elements.scheduleStartSunEnabledInput.setAttribute("aria-label", `${this._t("task_start")} - ${this._t("schedule_sun_toggle")}`);
+      }
+      if (this._elements.scheduleEndSunEnabledInput) {
+        this._elements.scheduleEndSunEnabledInput.setAttribute("aria-label", `${this._t("task_end")} - ${this._t("schedule_sun_toggle")}`);
+      }
+      if (this._elements.scheduleStartModeInput) {
+        this._elements.scheduleStartModeInput.setAttribute(
+          "aria-label",
+          `${this._t("task_start")} - ${this._t("schedule_time_mode")}`
+        );
+      }
+      if (this._elements.scheduleEndModeInput) {
+        this._elements.scheduleEndModeInput.setAttribute(
+          "aria-label",
+          `${this._t("task_end")} - ${this._t("schedule_time_mode")}`
+        );
+      }
+      if (this._elements.scheduleStartOffsetInput) {
+        this._elements.scheduleStartOffsetInput.setAttribute(
+          "aria-label",
+          `${this._t("task_start")} - ${this._t("schedule_time_offset")}`
+        );
+      }
+      if (this._elements.scheduleEndOffsetInput) {
+        this._elements.scheduleEndOffsetInput.setAttribute(
+          "aria-label",
+          `${this._t("task_end")} - ${this._t("schedule_time_offset")}`
+        );
+      }
       if (this._elements.scheduleDaysLabel) {
         this._elements.scheduleDaysLabel.textContent = this._t("task_days");
       }
@@ -3322,6 +3540,12 @@ class BoilerWaterCard extends HTMLElement {
       }
       if (this._elements.scheduleConditionEntityLabel) {
         this._elements.scheduleConditionEntityLabel.textContent = this._t("condition_entity_label");
+      }
+      if (this._elements.scheduleConditionEnabledLabel) {
+        this._elements.scheduleConditionEnabledLabel.textContent = this._t("condition_enabled_toggle");
+      }
+      if (this._elements.scheduleConditionEnabledInput) {
+        this._elements.scheduleConditionEnabledInput.setAttribute("aria-label", this._t("condition_enabled_toggle"));
       }
       if (this._elements.scheduleConditionStateLabel) {
         this._elements.scheduleConditionStateLabel.textContent = this._t("condition_state_label");
@@ -3922,7 +4146,7 @@ class BoilerWaterCard extends HTMLElement {
       profile.isTemperatureDriven = false;
       return profile;
     }
-    if (colorProgress < 0.5) {
+    if (colorProgress < 0.72) {
       const profile = this._buildHeatingProfile(
         progress,
         this._t("stage_warm"),
@@ -3979,19 +4203,18 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _effectiveHeatupMinutes(totalMinutes) {
-    // 15m timers stay literal. Longer timers increase heating pace sub-linearly
-    // so visual heat-up remains believable and doesn't stay "blue" for too long.
+    // 15m timers stay literal. Longer timers ramp color progress differently so
+    // blue->orange->red remains believable across short/long durations.
     const minHeat = 15;
-    const maxHeat = 55;
-    const normalized = this._clamp((totalMinutes - minHeat) / 90, 0, 1);
-    const curve = Math.pow(normalized, 0.7);
+    const maxHeat = 68;
+    const normalized = this._clamp((totalMinutes - minHeat) / 135, 0, 1);
+    const curve = Math.pow(normalized, 0.62);
     return this._clamp(minHeat + (maxHeat - minHeat) * curve, minHeat, maxHeat);
   }
 
   _stagedHeatGradient(colorProgress) {
     const p = this._clamp(colorProgress, 0, 1);
     const blue = "#2b7fff";
-    const yellow = "#f3d34f";
     const orange = "#f97316";
     const red = "#dc2626";
 
@@ -3999,24 +4222,36 @@ class BoilerWaterCard extends HTMLElement {
       return `linear-gradient(90deg, ${blue} 0%, ${blue} 100%)`;
     }
 
-    const yellowBase = 35 * this._clamp((p - 0.3) / 0.2, 0, 1);
-    const orangeWidth = 30 * this._clamp((p - 0.5) / 0.2, 0, 1);
-    const redWidth = 30 * this._clamp((p - 0.7) / 0.3, 0, 1);
-    const yellowWidth = this._clamp(yellowBase - (redWidth * 0.4), 0, 40);
-    const blueWidth = this._clamp(100 - yellowWidth - orangeWidth - redWidth, 0, 100);
+    const orangePhase = this._clamp((p - 0.3) / 0.35, 0, 1);
+    const redPhase = this._clamp((p - 0.65) / 0.35, 0, 1);
+
+    let blueWidth = 100 - (orangePhase * 62) - (redPhase * 20);
+    let orangeWidth = (orangePhase * 62) - (redPhase * 14);
+    let redWidth = redPhase * 34;
+
+    blueWidth = this._clamp(blueWidth, 10, 100);
+    orangeWidth = this._clamp(orangeWidth, 0, 80);
+    redWidth = this._clamp(redWidth, 0, 45);
+
+    const total = blueWidth + orangeWidth + redWidth;
+    if (total < 100) {
+      blueWidth += 100 - total;
+    } else if (total > 100) {
+      const scale = 100 / total;
+      blueWidth *= scale;
+      orangeWidth *= scale;
+      redWidth *= scale;
+    }
 
     const blueEnd = blueWidth;
-    const yellowEnd = blueEnd + yellowWidth;
-    const orangeEnd = yellowEnd + orangeWidth;
-    const blend = 2.2;
+    const orangeEnd = blueEnd + orangeWidth;
+    const blend = 3.8;
 
-    if (orangeWidth <= 0.01) {
-      return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} 100%)`;
-    }
     if (redWidth <= 0.01) {
-      return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} ${Math.max(0, yellowEnd - blend)}%, ${orange} ${Math.min(100, yellowEnd + blend)}%, ${orange} 100%)`;
+      return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${orange} ${Math.min(100, blueEnd + blend)}%, ${orange} 100%)`;
     }
-    return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} ${Math.max(0, yellowEnd - blend)}%, ${orange} ${Math.min(100, yellowEnd + blend)}%, ${orange} ${Math.max(0, orangeEnd - blend)}%, ${red} ${Math.min(100, orangeEnd + blend)}%, ${red} 100%)`;
+
+    return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${orange} ${Math.min(100, blueEnd + blend)}%, ${orange} ${Math.max(0, orangeEnd - blend)}%, ${red} ${Math.min(100, orangeEnd + blend)}%, ${red} 100%)`;
   }
 
   _temperatureDrivenProfile(liveTemp) {
@@ -4044,22 +4279,22 @@ class BoilerWaterCard extends HTMLElement {
       };
     }
 
-    if (celsiusValue <= 40) {
-      const primary = "#f3d34f";
+    if (celsiusValue <= 42) {
+      const primary = "#f97316";
       return {
         label: this._t("stage_warm"),
         primaryColor: primary,
-        secondaryColor: this._mixColors(primary, "#fff6cf", 0.35),
+        secondaryColor: this._mixColors(primary, "#ffe2c7", 0.35),
         glowColor: this._hexToRgba(primary, 0.33),
       };
     }
 
-    if (celsiusValue < 50) {
-      const primary = "#f97316";
+    if (celsiusValue < 52) {
+      const primary = "#ea6a15";
       return {
         label: this._t("stage_hot"),
         primaryColor: primary,
-        secondaryColor: this._mixColors(primary, "#ffe2c7", 0.35),
+        secondaryColor: this._mixColors(primary, "#ffd7bf", 0.35),
         glowColor: this._hexToRgba(primary, 0.33),
       };
     }
@@ -4123,18 +4358,21 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _temperatureProgressFromCelsius(celsiusValue) {
-    // Explicit fixed bands from 0C so cold water (0-30C) is always represented as blue range.
+    // Explicit fixed bands from 0C with blue->orange->red mapping.
     if (celsiusValue <= 0) {
       return 0;
     }
     if (celsiusValue <= 30) {
-      return this._clamp((celsiusValue / 30) * 0.6, 0, 0.6);
+      return this._clamp((celsiusValue / 30) * 0.58, 0, 0.58);
     }
-    if (celsiusValue <= 40) {
-      return this._clamp(0.6 + ((celsiusValue - 30) / 10) * 0.2, 0.6, 0.8);
+    if (celsiusValue <= 42) {
+      return this._clamp(0.58 + ((celsiusValue - 30) / 12) * 0.2, 0.58, 0.78);
     }
-    if (celsiusValue < 50) {
-      return this._clamp(0.8 + ((celsiusValue - 40) / 10) * 0.2, 0.8, 1);
+    if (celsiusValue < 52) {
+      return this._clamp(0.78 + ((celsiusValue - 42) / 10) * 0.14, 0.78, 0.92);
+    }
+    if (celsiusValue < 60) {
+      return this._clamp(0.92 + ((celsiusValue - 52) / 8) * 0.08, 0.92, 1);
     }
     return 1;
   }
@@ -4581,65 +4819,63 @@ class BoilerWaterCard extends HTMLElement {
     const conditionEntity = String(attrs.condition_entity || "").trim();
     const conditionOperator = this._normalizeConditionOperator(attrs.condition_operator);
     const skipIfState = String(attrs.skip_if_state || "").trim();
+    const normalizedStartTime = this._normalizeScheduleWindowTimeKey(attrs.start_time);
+    const normalizedEndTime = this._normalizeScheduleWindowTimeKey(attrs.end_time);
+    const normalizedTimelinePoints = Array.isArray(attrs.timeline_points)
+      ? attrs.timeline_points
+          .map((point) => {
+            const at = this._normalizeScheduleWindowTimeKey(point?.at);
+            const durationOption = String(point?.duration_option || "").trim();
+            const durationMinutes = Number.parseInt(point?.duration_minutes, 10);
+            if (!at || (!durationOption && !Number.isInteger(durationMinutes))) {
+              return null;
+            }
+            const minutes = Number.isInteger(durationMinutes) && durationMinutes > 0
+              ? durationMinutes
+              : this._optionToMinutes(durationOption);
+            if (!minutes || minutes <= 0) {
+              return null;
+            }
+            return {
+              at,
+              duration_option: durationOption || `${minutes}m`,
+              duration_minutes: minutes,
+            };
+          })
+          .filter((point) => !!point)
+      : [];
 
     const base = {
       name,
       task_type: taskType,
+      start_time: normalizedStartTime || String(attrs.start_time || "").trim(),
+      end_time: normalizedEndTime || String(attrs.end_time || "").trim(),
+      timeline_points: normalizedTimelinePoints,
       days,
       months,
       recurrence,
       ...(attrs.start_date ? { start_date: String(attrs.start_date).trim() } : {}),
       ...(attrs.end_date ? { end_date: String(attrs.end_date).trim() } : {}),
-      ...(conditionEntity ? { condition_entity: conditionEntity } : {}),
-      ...(conditionEntity ? { condition_operator: conditionOperator } : {}),
-      ...(conditionEntity && skipIfState ? { skip_if_state: skipIfState } : {}),
+      condition_entity: conditionEntity || null,
+      condition_operator: conditionOperator || "eq",
+      skip_if_state: skipIfState || null,
       enabled,
     };
 
     if (taskType === "timeline") {
-      const timelinePoints = Array.isArray(attrs.timeline_points)
-        ? attrs.timeline_points
-            .map((point) => {
-              const at = String(point?.at || "").trim();
-              const durationOption = String(point?.duration_option || "").trim();
-              const durationMinutes = Number.parseInt(point?.duration_minutes, 10);
-              if (!at || (!durationOption && !Number.isInteger(durationMinutes))) {
-                return null;
-              }
-              const minutes = Number.isInteger(durationMinutes) && durationMinutes > 0
-                ? durationMinutes
-                : this._optionToMinutes(durationOption);
-              if (!minutes || minutes <= 0) {
-                return null;
-              }
-              return {
-                at,
-                duration_option: durationOption || `${minutes}m`,
-                duration_minutes: minutes,
-              };
-            })
-            .filter((point) => !!point)
-        : [];
-
-      if (timelinePoints.length > 0) {
-        return {
-          ...base,
-          timeline_points: timelinePoints,
-        };
+      if (normalizedTimelinePoints.length > 0) {
+        return base;
       }
+      return null;
     }
 
-    const startTime = String(attrs.start_time || "").trim();
-    const endTime = String(attrs.end_time || "").trim();
+    const startTime = base.start_time;
+    const endTime = base.end_time;
     if (!startTime || !endTime) {
       return null;
     }
 
-    return {
-      ...base,
-      start_time: startTime,
-      end_time: endTime,
-    };
+    return base;
   }
 
   _normalizedDaysForExport(days) {
@@ -4747,6 +4983,7 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleModalTitle) {
       this._elements.scheduleModalTitle.textContent = this._t("task_add_title");
     }
+    this._syncScheduleSunModeOptionLabels();
     this._elements.scheduleModal.hidden = false;
     this._attachEscapeListener();
   }
@@ -5006,12 +5243,14 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     if (key === "start_time" && this._elements.scheduleStartInput) {
+      this._applyScheduleWindowTimeSpec("start", { mode: "fixed", time: "", offset: 0 }, "10:00");
       this._elements.scheduleStartInput.value = "";
       this._elements.scheduleStartInput.focus({ preventScroll: true });
       return;
     }
 
     if (key === "end_time" && this._elements.scheduleEndInput) {
+      this._applyScheduleWindowTimeSpec("end", { mode: "fixed", time: "", offset: 0 }, "12:00");
       this._elements.scheduleEndInput.value = "";
       this._elements.scheduleEndInput.focus({ preventScroll: true });
       return;
@@ -5037,6 +5276,7 @@ class BoilerWaterCard extends HTMLElement {
       if (this._elements.scheduleConditionStateInput) {
         this._elements.scheduleConditionStateInput.value = "";
       }
+      this._setScheduleConditionEnabled(false);
       this._refreshConditionEntityOptions("");
       this._refreshConditionOperatorOptions("");
       this._refreshConditionStateOptions("");
@@ -5526,11 +5766,73 @@ class BoilerWaterCard extends HTMLElement {
     const row = document.createElement("div");
     row.className = "timeline-point-row";
 
+    const timeGroup = document.createElement("div");
+    timeGroup.className = "timeline-point-time-group";
+
+    const sunToggleRow = document.createElement("label");
+    sunToggleRow.className = "schedule-inline-toggle timeline-point-sun-toggle";
+
+    const sunToggleInput = document.createElement("input");
+    sunToggleInput.type = "checkbox";
+    sunToggleInput.className = "schedule-inline-toggle-input timeline-point-sun-enabled";
+
+    const sunToggleText = document.createElement("span");
+    sunToggleText.className = "schedule-inline-toggle-text timeline-point-sun-toggle-text";
+    sunToggleText.textContent = this._t("schedule_sun_toggle");
+
+    sunToggleRow.appendChild(sunToggleInput);
+    sunToggleRow.appendChild(sunToggleText);
+
+    const modeRow = document.createElement("div");
+    modeRow.className = "schedule-control-row schedule-time-meta-row timeline-point-mode-row";
+
+    const modeSelect = document.createElement("select");
+    modeSelect.className = "schedule-select timeline-point-mode";
+    modeSelect.innerHTML = `
+      <option value="fixed">${this._t("schedule_time_mode_fixed")}</option>
+      <option value="sunrise">${this._t("schedule_time_mode_sunrise")}</option>
+      <option value="sunset">${this._t("schedule_time_mode_sunset")}</option>
+    `;
+
+    const offsetInput = document.createElement("input");
+    offsetInput.type = "number";
+    offsetInput.min = "-120";
+    offsetInput.max = "120";
+    offsetInput.step = "1";
+    offsetInput.value = "0";
+    offsetInput.className = "schedule-input schedule-time-offset-input timeline-point-offset";
+    offsetInput.setAttribute("title", this._t("schedule_time_offset"));
+
+    modeRow.appendChild(modeSelect);
+    modeRow.appendChild(offsetInput);
+
+    const fixedRow = document.createElement("div");
+    fixedRow.className = "schedule-control-row timeline-point-time-row";
+
     const atInput = document.createElement("input");
     atInput.type = "time";
     atInput.className = "schedule-input schedule-time-input timeline-point-time";
     atInput.setAttribute("dir", "ltr");
-    atInput.value = point?.at || "06:00";
+    atInput.value = "06:00";
+
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "schedule-clear-btn timeline-point-time-clear";
+    clearBtn.setAttribute("aria-label", "Clear");
+    clearBtn.textContent = "✕";
+    clearBtn.addEventListener("click", () => {
+      atInput.value = "06:00";
+      sunToggleInput.checked = false;
+      modeSelect.value = "fixed";
+      offsetInput.value = "0";
+      this._syncTimelinePointSunTimeFields(row);
+    });
+
+    fixedRow.appendChild(atInput);
+    fixedRow.appendChild(clearBtn);
+    timeGroup.appendChild(sunToggleRow);
+    timeGroup.appendChild(modeRow);
+    timeGroup.appendChild(fixedRow);
 
     const durationSelect = document.createElement("select");
     durationSelect.className = "schedule-select timeline-point-duration";
@@ -5548,17 +5850,101 @@ class BoilerWaterCard extends HTMLElement {
       row.remove();
     });
 
-    row.appendChild(atInput);
+    const parsed = this._parseScheduleWindowTimeSpec(point?.at || "06:00", "06:00");
+    sunToggleInput.checked = parsed.mode !== "fixed";
+    modeSelect.value = parsed.mode;
+    offsetInput.value = String(parsed.offset);
+    atInput.value = parsed.time;
+    row.appendChild(timeGroup);
+    this._syncTimelinePointSunTimeFields(row);
+    sunToggleInput.addEventListener("change", () => this._syncTimelinePointSunTimeFields(row));
+    sunToggleInput.addEventListener("input", () => this._syncTimelinePointSunTimeFields(row));
+    modeSelect.addEventListener("change", () => this._syncTimelinePointSunTimeFields(row));
+    modeSelect.addEventListener("input", () => this._syncTimelinePointSunTimeFields(row));
+    offsetInput.addEventListener("input", () => this._clampTimelinePointSunOffset(row));
+
     row.appendChild(durationSelect);
     row.appendChild(removeBtn);
     container.appendChild(row);
+  }
+
+  _syncTimelinePointSunTimeFields(row) {
+    const root = row || null;
+    if (!root) {
+      return;
+    }
+    const sunEnabledInput = root.querySelector(".timeline-point-sun-enabled");
+    const modeRow = root.querySelector(".timeline-point-mode-row");
+    const modeInput = root.querySelector(".timeline-point-mode");
+    const offsetInput = root.querySelector(".timeline-point-offset");
+    const fixedRow = root.querySelector(".timeline-point-time-row");
+    const useSunMode = !!sunEnabledInput?.checked;
+    if (modeRow) {
+      modeRow.hidden = !useSunMode;
+    }
+    if (!useSunMode) {
+      if (modeInput) {
+        modeInput.value = "fixed";
+      }
+      if (offsetInput) {
+        offsetInput.value = "0";
+      }
+      if (fixedRow) {
+        fixedRow.hidden = false;
+      }
+      return;
+    }
+    const mode = String(modeInput?.value || "fixed").toLowerCase();
+    const isFixed = mode === "fixed";
+    if (fixedRow) {
+      fixedRow.hidden = !isFixed;
+    }
+  }
+
+  _clampTimelinePointSunOffset(row) {
+    const root = row || null;
+    if (!root) {
+      return;
+    }
+    const offsetInput = root.querySelector(".timeline-point-offset");
+    if (!offsetInput) {
+      return;
+    }
+    const raw = Number.parseInt(offsetInput.value, 10);
+    const safe = Number.isInteger(raw) ? this._clamp(raw, -120, 120) : 0;
+    offsetInput.value = String(safe);
+  }
+
+  _collectTimelinePointAtValue(row) {
+    const root = row || null;
+    if (!root) {
+      return null;
+    }
+    const sunEnabled = !!root.querySelector(".timeline-point-sun-enabled")?.checked;
+    const atInput = root.querySelector(".timeline-point-time");
+    if (!sunEnabled) {
+      return this._normalizeHhMm(String(atInput?.value || "").trim());
+    }
+
+    const mode = String(root.querySelector(".timeline-point-mode")?.value || "fixed").trim().toLowerCase();
+    const offsetInput = root.querySelector(".timeline-point-offset");
+    if (mode === "sunrise" || mode === "sunset") {
+      const raw = Number.parseInt(String(offsetInput?.value || "0").trim(), 10);
+      const offset = Number.isInteger(raw) ? this._clamp(raw, -120, 120) : 0;
+      if (offsetInput) {
+        offsetInput.value = String(offset);
+      }
+      return offset === 0 ? mode : `${mode}${offset >= 0 ? `+${offset}` : offset}`;
+    }
+
+    return this._normalizeHhMm(String(atInput?.value || "").trim());
   }
 
   _collectTimelinePoints() {
     const rows = Array.from(this.shadowRoot.querySelectorAll(".timeline-point-row"));
     return rows
       .map((row) => {
-        const at = String(row.querySelector(".timeline-point-time")?.value || "").trim();
+        const at = this._collectTimelinePointAtValue(row);
         const durationOption = String(row.querySelector(".timeline-point-duration")?.value || "").trim();
         const durationMinutes = this._optionToMinutes(durationOption);
         if (!at || !durationOption || !durationMinutes || durationMinutes <= 0) {
@@ -5570,8 +5956,7 @@ class BoilerWaterCard extends HTMLElement {
           duration_minutes: durationMinutes,
         };
       })
-      .filter((item) => !!item)
-      .sort((a, b) => a.at.localeCompare(b.at));
+      .filter((item) => !!item);
   }
 
   _setSelectedScheduleDays(days) {
@@ -5616,6 +6001,7 @@ class BoilerWaterCard extends HTMLElement {
 
     this._editingTaskId = taskId;
     this._resetScheduleForm();
+    this._syncScheduleSunModeOptionLabels();
     this._refreshConditionEntityOptions();
 
     if (this._elements.scheduleModalTitle) {
@@ -5631,12 +6017,8 @@ class BoilerWaterCard extends HTMLElement {
     if (taskType === "timeline") {
       this._setTimelinePoints(Array.isArray(attrs.timeline_points) ? attrs.timeline_points : []);
     } else {
-      if (this._elements.scheduleStartInput) {
-        this._elements.scheduleStartInput.value = String(attrs.start_time || "10:00");
-      }
-      if (this._elements.scheduleEndInput) {
-        this._elements.scheduleEndInput.value = String(attrs.end_time || "12:00");
-      }
+      this._applyScheduleWindowTimeSpec("start", String(attrs.start_time || "10:00"), "10:00");
+      this._applyScheduleWindowTimeSpec("end", String(attrs.end_time || "12:00"), "12:00");
     }
 
     this._setScheduleRecurrence(String(attrs.recurrence || "forever").toLowerCase());
@@ -5649,6 +6031,7 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleConditionEntityInput) {
       this._elements.scheduleConditionEntityInput.value = String(attrs.condition_entity || "").trim();
     }
+    this._setScheduleConditionEnabled(!!String(attrs.condition_entity || "").trim());
     if (this._elements.scheduleConditionOperatorInput) {
       this._elements.scheduleConditionOperatorInput.value = this._normalizeConditionOperator(attrs.condition_operator);
     }
@@ -5732,6 +6115,277 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
+  _syncScheduleSunModeOptionLabels() {
+    const applyLabels = (select) => {
+      if (!select) {
+        return;
+      }
+      const fixed = select.querySelector("option[value=\"fixed\"]");
+      const sunrise = select.querySelector("option[value=\"sunrise\"]");
+      const sunset = select.querySelector("option[value=\"sunset\"]");
+      if (fixed) {
+        fixed.textContent = this._t("schedule_time_mode_fixed");
+      }
+      if (sunrise) {
+        sunrise.textContent = this._t("schedule_time_mode_sunrise");
+      }
+      if (sunset) {
+        sunset.textContent = this._t("schedule_time_mode_sunset");
+      }
+    };
+
+    applyLabels(this._elements.scheduleStartModeInput);
+    applyLabels(this._elements.scheduleEndModeInput);
+    const timelineModeSelects = Array.from(this.shadowRoot.querySelectorAll(".timeline-point-mode"));
+    timelineModeSelects.forEach(applyLabels);
+    if (this._elements.scheduleStartSunEnabledLabel) {
+      this._elements.scheduleStartSunEnabledLabel.textContent = this._t("schedule_sun_toggle");
+    }
+    if (this._elements.scheduleEndSunEnabledLabel) {
+      this._elements.scheduleEndSunEnabledLabel.textContent = this._t("schedule_sun_toggle");
+    }
+    const timelineSunToggleTexts = Array.from(this.shadowRoot.querySelectorAll(".timeline-point-sun-toggle-text"));
+    timelineSunToggleTexts.forEach((node) => {
+      node.textContent = this._t("schedule_sun_toggle");
+    });
+    const timelineSunToggleInputs = Array.from(this.shadowRoot.querySelectorAll(".timeline-point-sun-enabled"));
+    timelineSunToggleInputs.forEach((input) => {
+      input.setAttribute("aria-label", this._t("schedule_sun_toggle"));
+    });
+    if (this._elements.scheduleStartOffsetInput) {
+      this._elements.scheduleStartOffsetInput.setAttribute("title", this._t("schedule_time_offset"));
+    }
+    if (this._elements.scheduleEndOffsetInput) {
+      this._elements.scheduleEndOffsetInput.setAttribute("title", this._t("schedule_time_offset"));
+    }
+    const timelineOffsetInputs = Array.from(this.shadowRoot.querySelectorAll(".timeline-point-offset"));
+    timelineOffsetInputs.forEach((input) => input.setAttribute("title", this._t("schedule_time_offset")));
+  }
+
+  _setScheduleConditionEnabled(enabled) {
+    if (this._elements.scheduleConditionEnabledInput) {
+      this._elements.scheduleConditionEnabledInput.checked = !!enabled;
+    }
+    this._syncScheduleConditionFields();
+  }
+
+  _syncScheduleConditionFields() {
+    const enabled = !!this._elements.scheduleConditionEnabledInput?.checked;
+    if (this._elements.scheduleConditionRow) {
+      this._elements.scheduleConditionRow.hidden = !enabled;
+    }
+  }
+
+  _parseScheduleWindowTimeSpec(value, fallbackTime = "10:00") {
+    const fallback = this._normalizeHhMm(fallbackTime) || "10:00";
+    const raw = String(value || "").trim().toLowerCase();
+    const asTime = this._normalizeHhMm(raw);
+    if (asTime) {
+      return { mode: "fixed", time: asTime, offset: 0 };
+    }
+
+    const match = raw.match(/^(sunrise|sunset)(?:\s*([+-])\s*(\d{1,3}))?$/i);
+    if (!match) {
+      return { mode: "fixed", time: fallback, offset: 0 };
+    }
+
+    const mode = String(match[1] || "sunrise").toLowerCase();
+    const sign = String(match[2] || "");
+    const numeric = Number.parseInt(String(match[3] || "0"), 10);
+    let offset = Number.isInteger(numeric) ? numeric : 0;
+    if (sign === "-") {
+      offset = -Math.abs(offset);
+    } else {
+      offset = Math.abs(offset);
+    }
+    offset = this._clamp(offset, -120, 120);
+    return {
+      mode: mode === "sunset" ? "sunset" : "sunrise",
+      time: fallback,
+      offset,
+    };
+  }
+
+  _applyScheduleWindowTimeSpec(prefix, value, fallbackTime = "10:00") {
+    const normalizedPrefix = prefix === "end" ? "end" : "start";
+    const spec = typeof value === "object" && value !== null && "mode" in value
+      ? {
+          mode: String(value.mode || "fixed").toLowerCase() === "sunset"
+            ? "sunset"
+            : (String(value.mode || "fixed").toLowerCase() === "sunrise" ? "sunrise" : "fixed"),
+          time: this._normalizeHhMm(value.time || fallbackTime) || this._normalizeHhMm(fallbackTime) || "10:00",
+          offset: this._clamp(Number.parseInt(value.offset, 10) || 0, -120, 120),
+        }
+      : this._parseScheduleWindowTimeSpec(value, fallbackTime);
+
+    const modeInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndModeInput
+      : this._elements.scheduleStartModeInput;
+    const modeEnabledInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndSunEnabledInput
+      : this._elements.scheduleStartSunEnabledInput;
+    const offsetInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndOffsetInput
+      : this._elements.scheduleStartOffsetInput;
+    const timeInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndInput
+      : this._elements.scheduleStartInput;
+
+    if (modeInput) {
+      modeInput.value = spec.mode;
+    }
+    if (modeEnabledInput) {
+      modeEnabledInput.checked = spec.mode !== "fixed";
+    }
+    if (offsetInput) {
+      offsetInput.value = String(spec.offset);
+    }
+    if (timeInput) {
+      timeInput.value = spec.time;
+    }
+    this._syncScheduleSunTimeFields(normalizedPrefix);
+  }
+
+  _syncScheduleSunTimeFields(prefix) {
+    const normalizedPrefix = prefix === "end" ? "end" : "start";
+    const modeEnabledInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndSunEnabledInput
+      : this._elements.scheduleStartSunEnabledInput;
+    const modeRow = normalizedPrefix === "end"
+      ? this._elements.scheduleEndMetaRow
+      : this._elements.scheduleStartMetaRow;
+    const modeInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndModeInput
+      : this._elements.scheduleStartModeInput;
+    const row = normalizedPrefix === "end"
+      ? this._elements.scheduleEndTimeRow
+      : this._elements.scheduleStartTimeRow;
+    const useSunMode = !!modeEnabledInput?.checked;
+    if (modeRow) {
+      modeRow.hidden = !useSunMode;
+    }
+    if (!useSunMode) {
+      if (modeInput) {
+        modeInput.value = "fixed";
+      }
+      const offsetInput = normalizedPrefix === "end"
+        ? this._elements.scheduleEndOffsetInput
+        : this._elements.scheduleStartOffsetInput;
+      if (offsetInput) {
+        offsetInput.value = "0";
+      }
+      if (row) {
+        row.hidden = false;
+      }
+      return;
+    }
+    const mode = String(modeInput?.value || "fixed").toLowerCase();
+    const isFixed = mode === "fixed";
+    if (row) {
+      row.hidden = !isFixed;
+    }
+  }
+
+  _clampScheduleSunOffset(prefix) {
+    const normalizedPrefix = prefix === "end" ? "end" : "start";
+    const offsetInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndOffsetInput
+      : this._elements.scheduleStartOffsetInput;
+    if (!offsetInput) {
+      return;
+    }
+    const raw = Number.parseInt(offsetInput.value, 10);
+    const safe = Number.isInteger(raw) ? this._clamp(raw, -120, 120) : 0;
+    offsetInput.value = String(safe);
+  }
+
+  _collectScheduleWindowTimeSpec(prefix) {
+    const normalizedPrefix = prefix === "end" ? "end" : "start";
+    const modeEnabledInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndSunEnabledInput
+      : this._elements.scheduleStartSunEnabledInput;
+    const modeInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndModeInput
+      : this._elements.scheduleStartModeInput;
+    const offsetInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndOffsetInput
+      : this._elements.scheduleStartOffsetInput;
+    const timeInput = normalizedPrefix === "end"
+      ? this._elements.scheduleEndInput
+      : this._elements.scheduleStartInput;
+
+    if (!modeEnabledInput?.checked) {
+      return this._normalizeHhMm(String(timeInput?.value || "").trim());
+    }
+
+    const mode = String(modeInput?.value || "fixed").trim().toLowerCase();
+    if (mode !== "sunrise" && mode !== "sunset") {
+      return this._normalizeHhMm(String(timeInput?.value || "").trim());
+    }
+
+    const raw = Number.parseInt(String(offsetInput?.value || "0").trim(), 10);
+    const offset = Number.isInteger(raw) ? this._clamp(raw, -120, 120) : 0;
+    if (offsetInput) {
+      offsetInput.value = String(offset);
+    }
+    return offset === 0 ? mode : `${mode}${offset >= 0 ? `+${offset}` : offset}`;
+  }
+
+  _normalizeScheduleWindowTimeKey(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    const asTime = this._normalizeHhMm(raw);
+    if (asTime) {
+      return asTime;
+    }
+
+    const match = raw.match(/^(sunrise|sunset)(?:\s*([+-])\s*(\d{1,3}))?$/i);
+    if (!match) {
+      return null;
+    }
+
+    const mode = String(match[1] || "").toLowerCase();
+    const sign = String(match[2] || "");
+    const numeric = Number.parseInt(String(match[3] || "0"), 10);
+    if (!Number.isInteger(numeric)) {
+      return null;
+    }
+    let offset = numeric;
+    if (sign === "-") {
+      offset = -Math.abs(offset);
+    } else {
+      offset = Math.abs(offset);
+    }
+    if (offset < -120 || offset > 120) {
+      return null;
+    }
+    return offset === 0 ? mode : `${mode}${offset >= 0 ? `+${offset}` : offset}`;
+  }
+
+  _renderScheduleWindowTimeLabel(value) {
+    const normalized = this._normalizeScheduleWindowTimeKey(value);
+    if (!normalized) {
+      return String(value || "--:--").trim() || "--:--";
+    }
+
+    const asTime = this._normalizeHhMm(normalized);
+    if (asTime) {
+      return asTime;
+    }
+
+    const match = normalized.match(/^(sunrise|sunset)([+-]\d+)?$/);
+    if (!match) {
+      return normalized;
+    }
+    const mode = match[1] === "sunset" ? "sunset" : "sunrise";
+    const label = this._t(mode === "sunset" ? "schedule_time_mode_sunset" : "schedule_time_mode_sunrise");
+    const offset = Number.parseInt(String(match[2] || "0"), 10) || 0;
+    if (offset === 0) {
+      return label;
+    }
+    const minutesSuffix = this._t("minutes_short");
+    return `${label} ${offset >= 0 ? "+" : ""}${offset} ${minutesSuffix}`;
+  }
+
   _setScheduleRecurrence(value) {
     const normalized = ["forever", "once", "range"].includes(String(value || "").toLowerCase())
       ? String(value).toLowerCase()
@@ -5778,6 +6432,8 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleEndInput) {
       this._elements.scheduleEndInput.value = "12:00";
     }
+    this._applyScheduleWindowTimeSpec("start", "10:00", "10:00");
+    this._applyScheduleWindowTimeSpec("end", "12:00", "12:00");
     this._setScheduleRecurrence("forever");
     if (this._elements.scheduleStartDateInput) {
       this._elements.scheduleStartDateInput.value = "";
@@ -5794,6 +6450,7 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleConditionStateInput) {
       this._elements.scheduleConditionStateInput.value = "";
     }
+    this._setScheduleConditionEnabled(false);
     this._refreshConditionOperatorOptions("");
     this._refreshConditionStateOptions("");
     const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
@@ -5823,15 +6480,20 @@ class BoilerWaterCard extends HTMLElement {
     const recurrence = String(this._elements.scheduleRecurrenceInput?.value || "forever").trim().toLowerCase();
     const startDate = String(this._elements.scheduleStartDateInput?.value || "").trim();
     const endDate = String(this._elements.scheduleEndDateInput?.value || "").trim();
-    const conditionEntity = String(this._elements.scheduleConditionEntityInput?.value || "").trim();
+    const conditionEnabled = !!this._elements.scheduleConditionEnabledInput?.checked;
+    const conditionEntity = conditionEnabled
+      ? String(this._elements.scheduleConditionEntityInput?.value || "").trim()
+      : "";
     let conditionOperator = this._normalizeConditionOperator(
       this._elements.scheduleConditionOperatorInput?.value || "eq"
     );
-    let skipIfState = String(this._elements.scheduleConditionStateInput?.value || "").trim();
-    if (conditionEntity && !skipIfState) {
+    let skipIfState = conditionEnabled
+      ? String(this._elements.scheduleConditionStateInput?.value || "").trim()
+      : "";
+    if (conditionEnabled && conditionEntity && !skipIfState) {
       skipIfState = conditionOperator === "eq" ? "on" : "0";
     }
-    if (!conditionEntity) {
+    if (!conditionEnabled || !conditionEntity) {
       conditionOperator = "eq";
       skipIfState = "";
     }
@@ -5898,9 +6560,10 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    const startTime = String(this._elements.scheduleStartInput?.value || "").trim();
-    const endTime = String(this._elements.scheduleEndInput?.value || "").trim();
+    const startTime = this._collectScheduleWindowTimeSpec("start");
+    const endTime = this._collectScheduleWindowTimeSpec("end");
     if (!startTime || !endTime) {
+      this._showInfoModal(this._t("invalid_schedule_time"), this._t("dialog_title"));
       return;
     }
     const duplicateMatches = this._findDuplicateTaskConflicts(
@@ -6030,8 +6693,8 @@ class BoilerWaterCard extends HTMLElement {
       ].join("|");
     }
 
-    const startTime = this._normalizeHhMm(payload.start_time);
-    const endTime = this._normalizeHhMm(payload.end_time);
+    const startTime = this._normalizeScheduleWindowTimeKey(payload.start_time);
+    const endTime = this._normalizeScheduleWindowTimeKey(payload.end_time);
     if (!startTime || !endTime) {
       return null;
     }
@@ -6053,7 +6716,7 @@ class BoilerWaterCard extends HTMLElement {
     }
     const normalized = points
       .map((point) => {
-        const at = this._normalizeHhMm(point?.at);
+        const at = this._normalizeScheduleWindowTimeKey(point?.at);
         const minutesRaw = Number.parseInt(point?.duration_minutes, 10);
         const minutes = Number.isInteger(minutesRaw) && minutesRaw > 0
           ? minutesRaw
@@ -6109,7 +6772,7 @@ class BoilerWaterCard extends HTMLElement {
       const timeline = String(attrs.timeline_label || "").trim();
       return `${timeline || "--"}${dayText}`;
     }
-    return `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${dayText}`;
+    return `${this._renderScheduleWindowTimeLabel(attrs.start_time)} - ${this._renderScheduleWindowTimeLabel(attrs.end_time)}${dayText}`;
   }
 
   _syncVacationNotice(managerMode = null) {
@@ -6567,7 +7230,7 @@ class BoilerWaterCard extends HTMLElement {
         const timeline = String(attrs.timeline_label || "").trim();
         meta.textContent = `${timeline || "--"}${daysLabel}${conditionLabel}`;
       } else {
-        meta.textContent = `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${daysLabel}${conditionLabel}`;
+        meta.textContent = `${this._renderScheduleWindowTimeLabel(attrs.start_time)} - ${this._renderScheduleWindowTimeLabel(attrs.end_time)}${daysLabel}${conditionLabel}`;
       }
       main.appendChild(meta);
 
@@ -7016,19 +7679,15 @@ class BoilerWaterCard extends HTMLElement {
 
   _colorByHeat(progress) {
     const cool = "#2b7fff";
-    const warm = "#f3d34f";
-    const hot = "#f97316";
+    const warm = "#f97316";
     const veryHot = "#dc2626";
     const p = this._clamp(progress, 0, 1);
 
     if (p < 0.3) {
       return cool;
     }
-    if (p < 0.5) {
+    if (p < 0.72) {
       return warm;
-    }
-    if (p < 0.7) {
-      return hot;
     }
     return veryHot;
   }

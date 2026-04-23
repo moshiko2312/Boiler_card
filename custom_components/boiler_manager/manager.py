@@ -8,10 +8,12 @@ import logging
 import re
 import uuid
 
+from homeassistant.const import SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import sun as sun_helper
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
@@ -82,6 +84,15 @@ STATE_KEY_VACATION_MODE = "vacation_mode"
 SWITCHER_TIMER_MAX_MINUTES = 150
 SWITCHER_TIMER_DOMAIN = "switcher_kis"
 SWITCHER_TIMER_SERVICE = "turn_on_with_timer"
+SUN_TIME_MAX_OFFSET_MINUTES = 120
+SUN_TIME_PATTERN = re.compile(
+    r"^(sunrise|sunset)(?:\s*([+-])\s*(\d{1,3}))?$",
+    re.IGNORECASE,
+)
+SUN_TIME_EVENT_MAP = {
+    "sunrise": SUN_EVENT_SUNRISE,
+    "sunset": SUN_EVENT_SUNSET,
+}
 
 
 class BoilerManagerError(HomeAssistantError):
@@ -296,8 +307,8 @@ class BoilerManager:
         enabled: bool,
     ) -> BoilerTask:
         """Create a new schedule task."""
-        normalized_start = _normalize_time_string(start_time)
-        normalized_end = _normalize_time_string(end_time)
+        normalized_start = _normalize_schedule_time_string(start_time)
+        normalized_end = _normalize_schedule_time_string(end_time)
         normalized_days = _normalize_days(days)
         normalized_months = _normalize_months(months)
         normalized_recurrence = _normalize_recurrence(recurrence)
@@ -497,8 +508,21 @@ class BoilerManager:
                 elif task.timeline_points:
                     next_points = list(task.timeline_points)
                 else:
-                    derived_start = _normalize_time_string(start_time) if start_time is not None else task.start_time
-                    derived_end = _normalize_time_string(end_time) if end_time is not None else task.end_time
+                    derived_start = (
+                        _normalize_schedule_time_string(start_time)
+                        if start_time is not None
+                        else task.start_time
+                    )
+                    derived_end = (
+                        _normalize_schedule_time_string(end_time)
+                        if end_time is not None
+                        else task.end_time
+                    )
+                    if _is_sun_time_value(derived_start) or _is_sun_time_value(derived_end):
+                        raise BoilerManagerError(
+                            "Timeline fallback requires fixed HH:MM times. "
+                            "Provide explicit timeline points when using sunrise/sunset."
+                        )
                     minutes = max(1, _minutes_between(derived_start, derived_end))
                     next_points = _normalize_timeline_points(
                         [
@@ -514,9 +538,9 @@ class BoilerManager:
             else:
                 task.timeline_points = []
                 if start_time is not None:
-                    task.start_time = _normalize_time_string(start_time)
+                    task.start_time = _normalize_schedule_time_string(start_time)
                 if end_time is not None:
-                    task.end_time = _normalize_time_string(end_time)
+                    task.end_time = _normalize_schedule_time_string(end_time)
 
             if days is not None:
                 task.days = _normalize_days(days)
@@ -938,8 +962,6 @@ class BoilerManager:
             return []
 
         local_now = dt_util.as_local(now)
-        weekday = local_now.weekday()
-        previous_weekday = (weekday - 1) % 7
         now_time = local_now.time().replace(second=0, microsecond=0)
         current_date = local_now.date()
         previous_date = current_date - timedelta(days=1)
@@ -956,28 +978,31 @@ class BoilerManager:
                     continue
                 self._snoozed_task_until.pop(task.task_id, None)
 
-            windows = _task_time_windows(task)
-            for start, end in windows:
+            current_windows = _task_time_windows(task, self.hass, current_date)
+            for start, end in current_windows:
                 if start == end:
                     continue
 
                 # Same-day window, e.g. 10:00 -> 12:00.
                 if start < end:
-                    if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
+                    if _task_matches_schedule_day(task, current_date.weekday(), current_date) and start <= now_time < end:
                         active.append(task)
                         break
                     continue
 
                 # Cross-midnight window, e.g. 22:00 -> 02:00.
                 if now_time >= start:
-                    if _task_matches_schedule_day(task, weekday, current_date):
+                    if _task_matches_schedule_day(task, current_date.weekday(), current_date):
                         active.append(task)
                         break
-                    continue
-
-                if now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
-                    active.append(task)
-                    break
+            else:
+                previous_windows = _task_time_windows(task, self.hass, previous_date)
+                for start, end in previous_windows:
+                    if start == end or start < end:
+                        continue
+                    if now_time < end and _task_matches_schedule_day(task, previous_date.weekday(), previous_date):
+                        active.append(task)
+                        break
 
         return active
 
@@ -1028,14 +1053,13 @@ class BoilerManager:
             return None
 
         weekday = local_now.weekday()
-        previous_weekday = (weekday - 1) % 7
         now_time = local_now.time().replace(second=0, microsecond=0)
         current_date = local_now.date()
         previous_date = current_date - timedelta(days=1)
         next_date = current_date + timedelta(days=1)
 
         latest_end_local: datetime | None = None
-        for start, end in _task_time_windows(task):
+        for start, end in _task_time_windows(task, self.hass, current_date):
             if start == end:
                 continue
 
@@ -1046,8 +1070,17 @@ class BoilerManager:
             else:
                 if now_time >= start and _task_matches_schedule_day(task, weekday, current_date):
                     end_local = datetime.combine(next_date, end, tzinfo=tzinfo)
-                elif now_time < end and _task_matches_schedule_day(task, previous_weekday, previous_date):
-                    end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
+
+            if end_local and (latest_end_local is None or end_local > latest_end_local):
+                latest_end_local = end_local
+
+        for start, end in _task_time_windows(task, self.hass, previous_date):
+            if start == end or start < end:
+                continue
+
+            end_local: datetime | None = None
+            if now_time < end and _task_matches_schedule_day(task, previous_date.weekday(), previous_date):
+                end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
 
             if end_local and (latest_end_local is None or end_local > latest_end_local):
                 latest_end_local = end_local
@@ -1141,14 +1174,18 @@ def _task_from_raw(raw: dict) -> BoilerTask:
     if not name:
         name = task_id
 
-    start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
-    end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+    start_time = _normalize_schedule_time_string(raw.get(ATTR_START_TIME))
+    end_time = _normalize_schedule_time_string(raw.get(ATTR_END_TIME))
     task_type = _normalize_task_type(raw.get(ATTR_TASK_TYPE))
     timeline_points: list[BoilerTimelinePoint] = []
     if task_type == TASK_TYPE_TIMELINE:
         raw_points = raw.get(ATTR_TIMELINE_POINTS)
         if raw_points in (None, []):
             # Fallback for old/partial payloads without timeline points.
+            if _is_sun_time_value(start_time) or _is_sun_time_value(end_time):
+                raise BoilerManagerError(
+                    "Timeline task with missing points cannot be restored from sunrise/sunset start/end."
+                )
             timeline_points = _normalize_timeline_points(
                 [
                     {
@@ -1247,8 +1284,12 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
     if task_type == TASK_TYPE_TIMELINE:
         raw_points = raw.get(ATTR_TIMELINE_POINTS)
         if raw_points in (None, []):
-            start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
-            end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+            start_time = _normalize_schedule_time_string(raw.get(ATTR_START_TIME))
+            end_time = _normalize_schedule_time_string(raw.get(ATTR_END_TIME))
+            if _is_sun_time_value(start_time) or _is_sun_time_value(end_time):
+                raise BoilerManagerError(
+                    "Timeline import fallback requires fixed HH:MM start/end values."
+                )
             minutes = max(1, _minutes_between(start_time, end_time))
             timeline_points = _normalize_timeline_points(
                 [
@@ -1264,8 +1305,8 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         start_time, end_time = _timeline_time_bounds(timeline_points)
     else:
         timeline_points = []
-        start_time = _normalize_time_string(raw.get(ATTR_START_TIME))
-        end_time = _normalize_time_string(raw.get(ATTR_END_TIME))
+        start_time = _normalize_schedule_time_string(raw.get(ATTR_START_TIME))
+        end_time = _normalize_schedule_time_string(raw.get(ATTR_END_TIME))
 
     return BoilerTask(
         task_id=uuid.uuid4().hex[:10],
@@ -1285,6 +1326,78 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         enabled=enabled,
         once_started=False,
     )
+
+
+def _normalize_schedule_time_string(value: str | None) -> str:
+    """Normalize schedule time value (HH:MM or sunrise/sunset with optional offset)."""
+    raw = str(value or "").strip().lower()
+    if not raw:
+        raise BoilerManagerError("Time value is required")
+
+    try:
+        return _normalize_time_string(raw)
+    except BoilerManagerError:
+        pass
+
+    parsed_sun = _parse_sun_time_value(raw)
+    if parsed_sun is None:
+        raise BoilerManagerError(
+            f"Invalid time format: {value}. Expected HH:MM or sunrise/sunset with optional +/- minutes."
+        )
+
+    event, offset = parsed_sun
+    if abs(offset) > SUN_TIME_MAX_OFFSET_MINUTES:
+        raise BoilerManagerError(
+            f"Invalid sun offset for {value}. Allowed range is -{SUN_TIME_MAX_OFFSET_MINUTES}..+{SUN_TIME_MAX_OFFSET_MINUTES} minutes."
+        )
+    if offset == 0:
+        return event
+    return f"{event}{offset:+d}"
+
+
+def _parse_sun_time_value(value: str | None) -> tuple[str, int] | None:
+    """Parse sunrise/sunset expression into (event, offset_minutes)."""
+    raw = str(value or "").strip().lower()
+    match = SUN_TIME_PATTERN.match(raw)
+    if not match:
+        return None
+
+    event = str(match.group(1) or "").lower()
+    sign = str(match.group(2) or "").strip()
+    offset_raw = str(match.group(3) or "").strip()
+    offset = int(offset_raw) if offset_raw else 0
+    if sign == "-":
+        offset = -offset
+    return event, offset
+
+
+def _is_sun_time_value(value: str | None) -> bool:
+    """Return True when schedule value is sunrise/sunset expression."""
+    return _parse_sun_time_value(value) is not None
+
+
+def _resolve_schedule_time_for_date(
+    hass: HomeAssistant,
+    value: str,
+    day_date: date,
+) -> time | None:
+    """Resolve schedule value to concrete local time for a specific date."""
+    normalized = _normalize_schedule_time_string(value)
+    parsed_sun = _parse_sun_time_value(normalized)
+    if parsed_sun is None:
+        return _time_from_hhmm(normalized)
+
+    event, offset_minutes = parsed_sun
+    astral_event = SUN_TIME_EVENT_MAP.get(event)
+    if not astral_event:
+        return None
+
+    event_utc = sun_helper.get_astral_event_date(hass, astral_event, day_date)
+    if event_utc is None:
+        return None
+
+    event_local = dt_util.as_local(event_utc) + timedelta(minutes=offset_minutes)
+    return event_local.time().replace(second=0, microsecond=0)
 
 
 def _normalize_time_string(value: str | None) -> str:
@@ -1485,7 +1598,7 @@ def _normalize_timeline_points(value: list[dict] | None) -> list[BoilerTimelineP
         if not isinstance(raw, dict):
             raise BoilerManagerError("Invalid timeline point format")
 
-        at = _normalize_time_string(raw.get(ATTR_POINT_TIME))
+        at = _normalize_schedule_time_string(raw.get(ATTR_POINT_TIME))
         option = str(raw.get(ATTR_DURATION_OPTION) or "").strip()
         minutes_raw = raw.get(ATTR_DURATION_MINUTES)
 
@@ -1513,8 +1626,35 @@ def _normalize_timeline_points(value: list[dict] | None) -> list[BoilerTimelineP
     if not normalized:
         raise BoilerManagerError("At least one timeline point must be provided")
 
-    normalized.sort(key=lambda point: point.at)
+    normalized.sort(key=_timeline_point_sort_key)
     return normalized
+
+
+def _timeline_point_estimated_start_minutes(value: str) -> int:
+    """Return a stable estimated minute-of-day key for timeline ordering."""
+    parsed_sun = _parse_sun_time_value(value)
+    if parsed_sun is not None:
+        event, offset = parsed_sun
+        base_minutes = 360 if event == "sunrise" else 1080
+        return base_minutes + offset
+
+    normalized = _normalize_time_string(value)
+    start = _time_from_hhmm(normalized)
+    return start.hour * 60 + start.minute
+
+
+def _timeline_point_sort_key(point: BoilerTimelinePoint) -> tuple[int, str, int]:
+    """Sort timeline points by estimated start and stable tie-breakers."""
+    start_minutes = _timeline_point_estimated_start_minutes(point.at)
+    duration = max(1, int(point.duration_minutes))
+    return (start_minutes, point.at, duration)
+
+
+def _timeline_point_end_label(point: BoilerTimelinePoint) -> str:
+    """Compute timeline end label for metadata, preserving sun expressions."""
+    if _parse_sun_time_value(point.at) is not None:
+        return point.at
+    return _time_plus_minutes(point.at, point.duration_minutes)
 
 
 def _option_to_minutes(value: str) -> int:
@@ -1561,30 +1701,40 @@ def _timeline_time_bounds(points: list[BoilerTimelinePoint]) -> tuple[str, str]:
     if not points:
         return "00:00", "00:00"
 
-    sorted_points = sorted(points, key=lambda point: point.at)
+    sorted_points = sorted(points, key=_timeline_point_sort_key)
     start = sorted_points[0].at
 
     def _end_key(point: BoilerTimelinePoint) -> tuple[int, str]:
-        start_minutes = _time_from_hhmm(point.at).hour * 60 + _time_from_hhmm(point.at).minute
+        start_minutes = _timeline_point_estimated_start_minutes(point.at)
         end_minutes = start_minutes + int(point.duration_minutes)
         return end_minutes, point.at
 
     last_point = max(sorted_points, key=_end_key)
-    end = _time_plus_minutes(last_point.at, last_point.duration_minutes)
+    end = _timeline_point_end_label(last_point)
     return start, end
 
 
-def _task_time_windows(task: BoilerTask) -> list[tuple[time, time]]:
-    """Return normalized active windows for a task."""
+def _task_time_windows(task: BoilerTask, hass: HomeAssistant, day_date: date) -> list[tuple[time, time]]:
+    """Return normalized active windows for one task on a specific date."""
     if task.task_type == TASK_TYPE_TIMELINE and task.timeline_points:
         windows: list[tuple[time, time]] = []
         for point in task.timeline_points:
-            start = _time_from_hhmm(point.at)
-            end = _time_from_hhmm(_time_plus_minutes(point.at, point.duration_minutes))
+            start = _resolve_schedule_time_for_date(hass, point.at, day_date)
+            if start is None:
+                continue
+            start_dt = datetime.combine(day_date, start)
+            end = (start_dt + timedelta(minutes=max(1, int(point.duration_minutes)))).time().replace(
+                second=0,
+                microsecond=0,
+            )
             windows.append((start, end))
         return windows
 
-    return [(_time_from_hhmm(task.start_time), _time_from_hhmm(task.end_time))]
+    start = _resolve_schedule_time_for_date(hass, task.start_time, day_date)
+    end = _resolve_schedule_time_for_date(hass, task.end_time, day_date)
+    if start is None or end is None:
+        return []
+    return [(start, end)]
 
 
 def _task_duplicate_signature(task: BoilerTask) -> str:
@@ -1600,7 +1750,7 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
     if task_type == TASK_TYPE_TIMELINE:
         points = sorted(
             (
-                f"{_normalize_time_string(point.at)}>{max(1, int(point.duration_minutes))}"
+                f"{_normalize_schedule_time_string(point.at)}>{max(1, int(point.duration_minutes))}"
                 for point in task.timeline_points
             ),
             key=str,
@@ -1618,8 +1768,8 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
             ]
         )
 
-    start_time = _normalize_time_string(task.start_time)
-    end_time = _normalize_time_string(task.end_time)
+    start_time = _normalize_schedule_time_string(task.start_time)
+    end_time = _normalize_schedule_time_string(task.end_time)
     return "|".join(
         [
             task_type,
@@ -1638,7 +1788,7 @@ def format_timeline_for_display(points: list[BoilerTimelinePoint]) -> str:
     """Human-readable timeline summary for UI."""
     if not points:
         return ""
-    ordered = sorted(points, key=lambda point: point.at)
+    ordered = sorted(points, key=_timeline_point_sort_key)
     chunks = [f"{point.at}→{point.duration_option}" for point in ordered]
     return " | ".join(chunks)
 

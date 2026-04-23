@@ -81,12 +81,12 @@ create_schedule:
       required: true
     start_time:
       name: Start Time
-      description: Schedule start in HH:MM.
+      description: Schedule start in HH:MM or sunrise/sunset with optional +/- offset minutes (max 120).
       example: "10:00"
       required: true
     end_time:
       name: End Time
-      description: Schedule end in HH:MM.
+      description: Schedule end in HH:MM or sunrise/sunset with optional +/- offset minutes (max 120).
       example: "12:00"
       required: true
     days:
@@ -145,12 +145,12 @@ create_timeline:
       required: true
     timeline_points:
       name: Timeline Points
-      description: List of points with time and duration option.
+      description: List of points with time (HH:MM or sunrise/sunset +/- offset up to 120 minutes) and duration option.
       example:
         - at: "06:00"
           duration_option: "30m"
           duration_minutes: 30
-        - at: "10:00"
+        - at: "sunset-30"
           duration_option: "180m"
           duration_minutes: 180
       required: true
@@ -218,20 +218,20 @@ update_schedule:
       example: "timeline"
     start_time:
       name: Start Time
-      description: Start in HH:MM.
+      description: Start in HH:MM or sunrise/sunset with optional +/- offset minutes (max 120).
       example: "18:00"
     end_time:
       name: End Time
-      description: End in HH:MM.
+      description: End in HH:MM or sunrise/sunset with optional +/- offset minutes (max 120).
       example: "20:00"
     timeline_points:
       name: Timeline Points
-      description: Points for timeline tasks.
+      description: Points for timeline tasks (HH:MM or sunrise/sunset +/- offset up to 120 minutes).
       example:
         - at: "06:00"
           duration_option: "30m"
           duration_minutes: 30
-        - at: "10:00"
+        - at: "sunrise+20"
           duration_option: "180m"
           duration_minutes: 180
     days:

@@ -349,6 +349,7 @@ switcher_timer_values: "15,30,45,60,90,120"
 - Click `Import` and pick a `.json` file
 - Review task list popup and mark only the tasks you want to import
 - Click `Export` to download a backup JSON
+- Card export/import now preserves the full task payload (type, window/timeline fields, sunrise/sunset offsets, days/months, recurrence/date range, condition fields, and enabled state)
 
 Import confirmation:
 - `replace` mode shows in-card confirmation popup before execution
@@ -357,8 +358,11 @@ Import confirmation:
 #### Task Type: Time Window
 
 - Select `Type = Time Window`
-- Set `Start` and `End`
-- Optional: set `Condition Entity` + `Skip If State`
+- Set `Start` and `End`:
+  - Toggle `Use sunrise/sunset` on/off per field for cleaner mobile/desktop layout
+  - Fixed time (`HH:MM`)
+  - Or sun-based value: `sunrise`, `sunset`, `sunrise+30`, `sunset-45` (offset range `-120..+120` minutes)
+- Optional: enable condition with the `Enable Condition` toggle, then set `Condition Entity` + `Skip If State`
   - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
@@ -371,9 +375,11 @@ Import confirmation:
 - Select `Type = Timeline`
 - Add one or more points
 - For each point:
-  - choose time (`HH:MM`)
+  - Toggle `Use sunrise/sunset` on/off per point to keep the row compact
+  - choose time mode: fixed `HH:MM`, `sunrise`, or `sunset`
+  - optional offset range: `-120..+120` minutes for sunrise/sunset
   - choose timer option from existing options (15m..)
-- Optional: set `Condition Entity` + `Skip If State`
+- Optional: enable condition with the `Enable Condition` toggle, then set `Condition Entity` + `Skip If State`
   - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
@@ -480,9 +486,12 @@ When `temperature_sensor` is configured and has a live numeric state:
 
 Color thresholds:
 - Blue: up to `30°C`
-- Yellow: `30–40°C`
-- Orange: `40–50°C`
-- Red: `50°C+`
+- Orange: `30–52°C`
+- Red: `52°C+`
+
+Timer-driven color model:
+- Uses a staged `blue -> orange -> red` gradient (no yellow stage).
+- Color progress is duration-aware, so short and long timers transition at different visual pace while remaining believable.
 
 Fallback:
 - If no valid live temperature is available, card automatically falls back to timer-based heat calculation.
@@ -559,7 +568,7 @@ data:
     - at: "06:00"
       duration_option: "30m"
       duration_minutes: 30
-    - at: "10:00"
+    - at: "sunset-30"
       duration_option: "180m"
       duration_minutes: 180
   days: [0, 1, 2, 3, 4]
@@ -596,7 +605,7 @@ data:
   task_id: a1b2c3d4e5
   task_type: "timeline"
   timeline_points:
-    - at: "07:00"
+    - at: "sunrise+20"
       duration_option: "45m"
       duration_minutes: 45
     - at: "11:00"
@@ -673,6 +682,12 @@ Recent highlights:
   - Improved modal/tab/header behavior for mobile + RTL/LTR layouts (close button and controls consistency).
   - Vacation mode UX hardening: forced OFF + keep menu usable to disable vacation mode.
   - Safer service resolution when stale Switcher timed service is present in regular mode.
+  - Added sunrise/sunset + offset support for timeline points (`at`) in frontend/backend/services/docs.
+  - Added compact toggles in schedule UI:
+    - per-time-field `Use sunrise/sunset`
+    - per-timeline-point `Use sunrise/sunset`
+    - `Enable Condition` toggle for condition block
+  - Updated heating color model to `blue -> orange -> red` with duration-aware progression.
 - `0.1.4`
   - Metadata/version alignment and documentation cleanup.
 - `0.1.3`
