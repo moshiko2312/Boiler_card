@@ -6356,17 +6356,58 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   _onValueChanged(event) {
     const value = event?.detail?.value || {};
-    const prevLanguage = this._config?.language;
+    const prevLanguage = this._normalizeLanguage(this._config?.language);
+    const hasLanguageChange = Object.prototype.hasOwnProperty.call(value, "language");
+    const nextLanguage = hasLanguageChange
+      ? this._normalizeLanguage(value.language)
+      : prevLanguage;
     const nextConfig = { ...this._config, ...value };
+
+    if (hasLanguageChange && nextLanguage !== prevLanguage) {
+      const titleFromCurrentConfig = typeof this._config?.title === "string"
+        ? this._config.title
+        : "";
+      const titleFromNextConfig = typeof nextConfig?.title === "string"
+        ? nextConfig.title
+        : "";
+      const shouldReplaceTitle = this._isAutoDefaultTitle(titleFromCurrentConfig)
+        && this._isAutoDefaultTitle(titleFromNextConfig);
+
+      if (shouldReplaceTitle) {
+        nextConfig.title = this._defaultTitleForLanguage(nextLanguage);
+      }
+    }
+
     this._config = nextConfig;
     this.dispatchEvent(new CustomEvent("config-changed", {
       detail: { config: nextConfig },
     }));
 
     // Keep editor stable so dropdown/entity selectors stay interactive.
-    if (value.language && value.language !== prevLanguage) {
+    if (hasLanguageChange && nextLanguage !== prevLanguage) {
       this._render();
     }
+  }
+
+  _normalizeLanguage(language) {
+    const normalized = String(language || "").trim().toLowerCase();
+    return SUPPORTED_LANGUAGES.includes(normalized) ? normalized : "he";
+  }
+
+  _defaultTitleForLanguage(language) {
+    const lang = this._normalizeLanguage(language);
+    return I18N[lang]?.default_title ?? I18N.he.default_title;
+  }
+
+  _isAutoDefaultTitle(title) {
+    const normalized = String(title || "").trim();
+    if (!normalized) {
+      return false;
+    }
+    return SUPPORTED_LANGUAGES.some((lang) => {
+      const candidate = String(I18N[lang]?.default_title || "").trim();
+      return candidate && candidate === normalized;
+    });
   }
 
   _labels() {

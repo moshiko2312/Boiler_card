@@ -134,6 +134,8 @@ Custom boiler control solution for Home Assistant with:
 - Key fields:
   - Language (`he` / `en` / `ru` / `fr`)
   - Title
+    - When `Title` is still a default card title, changing `Language` auto-updates `Title` to that language's default.
+    - Custom user-entered titles are preserved and are not overwritten by language changes.
   - Boiler entity
   - Temperature sensor
   - Power sensor (`W`)
