@@ -3247,12 +3247,11 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     if (!timedActive) {
-      const hasRealTemperatureSensor = this._isConfiguredSensorEntity(
-        String(this._config?.temperature_sensor || "").trim()
-      );
-      const continuousProgress = hasRealTemperatureSensor ? 0.72 : 1;
+      // In continuous/no-timer mode, show a full bar while ON.
+      // This keeps switch/light behavior consistent even when a temp sensor exists
+      // but doesn't currently provide a valid reading.
       const profile = this._buildHeatingProfile(
-        continuousProgress,
+        1,
         this._t("stage_continuous"),
         this._t("no_timer_mode")
       );
