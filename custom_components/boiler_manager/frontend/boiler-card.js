@@ -668,6 +668,11 @@ class BoilerWaterCard extends HTMLElement {
           box-shadow: 0 0 8px var(--heat-glow);
         }
 
+        .boiler-visual.temp-driven .boiler-stage-sub {
+          font-size: 0.98rem;
+          font-weight: 900;
+        }
+
         .countdown-label {
           color: var(--boiler-muted);
           font-size: 0.7rem;
