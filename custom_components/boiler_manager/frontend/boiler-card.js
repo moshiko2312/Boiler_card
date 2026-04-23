@@ -780,18 +780,7 @@ class BoilerWaterCard extends HTMLElement {
           height: 100%;
           width: var(--heat-progress);
           border-radius: 2px;
-          background: linear-gradient(
-            90deg,
-            #2a53ff 0%,
-            #3f63ff 16%,
-            #8790d6 24%,
-            #d8bc63 36%,
-            #f3d34f 50%,
-            #efb04a 62%,
-            #ed8b38 74%,
-            #f05d33 86%,
-            #ff3328 100%
-          );
+          background: var(--heat-gradient, linear-gradient(90deg, #2b7fff, #2b7fff));
           box-shadow: 0 0 6px rgba(255, 84, 61, 0.35);
           transition: width 420ms ease;
         }
@@ -3698,6 +3687,10 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.boilerVisual.style.setProperty("--heat-primary", profile.primaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-secondary", profile.secondaryColor);
     this._elements.boilerVisual.style.setProperty("--heat-glow", profile.glowColor);
+    this._elements.boilerVisual.style.setProperty(
+      "--heat-gradient",
+      profile.gradient || "linear-gradient(90deg, #2b7fff, #2b7fff)"
+    );
     this._elements.boilerVisual.style.setProperty("--heat-progress", `${Math.round(profile.progress * 100)}%`);
     this._elements.boilerStage.textContent = profile.label;
     this._elements.boilerStageSub.textContent = profile.subLabel;
@@ -3723,6 +3716,7 @@ class BoilerWaterCard extends HTMLElement {
         primaryColor: "#c7d0dd",
         secondaryColor: "#dde4ee",
         glowColor: "rgba(0, 0, 0, 0)",
+        gradient: "linear-gradient(90deg, #c7d0dd, #dde4ee)",
         isTemperatureDriven: false,
       };
     }
@@ -3745,22 +3739,25 @@ class BoilerWaterCard extends HTMLElement {
       : this._managerTimedRemainingSeconds(managerMode);
     const total = this._timerTotalSeconds(timer, durationEntity, managerMode);
     const progress = total > 0 && remaining !== null ? this._clamp(1 - remaining / total, 0, 1) : 0;
+    const colorProgress = this._timedHeatColorProgress(progress, total);
     const percent = Math.round(progress * 100);
 
-    if (progress < 0.34) {
+    if (colorProgress < 0.3) {
       const profile = this._buildHeatingProfile(
         progress,
         this._t("stage_cool"),
-        this._formatWarmedPercent(percent)
+        this._formatWarmedPercent(percent),
+        { colorProgress }
       );
       profile.isTemperatureDriven = false;
       return profile;
     }
-    if (progress < 0.67) {
+    if (colorProgress < 0.5) {
       const profile = this._buildHeatingProfile(
         progress,
         this._t("stage_warm"),
-        this._formatWarmedPercent(percent)
+        this._formatWarmedPercent(percent),
+        { colorProgress }
       );
       profile.isTemperatureDriven = false;
       return profile;
@@ -3768,15 +3765,19 @@ class BoilerWaterCard extends HTMLElement {
     const profile = this._buildHeatingProfile(
       progress,
       this._t("stage_hot"),
-      this._formatWarmedPercent(percent)
+      this._formatWarmedPercent(percent),
+      { colorProgress }
     );
     profile.isTemperatureDriven = false;
     return profile;
   }
 
-  _buildHeatingProfile(progress, label, subLabel) {
+  _buildHeatingProfile(progress, label, subLabel, { colorProgress = null } = {}) {
     const clamped = this._clamp(progress, 0, 1);
-    const primary = this._colorByHeat(clamped);
+    const heatColorProgress = Number.isFinite(colorProgress)
+      ? this._clamp(colorProgress, 0, 1)
+      : clamped;
+    const primary = this._colorByHeat(heatColorProgress);
     const secondary = this._mixColors(primary, "#e2f4ff", 0.35);
     const glow = this._hexToRgba(primary, 0.33);
 
@@ -3787,8 +3788,65 @@ class BoilerWaterCard extends HTMLElement {
       primaryColor: primary,
       secondaryColor: secondary,
       glowColor: glow,
+      gradient: this._stagedHeatGradient(heatColorProgress),
       isTemperatureDriven: false,
     };
+  }
+
+  _timedHeatColorProgress(timerProgress, totalSeconds) {
+    const progress = this._clamp(timerProgress, 0, 1);
+    const totalMinutes = Number.isFinite(totalSeconds) && totalSeconds > 0 ? (totalSeconds / 60) : null;
+    if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+      return progress;
+    }
+
+    const elapsedMinutes = progress * totalMinutes;
+    const effectiveHeatMinutes = this._effectiveHeatupMinutes(totalMinutes);
+    if (!Number.isFinite(effectiveHeatMinutes) || effectiveHeatMinutes <= 0) {
+      return progress;
+    }
+    return this._clamp(elapsedMinutes / effectiveHeatMinutes, 0, 1);
+  }
+
+  _effectiveHeatupMinutes(totalMinutes) {
+    // 15m timers stay literal. Longer timers increase heating pace sub-linearly
+    // so visual heat-up remains believable and doesn't stay "blue" for too long.
+    const minHeat = 15;
+    const maxHeat = 55;
+    const normalized = this._clamp((totalMinutes - minHeat) / 90, 0, 1);
+    const curve = Math.pow(normalized, 0.7);
+    return this._clamp(minHeat + (maxHeat - minHeat) * curve, minHeat, maxHeat);
+  }
+
+  _stagedHeatGradient(colorProgress) {
+    const p = this._clamp(colorProgress, 0, 1);
+    const blue = "#2b7fff";
+    const yellow = "#f3d34f";
+    const orange = "#f97316";
+    const red = "#dc2626";
+
+    if (p < 0.3) {
+      return `linear-gradient(90deg, ${blue} 0%, ${blue} 100%)`;
+    }
+
+    const yellowBase = 35 * this._clamp((p - 0.3) / 0.2, 0, 1);
+    const orangeWidth = 30 * this._clamp((p - 0.5) / 0.2, 0, 1);
+    const redWidth = 30 * this._clamp((p - 0.7) / 0.3, 0, 1);
+    const yellowWidth = this._clamp(yellowBase - (redWidth * 0.4), 0, 40);
+    const blueWidth = this._clamp(100 - yellowWidth - orangeWidth - redWidth, 0, 100);
+
+    const blueEnd = blueWidth;
+    const yellowEnd = blueEnd + yellowWidth;
+    const orangeEnd = yellowEnd + orangeWidth;
+    const blend = 2.2;
+
+    if (orangeWidth <= 0.01) {
+      return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} 100%)`;
+    }
+    if (redWidth <= 0.01) {
+      return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} ${Math.max(0, yellowEnd - blend)}%, ${orange} ${Math.min(100, yellowEnd + blend)}%, ${orange} 100%)`;
+    }
+    return `linear-gradient(90deg, ${blue} 0%, ${blue} ${Math.max(0, blueEnd - blend)}%, ${yellow} ${Math.min(100, blueEnd + blend)}%, ${yellow} ${Math.max(0, yellowEnd - blend)}%, ${orange} ${Math.min(100, yellowEnd + blend)}%, ${orange} ${Math.max(0, orangeEnd - blend)}%, ${red} ${Math.min(100, orangeEnd + blend)}%, ${red} 100%)`;
   }
 
   _temperatureDrivenProfile(liveTemp) {
@@ -3800,6 +3858,7 @@ class BoilerWaterCard extends HTMLElement {
       primaryColor: band.primaryColor,
       secondaryColor: band.secondaryColor,
       glowColor: band.glowColor,
+      gradient: `linear-gradient(90deg, ${band.secondaryColor}, ${band.primaryColor})`,
       isTemperatureDriven: true,
     };
   }
@@ -6691,13 +6750,21 @@ class BoilerWaterCard extends HTMLElement {
 
   _colorByHeat(progress) {
     const cool = "#2b7fff";
-    const warm = "#f97316";
-    const hot = "#dc2626";
+    const warm = "#f3d34f";
+    const hot = "#f97316";
+    const veryHot = "#dc2626";
+    const p = this._clamp(progress, 0, 1);
 
-    if (progress <= 0.5) {
-      return this._mixColors(cool, warm, progress / 0.5);
+    if (p < 0.3) {
+      return cool;
     }
-    return hot;
+    if (p < 0.5) {
+      return warm;
+    }
+    if (p < 0.7) {
+      return hot;
+    }
+    return veryHot;
   }
 
   _mixColors(hexA, hexB, weight) {

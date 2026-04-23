@@ -109,6 +109,7 @@ Custom boiler control solution for Home Assistant with:
 
 ### 4) Import / Export Tab
 ![Import Export Tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/05-import-export-tab.png)
+![Import Task Selection List](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots_template/04-import-export-list.jpeg)
 
 - Purpose: task backup and restore operations.
 - Mode buttons:
@@ -117,6 +118,10 @@ Custom boiler control solution for Home Assistant with:
 - Action buttons:
   - `Import`: upload JSON backup.
   - `Export`: download current task set as JSON.
+- Import flow enhancement:
+  - After choosing a JSON file, an in-card selection popup opens.
+  - You can choose exactly which tasks to import (`Select All` / `Clear All`).
+  - In `merge` mode, duplicate tasks are filtered out before service call to avoid import validation errors.
 - Design goal:
   - Safe maintenance operations separated from normal task editing.
 
@@ -320,6 +325,7 @@ switcher_timer_values: "15,30,45,60,90,120"
   - `merge` = add imported tasks to existing tasks
   - `replace` = remove existing tasks first, then import
 - Click `Import` and pick a `.json` file
+- Review task list popup and mark only the tasks you want to import
 - Click `Export` to download a backup JSON
 
 Import confirmation:
