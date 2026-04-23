@@ -317,6 +317,10 @@ switcher_timer_values: "15,30,45,60,90,120"
 - Open hamburger menu (`☰`)
 - Choose `Tasks`
 - Click `Add`
+- `Vacation Mode` toggle behavior:
+  - Enabling vacation performs immediate forced OFF for the configured boiler entity.
+  - During vacation, timer activation is blocked until vacation is disabled.
+  - Hamburger/menu stays available so vacation can always be disabled from the UI.
 
 ### Import / Export (From Card UI)
 
@@ -491,6 +495,11 @@ data:
   boiler_entity: switch.boiler
   vacation_mode: true
 ```
+
+Vacation mode runtime behavior:
+- Forces immediate OFF across supported entity types (`switch`/`light`/`climate`/`water_heater`) using compatible service calls.
+- Prevents timed/continuous activation while vacation is enabled.
+- Keeps card menu access enabled so users can exit vacation mode from mobile/desktop.
 
 ### export_tasks example
 
