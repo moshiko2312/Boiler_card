@@ -62,6 +62,12 @@ const I18N = {
     import_mode_replace: "החלפה",
     import_replace_confirm: "לייבא במצב החלפה? זה ימחק את כל המשימות הקיימות לפני הייבוא.",
     import_invalid_file: "קובץ ייבוא לא תקין",
+    import_select_tasks_title: "בחירת משימות לייבוא",
+    import_select_tasks_message: "בחר אילו משימות לייבא:",
+    import_select_all: "בחר הכל",
+    import_clear_all: "נקה הכל",
+    import_no_tasks_selected: "לא נבחרו משימות לייבוא",
+    import_task_unnamed: "משימה ללא שם",
     dialog_title: "אישור פעולה",
     dialog_ok: "אישור",
     duplicate_task_title: "זוהתה כפילות במשימות",
@@ -168,6 +174,12 @@ const I18N = {
     import_mode_replace: "Replace",
     import_replace_confirm: "Import in replace mode? This will remove all existing tasks before import.",
     import_invalid_file: "Invalid import file",
+    import_select_tasks_title: "Select Tasks to Import",
+    import_select_tasks_message: "Choose which tasks to import:",
+    import_select_all: "Select All",
+    import_clear_all: "Clear All",
+    import_no_tasks_selected: "No tasks were selected for import",
+    import_task_unnamed: "Unnamed task",
     dialog_title: "Confirm Action",
     dialog_ok: "OK",
     duplicate_task_title: "Duplicate Task Detected",
@@ -274,6 +286,12 @@ const I18N = {
     import_mode_replace: "Замена",
     import_replace_confirm: "Импорт в режиме замены? Все текущие задачи будут удалены перед импортом.",
     import_invalid_file: "Некорректный файл импорта",
+    import_select_tasks_title: "Выбор задач для импорта",
+    import_select_tasks_message: "Выберите задачи для импорта:",
+    import_select_all: "Выбрать все",
+    import_clear_all: "Снять выбор",
+    import_no_tasks_selected: "Не выбраны задачи для импорта",
+    import_task_unnamed: "Задача без названия",
     dialog_title: "Подтверждение",
     dialog_ok: "ОК",
     duplicate_task_title: "Обнаружен дубликат задачи",
@@ -380,6 +398,12 @@ const I18N = {
     import_mode_replace: "Remplacer",
     import_replace_confirm: "Importer en mode remplacement ? Cela supprimera toutes les tâches existantes avant l'import.",
     import_invalid_file: "Fichier d'import invalide",
+    import_select_tasks_title: "Sélectionner les tâches à importer",
+    import_select_tasks_message: "Choisissez les tâches à importer :",
+    import_select_all: "Tout sélectionner",
+    import_clear_all: "Tout désélectionner",
+    import_no_tasks_selected: "Aucune tâche sélectionnée pour l'import",
+    import_task_unnamed: "Tâche sans nom",
     dialog_title: "Confirmer l'action",
     dialog_ok: "OK",
     duplicate_task_title: "Tâche en double détectée",
@@ -497,6 +521,8 @@ class BoilerWaterCard extends HTMLElement {
     this._menuMode = "timer";
     this._importMode = "merge";
     this._confirmResolver = null;
+    this._importSelectionResolver = null;
+    this._pendingImportTasks = null;
     this._schedulePanel = "recurrence";
     this._editingTaskId = null;
     this._offPendingUntil = 0;
@@ -508,6 +534,7 @@ class BoilerWaterCard extends HTMLElement {
         this._closeTimerModal();
         this._closeScheduleModal();
         this._closeConfirmModal(false);
+        this._closeImportSelectionModal(false);
       }
     };
   }
@@ -524,6 +551,7 @@ class BoilerWaterCard extends HTMLElement {
       this._ticker = null;
     }
     this._resolveConfirmDialog(false);
+    this._resolveImportSelectionDialog(null);
     window.removeEventListener("keydown", this._handleEscapeKey);
   }
 
@@ -1679,9 +1707,12 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-head {
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas:
+            "title title"
+            "toggle actions";
           align-items: center;
-          justify-content: space-between;
           gap: 10px;
           margin: 0 0 10px;
           position: sticky;
@@ -1698,19 +1729,24 @@ class BoilerWaterCard extends HTMLElement {
         }
 
         .timer-modal-title {
+          grid-area: title;
           margin: 0;
           font-size: 1rem;
           color: var(--boiler-text);
+          min-width: 0;
         }
 
         .timer-modal-actions {
+          grid-area: actions;
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          margin-inline-start: auto;
+          margin-inline-start: 0;
+          justify-self: end;
         }
 
         .menu-mode-toggle {
+          grid-area: toggle;
           display: inline-grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           align-items: stretch;
@@ -1720,6 +1756,7 @@ class BoilerWaterCard extends HTMLElement {
           border-radius: 14px;
           padding: 4px;
           width: min(100%, 420px);
+          min-width: 0;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
         }
 
@@ -1728,9 +1765,12 @@ class BoilerWaterCard extends HTMLElement {
           border-radius: 10px;
           min-height: 42px;
           min-width: 0;
-          padding: 8px 12px;
-          font-size: 0.92rem;
+          padding: 7px 10px;
+          font-size: 0.9rem;
           font-weight: 800;
+          line-height: 1.2;
+          white-space: normal;
+          overflow-wrap: anywhere;
           color: #ffffff;
           text-shadow: 0 1px 2px rgba(11, 28, 45, 0.5);
           background: linear-gradient(165deg, rgba(106, 125, 150, 0.9), rgba(86, 102, 126, 0.82));
@@ -1973,6 +2013,63 @@ class BoilerWaterCard extends HTMLElement {
           outline-offset: 2px;
         }
 
+        .import-select-message {
+          margin: 0 0 10px;
+          font-size: 0.9rem;
+          color: #dce8f8;
+        }
+
+        .import-select-actions {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 10px;
+          flex-wrap: wrap;
+        }
+
+        .import-select-list {
+          max-height: min(44dvh, 260px);
+          overflow: auto;
+          -webkit-overflow-scrolling: touch;
+          border: 1px solid rgba(152, 184, 214, 0.28);
+          border-radius: 12px;
+          padding: 6px;
+          background: rgba(14, 28, 46, 0.24);
+        }
+
+        .import-select-item {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 10px;
+          align-items: start;
+          padding: 8px;
+          border-radius: 10px;
+        }
+
+        .import-select-item:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .import-select-item-title {
+          font-size: 0.92rem;
+          font-weight: 700;
+          color: #f7fbff;
+          line-height: 1.35;
+        }
+
+        .import-select-item-subtitle {
+          margin-top: 2px;
+          font-size: 0.82rem;
+          color: #c4d6ee;
+          line-height: 1.3;
+          word-break: break-word;
+        }
+
+        .import-select-checkbox {
+          margin-top: 2px;
+          width: 18px;
+          height: 18px;
+        }
+
         @media (max-width: 760px) {
           .boiler-visual {
             grid-template-columns: minmax(92px, 26vw) minmax(0, 1fr);
@@ -2053,16 +2150,19 @@ class BoilerWaterCard extends HTMLElement {
             top: 0;
             z-index: 8;
             padding: 8px 8px 10px;
-            flex-wrap: wrap;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+              "title"
+              "toggle"
+              "actions";
             row-gap: 8px;
           }
 
           .timer-modal-title {
-            flex: 1 1 auto;
+            width: 100%;
           }
 
           .menu-mode-toggle {
-            flex: 1 1 100%;
             width: 100%;
           }
 
@@ -2202,6 +2302,38 @@ class BoilerWaterCard extends HTMLElement {
           .tasks-head-actions .tasks-vacation-btn {
             grid-column: 1 / -1;
           }
+
+          #import-select-modal-panel {
+            width: calc(100vw - 12px);
+            max-height: min(90dvh, 760px);
+            padding: 14px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+          }
+
+          .import-select-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .import-select-actions .confirm-action-btn {
+            min-width: 0;
+            width: 100%;
+            min-height: 46px;
+          }
+
+          .import-select-list {
+            max-height: min(52dvh, 420px);
+          }
+
+          .import-select-item {
+            padding: 10px 8px;
+            gap: 12px;
+          }
+
+          .import-select-checkbox {
+            width: 22px;
+            height: 22px;
+          }
         }
 
         @media (max-width: 520px) {
@@ -2262,6 +2394,34 @@ class BoilerWaterCard extends HTMLElement {
             min-width: min(46vw, 170px);
             min-height: 44px;
             font-size: 0.92rem;
+          }
+
+          #import-select-modal-panel {
+            width: calc(100vw - 10px);
+            max-height: min(92dvh, 760px);
+            padding: 12px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+          }
+
+          .import-select-actions {
+            grid-template-columns: 1fr;
+          }
+
+          .import-select-actions .confirm-action-btn {
+            min-height: 48px;
+            font-size: 0.9rem;
+          }
+
+          .import-select-list {
+            max-height: min(56dvh, 470px);
+            padding: 5px;
+          }
+
+          .import-select-item-title {
+            font-size: 0.9rem;
+          }
+
+          .import-select-item-subtitle {
+            font-size: 0.8rem;
           }
 
           .schedule-section-switch {
@@ -2683,6 +2843,23 @@ class BoilerWaterCard extends HTMLElement {
           </div>
         </div>
       </div>
+
+      <div class="timer-modal" id="import-select-modal" hidden>
+        <div class="timer-modal-backdrop" id="import-select-modal-backdrop"></div>
+        <div class="confirm-modal-panel" id="import-select-modal-panel" role="dialog" aria-modal="true" aria-label="Select Tasks">
+          <h3 class="confirm-modal-title" id="import-select-title">Select Tasks to Import</h3>
+          <p class="import-select-message" id="import-select-message">Choose which tasks to import:</p>
+          <div class="import-select-actions">
+            <button type="button" class="confirm-action-btn" id="import-select-all-btn">Select All</button>
+            <button type="button" class="confirm-action-btn" id="import-clear-all-btn">Clear All</button>
+          </div>
+          <div class="import-select-list" id="import-select-list"></div>
+          <div class="confirm-modal-actions">
+            <button type="button" class="confirm-action-btn" id="import-select-cancel-btn">Cancel</button>
+            <button type="button" class="confirm-action-btn primary" id="import-select-ok-btn">Import</button>
+          </div>
+        </div>
+      </div>
     `;
 
     this._elements = {
@@ -2796,6 +2973,16 @@ class BoilerWaterCard extends HTMLElement {
       confirmModalMessage: this.shadowRoot.getElementById("confirm-modal-message"),
       confirmCancelBtn: this.shadowRoot.getElementById("confirm-cancel-btn"),
       confirmOkBtn: this.shadowRoot.getElementById("confirm-ok-btn"),
+      importSelectModal: this.shadowRoot.getElementById("import-select-modal"),
+      importSelectModalBackdrop: this.shadowRoot.getElementById("import-select-modal-backdrop"),
+      importSelectModalPanel: this.shadowRoot.getElementById("import-select-modal-panel"),
+      importSelectTitle: this.shadowRoot.getElementById("import-select-title"),
+      importSelectMessage: this.shadowRoot.getElementById("import-select-message"),
+      importSelectAllBtn: this.shadowRoot.getElementById("import-select-all-btn"),
+      importClearAllBtn: this.shadowRoot.getElementById("import-clear-all-btn"),
+      importSelectList: this.shadowRoot.getElementById("import-select-list"),
+      importSelectCancelBtn: this.shadowRoot.getElementById("import-select-cancel-btn"),
+      importSelectOkBtn: this.shadowRoot.getElementById("import-select-ok-btn"),
     };
 
     this._elements.timerMenuBtn.addEventListener("click", () => this._openTimerModal());
@@ -2819,6 +3006,11 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.confirmModalBackdrop?.addEventListener("click", () => this._closeConfirmModal(false));
     this._elements.confirmCancelBtn?.addEventListener("click", () => this._closeConfirmModal(false));
     this._elements.confirmOkBtn?.addEventListener("click", () => this._closeConfirmModal(true));
+    this._elements.importSelectModalBackdrop?.addEventListener("click", () => this._closeImportSelectionModal(false));
+    this._elements.importSelectCancelBtn?.addEventListener("click", () => this._closeImportSelectionModal(false));
+    this._elements.importSelectOkBtn?.addEventListener("click", () => this._closeImportSelectionModal(true));
+    this._elements.importSelectAllBtn?.addEventListener("click", () => this._setImportSelectionChecked(true));
+    this._elements.importClearAllBtn?.addEventListener("click", () => this._setImportSelectionChecked(false));
     this._elements.scheduleTypeWindowBtn?.addEventListener("click", () => this._setScheduleType("window"));
     this._elements.scheduleTypeTimelineBtn?.addEventListener("click", () => this._setScheduleType("timeline"));
     this._elements.schedulePanelRecurrenceBtn?.addEventListener("click", () => this._setSchedulePanel("recurrence"));
@@ -2932,6 +3124,27 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.confirmOkBtn) {
       this._elements.confirmOkBtn.textContent = this._t("dialog_ok");
+    }
+    if (this._elements.importSelectModalPanel) {
+      this._elements.importSelectModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
+    }
+    if (this._elements.importSelectTitle) {
+      this._elements.importSelectTitle.textContent = this._t("import_select_tasks_title");
+    }
+    if (this._elements.importSelectMessage) {
+      this._elements.importSelectMessage.textContent = this._t("import_select_tasks_message");
+    }
+    if (this._elements.importSelectAllBtn) {
+      this._elements.importSelectAllBtn.textContent = this._t("import_select_all");
+    }
+    if (this._elements.importClearAllBtn) {
+      this._elements.importClearAllBtn.textContent = this._t("import_clear_all");
+    }
+    if (this._elements.importSelectCancelBtn) {
+      this._elements.importSelectCancelBtn.textContent = this._t("task_cancel");
+    }
+    if (this._elements.importSelectOkBtn) {
+      this._elements.importSelectOkBtn.textContent = this._t("tasks_import");
     }
     this._setImportMode(this._importMode);
     if (this._elements.modalModeTimerBtn) {
@@ -3982,6 +4195,15 @@ class BoilerWaterCard extends HTMLElement {
         return;
       }
 
+      const selectedTasks = await this._openImportSelectionModal(tasks);
+      if (!Array.isArray(selectedTasks)) {
+        return;
+      }
+      if (selectedTasks.length === 0) {
+        await this._showInfoModal(this._t("import_no_tasks_selected"));
+        return;
+      }
+
       if (this._importMode === "replace") {
         const approved = await this._openConfirmModal(this._t("import_replace_confirm"));
         if (!approved) {
@@ -3992,7 +4214,7 @@ class BoilerWaterCard extends HTMLElement {
       this._callConfiguredService(this._config.service_import_tasks, {
         ...this._builtInServiceBaseData(),
         mode: this._importMode,
-        tasks,
+        tasks: selectedTasks,
       });
     } catch (_error) {
       await this._showInfoModal(this._t("import_invalid_file"));
@@ -4280,11 +4502,132 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
+  _openImportSelectionModal(tasks) {
+    if (!this._elements.importSelectModal || !this._elements.importSelectList) {
+      return Promise.resolve(Array.isArray(tasks) ? tasks : null);
+    }
+
+    this._resolveImportSelectionDialog(null);
+    const normalizedTasks = Array.isArray(tasks) ? tasks : [];
+    this._pendingImportTasks = normalizedTasks;
+    this._elements.importSelectList.innerHTML = "";
+
+    normalizedTasks.forEach((task, index) => {
+      const row = document.createElement("label");
+      row.className = "import-select-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "import-select-checkbox";
+      checkbox.checked = true;
+      checkbox.dataset.importIndex = String(index);
+
+      const textWrap = document.createElement("div");
+      const title = document.createElement("div");
+      title.className = "import-select-item-title";
+      title.textContent = this._importTaskDisplayName(task, index + 1);
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "import-select-item-subtitle";
+      subtitle.textContent = this._importTaskDisplaySubtitle(task);
+
+      textWrap.appendChild(title);
+      textWrap.appendChild(subtitle);
+      row.appendChild(checkbox);
+      row.appendChild(textWrap);
+      this._elements.importSelectList.appendChild(row);
+    });
+
+    this._elements.importSelectModal.hidden = false;
+    this._attachEscapeListener();
+    this._elements.importSelectOkBtn?.focus({ preventScroll: true });
+    return new Promise((resolve) => {
+      this._importSelectionResolver = resolve;
+    });
+  }
+
+  _importTaskDisplayName(task, fallbackIndex) {
+    const taskName = String(task?.task_name || task?.name || task?.friendly_name || "").trim();
+    if (taskName) {
+      return taskName;
+    }
+    const taskId = String(task?.task_id || "").trim();
+    if (taskId) {
+      return taskId;
+    }
+    return `${this._t("import_task_unnamed")} #${fallbackIndex}`;
+  }
+
+  _importTaskDisplaySubtitle(task) {
+    const taskType = String(task?.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
+    if (taskType === "timeline") {
+      const points = Array.isArray(task?.timeline_points) ? task.timeline_points.length : 0;
+      return `${this._t("task_type_timeline")} • ${points} ${this._t("timeline_points")}`;
+    }
+    const start = String(task?.start_time || "--:--").trim() || "--:--";
+    const end = String(task?.end_time || "--:--").trim() || "--:--";
+    return `${start} - ${end}`;
+  }
+
+  _setImportSelectionChecked(checked) {
+    const list = this._elements.importSelectList;
+    if (!list) {
+      return;
+    }
+    const boxes = list.querySelectorAll("input.import-select-checkbox[type=\"checkbox\"]");
+    boxes.forEach((box) => {
+      box.checked = !!checked;
+    });
+  }
+
+  _closeImportSelectionModal(approved = false) {
+    if (!this._elements.importSelectModal) {
+      return;
+    }
+    this._elements.importSelectModal.hidden = true;
+    if (!approved) {
+      this._resolveImportSelectionDialog(null);
+    } else {
+      const list = this._elements.importSelectList;
+      const selectedIndexes = Array.from(
+        list?.querySelectorAll("input.import-select-checkbox[type=\"checkbox\"]:checked") || [],
+      ).map((el) => Number.parseInt(el.dataset.importIndex || "-1", 10))
+        .filter((index) => Number.isInteger(index) && index >= 0);
+      this._resolveImportSelectionDialog(selectedIndexes);
+    }
+
+    if (!this._isAnyModalOpen()) {
+      window.removeEventListener("keydown", this._handleEscapeKey);
+    }
+  }
+
+  _resolveImportSelectionDialog(selectedIndexes) {
+    if (typeof this._importSelectionResolver !== "function") {
+      this._pendingImportTasks = null;
+      return;
+    }
+    const resolver = this._importSelectionResolver;
+    this._importSelectionResolver = null;
+    if (!Array.isArray(selectedIndexes)) {
+      this._pendingImportTasks = null;
+      resolver(null);
+      return;
+    }
+
+    const selectedSet = new Set(selectedIndexes);
+    const selectedTasks = Array.isArray(this._pendingImportTasks)
+      ? this._pendingImportTasks.filter((_task, index) => selectedSet.has(index))
+      : [];
+    this._pendingImportTasks = null;
+    resolver(selectedTasks);
+  }
+
   _isAnyModalOpen() {
     return !!(
       (this._elements.timerModal && !this._elements.timerModal.hidden)
       || (this._elements.scheduleModal && !this._elements.scheduleModal.hidden)
       || (this._elements.confirmModal && !this._elements.confirmModal.hidden)
+      || (this._elements.importSelectModal && !this._elements.importSelectModal.hidden)
     );
   }
 
