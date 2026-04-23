@@ -8,7 +8,7 @@ Custom boiler control solution for Home Assistant with:
 - Optional card sensors (temperature / current / voltage)
 - Mobile-friendly popups (Safari + Chrome)
 - In-card task backup/restore (Import/Export)
-- Per-task conditional execution by external entity state
+- Per-task conditional execution by external entity state (including numeric operators)
 
 ## What You Get
 
@@ -20,6 +20,7 @@ Custom boiler control solution for Home Assistant with:
   - Import mode buttons: `merge` / `replace`
 - Per-task condition in card UI:
   - `Condition Entity` (for example `input_boolean.some_flag`)
+  - `Condition Operator` (`=`, `>`, `<`, `>=`, `<=`)
   - `Skip If State` (for example `on`)
   - Smart state suggestions by selected entity domain (for example `light` => `on/off`)
 - Sensor chips shown only when configured in the card
@@ -36,11 +37,14 @@ Custom boiler control solution for Home Assistant with:
   - Each point uses existing timer options (same as timer picker)
   - Overlap behavior: extends until latest end time (max end wins)
 - Tasks list sorted by the **next upcoming event** (chronological order)
+- Active task notice in card with current task end time
 - Scheduler tick every second for near-immediate start/stop transitions
 - Mobile-first schedule/task modals:
   - touch-friendly controls
   - no horizontal scrolling
   - centered/stable dialogs for Safari + Chrome
+  - sticky top toolbar in mobile tasks view
+  - timer page arrows hidden in tasks mode (list-only mode)
 
 ## Project Structure
 
@@ -170,6 +174,7 @@ Import confirmation:
 - Select `Type = Time Window`
 - Set `Start` and `End`
 - Optional: set `Condition Entity` + `Skip If State`
+  - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
 - Select months
@@ -184,6 +189,7 @@ Import confirmation:
   - choose time (`HH:MM`)
   - choose timer option from existing options (15m..)
 - Optional: set `Condition Entity` + `Skip If State`
+  - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
 - Select days
 - Select months
@@ -232,15 +238,19 @@ Import confirmation:
 
 - Each task can include:
   - `condition_entity`
+  - `condition_operator` (`eq`, `gt`, `lt`, `gte`, `lte`)
   - `skip_if_state`
 - Runtime behavior:
   - During each scheduler tick, condition is checked before task activation.
-  - If `condition_entity.state == skip_if_state` (case-insensitive), the task is skipped for that check cycle.
+  - For `condition_operator = eq`, if `condition_entity.state == skip_if_state` (case-insensitive), task is skipped.
+  - For `condition_operator = gt/lt/gte/lte`, the condition compares numeric values.
   - If the condition entity is missing/unavailable, task is not blocked by this condition.
 - Defaults:
-  - If `condition_entity` is set and `skip_if_state` is empty, backend defaults `skip_if_state` to `on`.
+  - If `condition_entity` is set and operator is `eq`, empty `skip_if_state` defaults to `on`.
+  - Numeric operators require numeric `skip_if_state` values.
 - UX:
-  - Card suggests likely values for `skip_if_state` based on selected entity domain.
+  - Card suggests likely values for `skip_if_state` based on selected entity domain and selected operator.
+  - Numeric entities (`sensor`, `number`, `input_number`) expose numeric operators in the card.
   - Current entity state and relevant attribute option lists are included in suggestions when available.
 - Import/Export:
   - Condition fields are included in exported JSON.
@@ -348,6 +358,7 @@ data:
   months: [1, 2, 3, 10, 11, 12]
   recurrence: "forever"
   condition_entity: input_boolean.skip_morning_boiler
+  condition_operator: "eq"
   skip_if_state: "on"
   enabled: true
 ```
@@ -364,6 +375,7 @@ data:
   days: [0, 1, 2, 3, 4]
   recurrence: "forever"
   condition_entity: input_boolean.skip_morning_boiler
+  condition_operator: "eq"
   skip_if_state: "on"
   enabled: true
 ```
@@ -388,7 +400,25 @@ data:
   start_date: "2026-05-01"
   end_date: "2026-08-31"
   condition_entity: input_boolean.skip_morning_boiler
+  condition_operator: "eq"
   skip_if_state: "on"
+```
+
+### create_schedule example (numeric condition)
+
+```yaml
+service: boiler_manager.create_schedule
+data:
+  boiler_entity: switch.boiler
+  name: "Block when hot"
+  start_time: "10:00"
+  end_time: "12:00"
+  days: [0, 1, 2, 3, 4]
+  recurrence: "forever"
+  condition_entity: sensor.boiler_temperature
+  condition_operator: "gt"
+  skip_if_state: "50"
+  enabled: true
 ```
 
 ## Entity Behavior
@@ -399,6 +429,7 @@ data:
   - `task_type`
   - `days`, `months`, `recurrence`, `start_date`, `end_date`
   - `condition_entity`, `skip_if_state`
+  - `condition_operator`
   - `timeline_points`, `timeline_label` for timeline tasks
   - `active_now`
 - `active_now` represents the task being active by schedule window/timeline timing

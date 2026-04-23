@@ -96,9 +96,16 @@ const I18N = {
     timeline_time: "שעה",
     timeline_timer: "טיימר",
     condition_entity_label: "ישות תנאי",
+    condition_operator_label: "אופרטור",
     condition_state_label: "דלג אם מצב",
     condition_state_placeholder: "on",
+    condition_op_eq: "=",
+    condition_op_gt: ">",
+    condition_op_lt: "<",
+    condition_op_gte: ">=",
+    condition_op_lte: "<=",
     condition_summary_prefix: "דלג אם",
+    active_task_ends_at: "מסתיימת ב",
     upcoming_task_starts_in: "מתחיל בעוד",
     sensor_temperature: "טמפרטורה",
     sensor_current: "זרם",
@@ -187,9 +194,16 @@ const I18N = {
     timeline_time: "Time",
     timeline_timer: "Timer",
     condition_entity_label: "Condition Entity",
+    condition_operator_label: "Operator",
     condition_state_label: "Skip If State",
     condition_state_placeholder: "on",
+    condition_op_eq: "=",
+    condition_op_gt: ">",
+    condition_op_lt: "<",
+    condition_op_gte: ">=",
+    condition_op_lte: "<=",
     condition_summary_prefix: "Skip if",
+    active_task_ends_at: "Ends at",
     upcoming_task_starts_in: "Starts in",
     sensor_temperature: "Temperature",
     sensor_current: "Current",
@@ -278,9 +292,16 @@ const I18N = {
     timeline_time: "Время",
     timeline_timer: "Таймер",
     condition_entity_label: "Сущность условия",
+    condition_operator_label: "Оператор",
     condition_state_label: "Пропускать при состоянии",
     condition_state_placeholder: "on",
+    condition_op_eq: "=",
+    condition_op_gt: ">",
+    condition_op_lt: "<",
+    condition_op_gte: ">=",
+    condition_op_lte: "<=",
     condition_summary_prefix: "Пропускать если",
+    active_task_ends_at: "Заканчивается в",
     upcoming_task_starts_in: "Запуск через",
     sensor_temperature: "Температура",
     sensor_current: "Ток",
@@ -533,6 +554,19 @@ class BoilerWaterCard extends HTMLElement {
           font-weight: 800;
           text-align: center;
           text-shadow: 0 1px 1px rgba(8, 28, 48, 0.5);
+        }
+
+        .active-task-notice {
+          margin: 0 0 4px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          border: 1px solid rgba(148, 224, 170, 0.58);
+          background: linear-gradient(165deg, rgba(66, 157, 99, 0.32), rgba(30, 109, 63, 0.24));
+          color: #eefef3;
+          font-size: 0.72rem;
+          font-weight: 800;
+          text-align: center;
+          text-shadow: 0 1px 1px rgba(12, 34, 18, 0.45);
         }
 
         .boiler-progress-row {
@@ -1133,6 +1167,10 @@ class BoilerWaterCard extends HTMLElement {
           min-width: 0;
         }
 
+        .schedule-condition-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .schedule-window-fields[hidden],
         .schedule-timeline-fields[hidden],
         .schedule-date-row[hidden] {
@@ -1360,7 +1398,18 @@ class BoilerWaterCard extends HTMLElement {
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          margin-bottom: 10px;
+          margin: 0 0 10px;
+          position: sticky;
+          top: 0;
+          z-index: 6;
+          background: linear-gradient(
+            165deg,
+            rgba(63, 74, 93, 0.98),
+            rgba(55, 66, 85, 0.96)
+          );
+          border-radius: 12px;
+          padding: 8px 8px 10px;
+          box-shadow: 0 2px 10px rgba(14, 27, 51, 0.24);
         }
 
         .timer-modal-title {
@@ -1422,6 +1471,14 @@ class BoilerWaterCard extends HTMLElement {
           display: inline-flex;
           align-items: center;
           gap: 8px;
+        }
+
+        .timer-page-controls[hidden] {
+          display: none !important;
+        }
+
+        .timer-modal-panel.menu-mode-tasks .timer-page-controls {
+          display: none !important;
         }
 
         .timer-page-btn,
@@ -1707,9 +1764,8 @@ class BoilerWaterCard extends HTMLElement {
           .timer-modal-head {
             position: sticky;
             top: 0;
-            background: var(--ha-card-background, var(--card-background-color, #ffffff));
-            z-index: 1;
-            padding-bottom: 6px;
+            z-index: 8;
+            padding: 8px 8px 10px;
             flex-wrap: wrap;
             row-gap: 8px;
           }
@@ -2109,6 +2165,7 @@ class BoilerWaterCard extends HTMLElement {
             <div class="boiler-meta">
               <p class="boiler-stage" id="boiler-stage">Cool Stage</p>
               <p class="upcoming-task-notice" id="upcoming-task-notice" hidden></p>
+              <p class="active-task-notice" id="active-task-notice" hidden></p>
               <div class="sensors-row" id="sensors-row" hidden></div>
               <div class="boiler-progress-row">
                 <p class="boiler-stage-sub" id="boiler-stage-sub">0% warmed</p>
@@ -2253,13 +2310,19 @@ class BoilerWaterCard extends HTMLElement {
                   <datalist id="schedule-condition-entity-list"></datalist>
                 </div>
                 <div class="schedule-field">
+                  <label class="schedule-label" for="schedule-condition-operator-input" id="schedule-condition-operator-label">Operator</label>
+                  <select
+                    class="schedule-select"
+                    id="schedule-condition-operator-input"
+                  ></select>
+                </div>
+                <div class="schedule-field">
                   <label class="schedule-label" for="schedule-condition-state-input" id="schedule-condition-state-label">Skip If State</label>
                   <input
                     class="schedule-input"
                     id="schedule-condition-state-input"
                     type="text"
                     list="schedule-condition-state-list"
-                    placeholder="on"
                     autocomplete="off"
                   />
                   <datalist id="schedule-condition-state-list"></datalist>
@@ -2306,6 +2369,7 @@ class BoilerWaterCard extends HTMLElement {
       boilerMainImage: this.shadowRoot.getElementById("boiler-main-image"),
       boilerStage: this.shadowRoot.getElementById("boiler-stage"),
       upcomingTaskNotice: this.shadowRoot.getElementById("upcoming-task-notice"),
+      activeTaskNotice: this.shadowRoot.getElementById("active-task-notice"),
       boilerStageSub: this.shadowRoot.getElementById("boiler-stage-sub"),
       boilerProgressFill: this.shadowRoot.getElementById("boiler-progress-fill"),
       countdownLabel: this.shadowRoot.getElementById("countdown-label"),
@@ -2367,6 +2431,7 @@ class BoilerWaterCard extends HTMLElement {
       scheduleDateStartLabel: this.shadowRoot.getElementById("schedule-date-start-label"),
       scheduleDateEndLabel: this.shadowRoot.getElementById("schedule-date-end-label"),
       scheduleConditionEntityLabel: this.shadowRoot.getElementById("schedule-condition-entity-label"),
+      scheduleConditionOperatorLabel: this.shadowRoot.getElementById("schedule-condition-operator-label"),
       scheduleConditionStateLabel: this.shadowRoot.getElementById("schedule-condition-state-label"),
       timelinePointsLabel: this.shadowRoot.getElementById("timeline-points-label"),
       scheduleNameInput: this.shadowRoot.getElementById("schedule-name-input"),
@@ -2380,9 +2445,10 @@ class BoilerWaterCard extends HTMLElement {
       scheduleStartDateInput: this.shadowRoot.getElementById("schedule-start-date-input"),
       scheduleEndDateInput: this.shadowRoot.getElementById("schedule-end-date-input"),
       scheduleConditionEntityInput: this.shadowRoot.getElementById("schedule-condition-entity-input"),
+      scheduleConditionOperatorInput: this.shadowRoot.getElementById("schedule-condition-operator-input"),
       scheduleConditionStateInput: this.shadowRoot.getElementById("schedule-condition-state-input"),
-      scheduleConditionEntityList: this.shadowRoot.getElementById("schedule-condition-entity-list"),
       scheduleConditionStateList: this.shadowRoot.getElementById("schedule-condition-state-list"),
+      scheduleConditionEntityList: this.shadowRoot.getElementById("schedule-condition-entity-list"),
       scheduleDays: this.shadowRoot.getElementById("schedule-days"),
       scheduleMonths: this.shadowRoot.getElementById("schedule-months"),
       timelinePoints: this.shadowRoot.getElementById("timeline-points"),
@@ -2427,6 +2493,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.scheduleRecurrenceRangeBtn?.addEventListener("click", () => this._setScheduleRecurrence("range"));
     this._elements.scheduleConditionEntityInput?.addEventListener("input", () => this._onConditionEntityChanged());
     this._elements.scheduleConditionEntityInput?.addEventListener("change", () => this._onConditionEntityChanged());
+    this._elements.scheduleConditionOperatorInput?.addEventListener("change", () => this._onConditionOperatorChanged());
     this._elements.timelinePointAddBtn?.addEventListener("click", () => this._addTimelinePointRow());
     this._elements.scheduleForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -2581,11 +2648,11 @@ class BoilerWaterCard extends HTMLElement {
       if (this._elements.scheduleConditionEntityLabel) {
         this._elements.scheduleConditionEntityLabel.textContent = this._t("condition_entity_label");
       }
+      if (this._elements.scheduleConditionOperatorLabel) {
+        this._elements.scheduleConditionOperatorLabel.textContent = this._t("condition_operator_label");
+      }
       if (this._elements.scheduleConditionStateLabel) {
         this._elements.scheduleConditionStateLabel.textContent = this._t("condition_state_label");
-      }
-      if (this._elements.scheduleConditionStateInput) {
-        this._elements.scheduleConditionStateInput.placeholder = this._t("condition_state_placeholder");
       }
       if (this._elements.timelinePointsLabel) {
         this._elements.timelinePointsLabel.textContent = this._t("timeline_points");
@@ -2615,6 +2682,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncStatus(boiler, timer);
     this._syncCountdown(timer, boiler);
     this._syncSensors();
+    this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
     this._syncError(boiler, duration, timer, scripts);
     this._syncControls(boiler, duration, timer, scripts);
@@ -2918,6 +2986,7 @@ class BoilerWaterCard extends HTMLElement {
     const boiler = this._hass.states[this._config.boiler_entity];
     const duration = this._hass.states[this._config.duration_entity];
     this._syncCountdown(timer, boiler);
+    this._syncActiveTaskNotice();
     this._syncUpcomingTaskNotice();
     this._syncHeatingVisual(boiler, timer, duration);
   }
@@ -3310,6 +3379,10 @@ class BoilerWaterCard extends HTMLElement {
   _setMenuMode(mode) {
     this._menuMode = mode === "tasks" ? "tasks" : "timer";
     const isTimer = this._menuMode === "timer";
+    if (this._elements.timerModalPanel) {
+      this._elements.timerModalPanel.classList.toggle("menu-mode-tasks", !isTimer);
+      this._elements.timerModalPanel.classList.toggle("menu-mode-timer", isTimer);
+    }
     if (this._elements.modalTimerView) {
       this._elements.modalTimerView.hidden = !isTimer;
     }
@@ -3450,6 +3523,7 @@ class BoilerWaterCard extends HTMLElement {
     const recurrence = this._normalizedRecurrenceForExport(attrs.recurrence);
     const enabled = String(taskState.state || "").toLowerCase() === "on";
     const conditionEntity = String(attrs.condition_entity || "").trim();
+    const conditionOperator = this._normalizeConditionOperator(attrs.condition_operator);
     const skipIfState = String(attrs.skip_if_state || "").trim();
 
     const base = {
@@ -3461,6 +3535,7 @@ class BoilerWaterCard extends HTMLElement {
       ...(attrs.start_date ? { start_date: String(attrs.start_date).trim() } : {}),
       ...(attrs.end_date ? { end_date: String(attrs.end_date).trim() } : {}),
       ...(conditionEntity ? { condition_entity: conditionEntity } : {}),
+      ...(conditionEntity ? { condition_operator: conditionOperator } : {}),
       ...(conditionEntity && skipIfState ? { skip_if_state: skipIfState } : {}),
       enabled,
     };
@@ -3611,6 +3686,7 @@ class BoilerWaterCard extends HTMLElement {
     this._editingTaskId = null;
     this._resetScheduleForm();
     this._refreshConditionEntityOptions();
+    this._refreshConditionOperatorOptions("");
     this._refreshConditionStateOptions("");
     if (this._elements.scheduleModalTitle) {
       this._elements.scheduleModalTitle.textContent = this._t("task_add_title");
@@ -3806,7 +3882,7 @@ class BoilerWaterCard extends HTMLElement {
 
   _onConditionEntityChanged() {
     const entityId = String(this._elements.scheduleConditionEntityInput?.value || "").trim();
-    const suggestions = this._conditionStateSuggestionsForEntity(entityId);
+    this._refreshConditionOperatorOptions(entityId);
     this._refreshConditionStateOptions(entityId);
     const stateInput = this._elements.scheduleConditionStateInput;
     if (!stateInput) {
@@ -3816,33 +3892,139 @@ class BoilerWaterCard extends HTMLElement {
     const hasEntity = entityId.includes(".");
     const currentState = String(stateInput.value || "").trim();
     if (hasEntity && !currentState) {
-      stateInput.value = suggestions[0] || "on";
+      const operator = this._normalizeConditionOperator(this._elements.scheduleConditionOperatorInput?.value);
+      const suggestions = this._conditionStateSuggestionsForEntity(entityId, operator);
+      stateInput.value = suggestions[0] || (operator === "eq" ? "on" : "0");
     }
   }
 
-  _refreshConditionStateOptions(entityId = null) {
-    const list = this._elements.scheduleConditionStateList;
-    if (!list) {
+  _onConditionOperatorChanged() {
+    this._refreshConditionStateOptions();
+  }
+
+  _refreshConditionOperatorOptions(entityId = null) {
+    const select = this._elements.scheduleConditionOperatorInput;
+    if (!select) {
       return;
     }
 
     const resolvedEntityId = String(
       entityId ?? this._elements.scheduleConditionEntityInput?.value ?? ""
     ).trim();
-    const suggestions = this._conditionStateSuggestionsForEntity(resolvedEntityId);
+    const operatorOptions = this._conditionOperatorOptionsForEntity(resolvedEntityId);
+    const currentValue = this._normalizeConditionOperator(select.value);
+    const nextValue = operatorOptions.includes(currentValue) ? currentValue : operatorOptions[0];
+
+    select.innerHTML = "";
+    operatorOptions.forEach((operator) => {
+      const option = document.createElement("option");
+      option.value = operator;
+      option.textContent = this._conditionOperatorLabel(operator);
+      if (operator === nextValue) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    if (select.options.length > 0 && select.selectedIndex < 0) {
+      select.selectedIndex = 0;
+    }
+  }
+
+  _refreshConditionStateOptions(entityId = null) {
+    const input = this._elements.scheduleConditionStateInput;
+    const list = this._elements.scheduleConditionStateList;
+    if (!input || !list) {
+      return;
+    }
+
+    const resolvedEntityId = String(
+      entityId ?? this._elements.scheduleConditionEntityInput?.value ?? ""
+    ).trim();
+    const operator = this._normalizeConditionOperator(this._elements.scheduleConditionOperatorInput?.value);
+    const suggestions = this._conditionStateSuggestionsForEntity(resolvedEntityId, operator);
+    const currentValue = String(input.value || "").trim();
+    const options = [...suggestions];
+    if (currentValue && !options.includes(currentValue)) {
+      options.unshift(currentValue);
+    }
+    if (options.length === 0) {
+      options.push(operator === "eq" ? "on" : "0");
+    }
 
     list.innerHTML = "";
-    suggestions.forEach((value) => {
+    options.forEach((value) => {
       const option = document.createElement("option");
       option.value = value;
       list.appendChild(option);
     });
+
+    if (!currentValue && resolvedEntityId.includes(".")) {
+      input.value = options[0] || (operator === "eq" ? "on" : "0");
+    }
+    input.placeholder = options[0] || this._t("condition_state_placeholder");
   }
 
-  _conditionStateSuggestionsForEntity(entityId) {
+  _normalizeConditionOperator(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    const aliases = {
+      "": "eq",
+      "=": "eq",
+      "==": "eq",
+      eq: "eq",
+      ">": "gt",
+      gt: "gt",
+      "<": "lt",
+      lt: "lt",
+      ">=": "gte",
+      gte: "gte",
+      "<=": "lte",
+      lte: "lte",
+    };
+    return aliases[normalized] || "eq";
+  }
+
+  _conditionOperatorLabel(operator) {
+    const normalized = this._normalizeConditionOperator(operator);
+    const map = {
+      eq: this._t("condition_op_eq"),
+      gt: this._t("condition_op_gt"),
+      lt: this._t("condition_op_lt"),
+      gte: this._t("condition_op_gte"),
+      lte: this._t("condition_op_lte"),
+    };
+    return map[normalized] || this._t("condition_op_eq");
+  }
+
+  _conditionOperatorOptionsForEntity(entityId) {
+    if (!this._isNumericConditionEntity(entityId)) {
+      return ["eq"];
+    }
+    return ["eq", "gt", "lt", "gte", "lte"];
+  }
+
+  _isNumericConditionEntity(entityId) {
     const normalizedEntityId = String(entityId || "").trim();
     if (!normalizedEntityId || !normalizedEntityId.includes(".")) {
-      return [];
+      return false;
+    }
+
+    const [domain] = normalizedEntityId.split(".", 1);
+    const normalizedDomain = String(domain || "").toLowerCase();
+    if (["sensor", "number", "input_number"].includes(normalizedDomain)) {
+      return true;
+    }
+
+    const state = String(this._hass?.states?.[normalizedEntityId]?.state || "").trim();
+    const numeric = Number.parseFloat(state);
+    return Number.isFinite(numeric);
+  }
+
+  _conditionStateSuggestionsForEntity(entityId, operator = null) {
+    const normalizedOperator = this._normalizeConditionOperator(operator);
+    const normalizedEntityId = String(entityId || "").trim();
+    if (!normalizedEntityId || !normalizedEntityId.includes(".")) {
+      return normalizedOperator === "eq" ? ["on", "off"] : ["0"];
     }
 
     const [domain] = normalizedEntityId.split(".", 1);
@@ -3859,6 +4041,22 @@ class BoilerWaterCard extends HTMLElement {
       seen.add(normalizedValue);
       suggestions.push(normalizedValue);
     };
+
+    if (normalizedOperator !== "eq") {
+      const currentNumeric = Number.parseFloat(String(entity?.state || "").trim());
+      if (Number.isFinite(currentNumeric)) {
+        add(String(currentNumeric));
+      }
+      const min = Number.parseFloat(String(attrs?.min ?? ""));
+      const max = Number.parseFloat(String(attrs?.max ?? ""));
+      if (Number.isFinite(min)) {
+        add(String(min));
+      }
+      if (Number.isFinite(max)) {
+        add(String(max));
+      }
+      return suggestions.length > 0 ? suggestions : ["0"];
+    }
 
     const domainDefaults = {
       light: ["on", "off"],
@@ -4092,6 +4290,10 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleConditionEntityInput) {
       this._elements.scheduleConditionEntityInput.value = String(attrs.condition_entity || "").trim();
     }
+    if (this._elements.scheduleConditionOperatorInput) {
+      this._elements.scheduleConditionOperatorInput.value = this._normalizeConditionOperator(attrs.condition_operator);
+    }
+    this._refreshConditionOperatorOptions(String(attrs.condition_entity || "").trim());
     if (this._elements.scheduleConditionStateInput) {
       this._elements.scheduleConditionStateInput.value = String(attrs.skip_if_state || "").trim();
     }
@@ -4227,10 +4429,13 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.scheduleConditionEntityInput) {
       this._elements.scheduleConditionEntityInput.value = "";
     }
+    if (this._elements.scheduleConditionOperatorInput) {
+      this._elements.scheduleConditionOperatorInput.value = "eq";
+    }
     if (this._elements.scheduleConditionStateInput) {
       this._elements.scheduleConditionStateInput.value = "";
-      this._elements.scheduleConditionStateInput.placeholder = this._t("condition_state_placeholder");
     }
+    this._refreshConditionOperatorOptions("");
     this._refreshConditionStateOptions("");
     const dayButtons = Array.from(this.shadowRoot.querySelectorAll(".schedule-day"));
     dayButtons.forEach((button) => {
@@ -4260,11 +4465,15 @@ class BoilerWaterCard extends HTMLElement {
     const startDate = String(this._elements.scheduleStartDateInput?.value || "").trim();
     const endDate = String(this._elements.scheduleEndDateInput?.value || "").trim();
     const conditionEntity = String(this._elements.scheduleConditionEntityInput?.value || "").trim();
+    let conditionOperator = this._normalizeConditionOperator(
+      this._elements.scheduleConditionOperatorInput?.value || "eq"
+    );
     let skipIfState = String(this._elements.scheduleConditionStateInput?.value || "").trim();
     if (conditionEntity && !skipIfState) {
-      skipIfState = "on";
+      skipIfState = conditionOperator === "eq" ? "on" : "0";
     }
     if (!conditionEntity) {
+      conditionOperator = "eq";
       skipIfState = "";
     }
     const includeDateRange = recurrence === "range";
@@ -4278,6 +4487,7 @@ class BoilerWaterCard extends HTMLElement {
       ...(includeDateRange && startDate ? { start_date: startDate } : {}),
       ...(includeDateRange && endDate ? { end_date: endDate } : {}),
       condition_entity: conditionEntity,
+      condition_operator: conditionOperator,
       skip_if_state: skipIfState,
       enabled: true,
     };
@@ -4543,6 +4753,149 @@ class BoilerWaterCard extends HTMLElement {
     return `${attrs.start_time || "--:--"} - ${attrs.end_time || "--:--"}${dayText}`;
   }
 
+  _syncActiveTaskNotice() {
+    const notice = this._elements.activeTaskNotice;
+    if (!notice) {
+      return;
+    }
+
+    const active = this._currentActiveTask();
+    if (!active) {
+      notice.hidden = true;
+      notice.textContent = "";
+      return;
+    }
+
+    const label = active.name || this._t("tasks_title");
+    notice.textContent = `${label} • ${this._t("active_task_ends_at")} ${this._formatClockTime(active.endTs)}`;
+    notice.hidden = false;
+  }
+
+  _currentActiveTask() {
+    const nowTs = Date.now();
+    let nearest = null;
+
+    this._taskSwitchEntities().forEach((taskState) => {
+      const enabled = String(taskState?.state || "").toLowerCase() === "on";
+      if (!enabled) {
+        return;
+      }
+
+      const attrs = taskState?.attributes || {};
+      if (!this._asTruthy(attrs.active_now)) {
+        return;
+      }
+
+      const endTs = this._taskCurrentEndTimestamp(attrs, nowTs);
+      if (!Number.isFinite(endTs) || endTs <= nowTs) {
+        return;
+      }
+
+      if (!nearest || endTs < nearest.endTs) {
+        nearest = {
+          endTs,
+          name: String(attrs.task_name || attrs.friendly_name || attrs.task_id || "").trim(),
+        };
+      }
+    });
+
+    return nearest;
+  }
+
+  _taskCurrentEndTimestamp(attrs, nowTs) {
+    const now = new Date(nowTs);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const taskType = String(attrs?.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
+
+    if (taskType === "timeline" && Array.isArray(attrs?.timeline_points)) {
+      let activeEnd = null;
+      const candidates = [yesterday, today];
+      candidates.forEach((dateRef) => {
+        if (!this._taskMatchesDate(attrs, dateRef)) {
+          return;
+        }
+        attrs.timeline_points.forEach((point) => {
+          const startMinutes = this._timeToMinutes(point?.at);
+          const durationMinutes = this._timelinePointDurationMinutes(point);
+          if (startMinutes === null || durationMinutes === null || durationMinutes <= 0) {
+            return;
+          }
+
+          const start = new Date(dateRef);
+          start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+          const endTs = start.getTime() + (durationMinutes * 60 * 1000);
+          const startTs = start.getTime();
+          if (nowTs >= startTs && nowTs < endTs) {
+            if (activeEnd === null || endTs < activeEnd) {
+              activeEnd = endTs;
+            }
+          }
+        });
+      });
+      return activeEnd;
+    }
+
+    const startMinutes = this._timeToMinutes(attrs?.start_time);
+    const endMinutes = this._timeToMinutes(attrs?.end_time);
+    if (startMinutes === null || endMinutes === null) {
+      return null;
+    }
+
+    const candidates = [yesterday, today];
+    for (const dateRef of candidates) {
+      if (!this._taskMatchesDate(attrs, dateRef)) {
+        continue;
+      }
+
+      const start = new Date(dateRef);
+      start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+      const end = new Date(dateRef);
+      if (endMinutes <= startMinutes) {
+        end.setDate(end.getDate() + 1);
+      }
+      end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+
+      const startTs = start.getTime();
+      const endTs = end.getTime();
+      if (nowTs >= startTs && nowTs < endTs) {
+        return endTs;
+      }
+    }
+
+    return null;
+  }
+
+  _timelinePointDurationMinutes(point) {
+    const minutesRaw = Number.parseInt(String(point?.duration_minutes ?? ""), 10);
+    if (Number.isInteger(minutesRaw) && minutesRaw > 0) {
+      return minutesRaw;
+    }
+
+    const fromOption = this._optionToMinutes(point?.duration_option);
+    if (Number.isInteger(fromOption) && fromOption > 0) {
+      return fromOption;
+    }
+
+    return null;
+  }
+
+  _formatClockTime(ts) {
+    if (!Number.isFinite(ts)) {
+      return "--:--";
+    }
+    const date = new Date(ts);
+    if (!Number.isFinite(date.getTime())) {
+      return "--:--";
+    }
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
+
   _syncUpcomingTaskNotice() {
     const notice = this._elements.upcomingTaskNotice;
     if (!notice) {
@@ -4786,6 +5139,7 @@ class BoilerWaterCard extends HTMLElement {
         timeline_label: taskState.attributes?.timeline_label || "",
         days: Array.isArray(taskState.attributes?.days) ? taskState.attributes.days : [],
         condition_entity: taskState.attributes?.condition_entity || "",
+        condition_operator: taskState.attributes?.condition_operator || "",
         skip_if_state: taskState.attributes?.skip_if_state || "",
       })),
     });
@@ -4822,9 +5176,11 @@ class BoilerWaterCard extends HTMLElement {
       const localizedDays = this._formatScheduleDays(attrs.days);
       const daysLabel = localizedDays ? ` · ${localizedDays}` : "";
       const conditionEntity = String(attrs.condition_entity || "").trim();
+      const conditionOperator = this._normalizeConditionOperator(attrs.condition_operator);
       const conditionState = String(attrs.skip_if_state || "").trim();
+      const conditionValue = conditionState || (conditionOperator === "eq" ? "on" : "0");
       const conditionLabel = conditionEntity
-        ? ` · ${this._t("condition_summary_prefix")} ${conditionEntity}=${conditionState || "on"}`
+        ? ` · ${this._t("condition_summary_prefix")} ${conditionEntity} ${this._conditionOperatorLabel(conditionOperator)} ${conditionValue}`
         : "";
       if (attrs.task_type === "timeline") {
         const timeline = String(attrs.timeline_label || "").trim();

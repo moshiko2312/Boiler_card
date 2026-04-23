@@ -11,7 +11,14 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import entity_registry as er
 
-from .const import ATTR_TASK_ID, ATTR_TASK_TYPE, DOMAIN, signal_state_updated, signal_tasks_updated
+from .const import (
+    ATTR_CONDITION_OPERATOR,
+    ATTR_TASK_ID,
+    ATTR_TASK_TYPE,
+    DOMAIN,
+    signal_state_updated,
+    signal_tasks_updated,
+)
 from .manager import BoilerManager, BoilerTask, format_days_for_display, format_timeline_for_display
 
 
@@ -123,6 +130,7 @@ class BoilerTaskSwitch(SwitchEntity):
             "start_date": task.start_date,
             "end_date": task.end_date,
             "condition_entity": task.condition_entity,
+            ATTR_CONDITION_OPERATOR: task.condition_operator,
             "skip_if_state": task.skip_if_state,
             "timeline_points": [point.as_dict() for point in task.timeline_points],
             "timeline_label": format_timeline_for_display(task.timeline_points),

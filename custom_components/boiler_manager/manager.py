@@ -18,6 +18,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ATTR_CONDITION_OPERATOR,
     ATTR_CONDITION_ENTITY,
     ATTR_DAYS,
     ATTR_DURATION,
@@ -42,6 +43,12 @@ from .const import (
     CONF_NAME,
     CONF_POWER_SENSOR,
     CONF_TEMPERATURE_SENSOR,
+    CONDITION_OPERATOR_EQ,
+    CONDITION_OPERATOR_GT,
+    CONDITION_OPERATOR_GTE,
+    CONDITION_OPERATOR_LT,
+    CONDITION_OPERATOR_LTE,
+    CONDITION_OPERATORS,
     DOMAIN,
     DAY_NAME_TO_INDEX,
     DEFAULT_NAME,
@@ -104,6 +111,7 @@ class BoilerTask:
     start_date: str | None
     end_date: str | None
     condition_entity: str | None
+    condition_operator: str | None
     skip_if_state: str | None
     enabled: bool
     timeline_points: list[BoilerTimelinePoint] = field(default_factory=list)
@@ -124,6 +132,7 @@ class BoilerTask:
             ATTR_START_DATE: self.start_date,
             ATTR_END_DATE: self.end_date,
             ATTR_CONDITION_ENTITY: self.condition_entity,
+            ATTR_CONDITION_OPERATOR: self.condition_operator,
             ATTR_SKIP_IF_STATE: self.skip_if_state,
             ATTR_ENABLED: self.enabled,
             "once_started": self.once_started,
@@ -263,6 +272,7 @@ class BoilerManager:
         start_date: str | None = None,
         end_date: str | None = None,
         condition_entity: str | None = None,
+        condition_operator: str | None = None,
         skip_if_state: str | None = None,
         enabled: bool,
     ) -> BoilerTask:
@@ -277,8 +287,13 @@ class BoilerManager:
             end_date,
             normalized_recurrence,
         )
-        normalized_condition_entity, normalized_skip_if_state = _normalize_task_condition(
+        (
+            normalized_condition_entity,
+            normalized_condition_operator,
+            normalized_skip_if_state,
+        ) = _normalize_task_condition(
             condition_entity,
+            condition_operator,
             skip_if_state,
         )
 
@@ -298,6 +313,7 @@ class BoilerManager:
             start_date=normalized_start_date,
             end_date=normalized_end_date,
             condition_entity=normalized_condition_entity,
+            condition_operator=normalized_condition_operator,
             skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
             once_started=False,
@@ -329,6 +345,7 @@ class BoilerManager:
         start_date: str | None = None,
         end_date: str | None = None,
         condition_entity: str | None = None,
+        condition_operator: str | None = None,
         skip_if_state: str | None = None,
         enabled: bool,
     ) -> BoilerTask:
@@ -341,8 +358,13 @@ class BoilerManager:
             end_date,
             normalized_recurrence,
         )
-        normalized_condition_entity, normalized_skip_if_state = _normalize_task_condition(
+        (
+            normalized_condition_entity,
+            normalized_condition_operator,
+            normalized_skip_if_state,
+        ) = _normalize_task_condition(
             condition_entity,
+            condition_operator,
             skip_if_state,
         )
         timeline_points = _normalize_timeline_points(points)
@@ -364,6 +386,7 @@ class BoilerManager:
             start_date=normalized_start_date,
             end_date=normalized_end_date,
             condition_entity=normalized_condition_entity,
+            condition_operator=normalized_condition_operator,
             skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
             once_started=False,
@@ -429,6 +452,7 @@ class BoilerManager:
         start_date: str | None = None,
         end_date: str | None = None,
         condition_entity: str | None = None,
+        condition_operator: str | None = None,
         skip_if_state: str | None = None,
         enabled: bool | None = None,
     ) -> BoilerTask:
@@ -493,11 +517,23 @@ class BoilerManager:
                 task.once_started = False
             if recurrence is not None and next_recurrence != RECURRENCE_ONCE:
                 task.once_started = False
-            if condition_entity is not None or skip_if_state is not None:
+            if (
+                condition_entity is not None
+                or condition_operator is not None
+                or skip_if_state is not None
+            ):
                 next_condition_entity = task.condition_entity if condition_entity is None else condition_entity
+                next_condition_operator = (
+                    task.condition_operator if condition_operator is None else condition_operator
+                )
                 next_skip_if_state = task.skip_if_state if skip_if_state is None else skip_if_state
-                task.condition_entity, task.skip_if_state = _normalize_task_condition(
+                (
+                    task.condition_entity,
+                    task.condition_operator,
+                    task.skip_if_state,
+                ) = _normalize_task_condition(
                     next_condition_entity,
+                    next_condition_operator,
                     next_skip_if_state,
                 )
             if enabled is not None:
@@ -859,16 +895,34 @@ class BoilerManager:
     def _task_is_blocked_by_condition(self, task: BoilerTask) -> bool:
         """Return True when task should be skipped due to external entity condition."""
         condition_entity = str(task.condition_entity or "").strip()
-        skip_if_state = str(task.skip_if_state or "").strip().lower()
-        if not condition_entity or not skip_if_state:
+        condition_operator = _normalize_condition_operator(task.condition_operator)
+        condition_value = str(task.skip_if_state or "").strip()
+        if not condition_entity or not condition_value:
             return False
 
         condition_state = self.hass.states.get(condition_entity)
         if condition_state is None:
             return False
 
-        current_state = str(condition_state.state or "").strip().lower()
-        return current_state == skip_if_state
+        current_state = str(condition_state.state or "").strip()
+        if condition_operator == CONDITION_OPERATOR_EQ:
+            return current_state.lower() == condition_value.lower()
+
+        current_numeric = _parse_float(current_state)
+        expected_numeric = _parse_float(condition_value)
+        if current_numeric is None or expected_numeric is None:
+            return False
+
+        if condition_operator == CONDITION_OPERATOR_GT:
+            return current_numeric > expected_numeric
+        if condition_operator == CONDITION_OPERATOR_LT:
+            return current_numeric < expected_numeric
+        if condition_operator == CONDITION_OPERATOR_GTE:
+            return current_numeric >= expected_numeric
+        if condition_operator == CONDITION_OPERATOR_LTE:
+            return current_numeric <= expected_numeric
+
+        return False
 
     def _async_snooze_active_tasks_until_segment_end(self, now: datetime) -> None:
         """Skip currently active task segments until they naturally end."""
@@ -986,8 +1040,9 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_END_DATE),
         recurrence,
     )
-    condition_entity, skip_if_state = _normalize_task_condition(
+    condition_entity, condition_operator, skip_if_state = _normalize_task_condition(
         raw.get(ATTR_CONDITION_ENTITY),
+        raw.get(ATTR_CONDITION_OPERATOR),
         raw.get(ATTR_SKIP_IF_STATE),
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
@@ -1006,6 +1061,7 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         start_date=start_date,
         end_date=end_date,
         condition_entity=condition_entity,
+        condition_operator=condition_operator,
         skip_if_state=skip_if_state,
         enabled=enabled,
         once_started=once_started,
@@ -1026,6 +1082,7 @@ def _task_to_export_dict(task: BoilerTask) -> dict:
         ATTR_START_DATE: task.start_date,
         ATTR_END_DATE: task.end_date,
         ATTR_CONDITION_ENTITY: task.condition_entity,
+        ATTR_CONDITION_OPERATOR: task.condition_operator,
         ATTR_SKIP_IF_STATE: task.skip_if_state,
         ATTR_ENABLED: bool(task.enabled),
     }
@@ -1049,8 +1106,9 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_END_DATE),
         recurrence,
     )
-    condition_entity, skip_if_state = _normalize_task_condition(
+    condition_entity, condition_operator, skip_if_state = _normalize_task_condition(
         raw.get(ATTR_CONDITION_ENTITY),
+        raw.get(ATTR_CONDITION_OPERATOR),
         raw.get(ATTR_SKIP_IF_STATE),
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
@@ -1091,6 +1149,7 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         start_date=start_date,
         end_date=end_date,
         condition_entity=condition_entity,
+        condition_operator=condition_operator,
         skip_if_state=skip_if_state,
         enabled=enabled,
         once_started=False,
@@ -1195,20 +1254,64 @@ def _normalize_task_type(value: str | None) -> str:
 
 def _normalize_task_condition(
     condition_entity: str | None,
+    condition_operator: str | None,
     skip_if_state: str | None,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, str | None]:
     """Normalize optional skip condition fields."""
     entity = str(condition_entity or "").strip()
+    operator = _normalize_condition_operator(condition_operator)
     state = str(skip_if_state or "").strip()
 
     if not entity:
-        return None, None
+        return None, None, None
     if "." not in entity:
         raise BoilerManagerError(f"Invalid condition entity id: {condition_entity}")
     if not state:
-        state = "on"
+        if operator == CONDITION_OPERATOR_EQ:
+            state = "on"
+        else:
+            raise BoilerManagerError("Condition value is required for numeric operators")
 
-    return entity, state
+    if operator != CONDITION_OPERATOR_EQ and _parse_float(state) is None:
+        raise BoilerManagerError(
+            f"Condition value must be numeric for operator '{operator}': {skip_if_state}"
+        )
+
+    return entity, operator, state
+
+
+def _normalize_condition_operator(value: str | None) -> str:
+    """Normalize condition operator token."""
+    normalized = str(value or "").strip().lower()
+    aliases = {
+        "": CONDITION_OPERATOR_EQ,
+        "=": CONDITION_OPERATOR_EQ,
+        "==": CONDITION_OPERATOR_EQ,
+        "eq": CONDITION_OPERATOR_EQ,
+        ">": CONDITION_OPERATOR_GT,
+        "gt": CONDITION_OPERATOR_GT,
+        "<": CONDITION_OPERATOR_LT,
+        "lt": CONDITION_OPERATOR_LT,
+        ">=": CONDITION_OPERATOR_GTE,
+        "gte": CONDITION_OPERATOR_GTE,
+        "<=": CONDITION_OPERATOR_LTE,
+        "lte": CONDITION_OPERATOR_LTE,
+    }
+    operator = aliases.get(normalized)
+    if operator is None or operator not in CONDITION_OPERATORS:
+        raise BoilerManagerError(f"Unsupported condition operator: {value}")
+    return operator
+
+
+def _parse_float(value: str | None) -> float | None:
+    """Parse numeric string into float, return None if invalid."""
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 def _normalize_timeline_points(value: list[dict] | None) -> list[BoilerTimelinePoint]:
