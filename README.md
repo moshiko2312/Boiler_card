@@ -45,7 +45,7 @@ Custom boiler control solution for Home Assistant with:
   - Multiple points per day
   - Each point uses existing timer options (same as timer picker)
   - Overlap behavior: extends until latest end time (max end wins)
-- Tasks list sorted by the **next upcoming event** (chronological order)
+- Tasks list uses a **stable order** (start time -> name -> task id) to keep row/button mapping fixed during repeated toggles
 - Active task notice in card with current task end time
 - Vacation mode toggle directly in Tasks tab
 - Vacation mode safety behavior:
@@ -363,6 +363,12 @@ switcher_timer_values: "15,30,45,60,90,120"
   - **Window list** — full read-only list from the JSON (labels, start→end, kind, past/now/upcoming). It does not assign rules per row; it is for verification and planning.
   - **Per-task exceptions** — still use the task editor **Condition** block (`condition_entity`, `condition_operator`, `skip_if_state`) if one task needs different logic than the global task rule.
 - **Card editor:** Hebcal on/off, optional manual JSON path, entry id helpers — **not** the duplicate timer/task/scope controls (those stay in the tab).
+- **Task editor integration (compact mode):**
+  - In `Type`, choose `Holidays/Shabbat` to reveal per-task Hebcal controls directly inside the Time section.
+  - When `Event type = Shabbat`, holiday subtype options are hidden.
+  - `Phase = start` autofills/locks start time from next entry time.
+  - `Phase = end` switches end-time control to timer-duration selection (same options as timeline), then derives start time automatically.
+  - `Holiday + Yom Tov` follows the same start/end behavior as Shabbat.
 
 ### Import / Export (From Card UI)
 
@@ -485,9 +491,10 @@ Import confirmation:
 
 ### Task Order In List
 
-- Tasks window always sorts by the next real execution time
-- The closest upcoming task is first
-- Tasks with no upcoming execution (for now) are pushed lower
+- Tasks window uses a stable deterministic order to prevent row movement while toggling:
+  - by `start_time`
+  - then by task name
+  - then by task id/entity id
 
 ## Sensor Display (Card Only)
 

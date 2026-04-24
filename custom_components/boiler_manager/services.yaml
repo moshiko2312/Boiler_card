@@ -121,6 +121,26 @@ create_schedule:
       name: Skip If State
       description: Condition value. For eq compares as state text, for gt/lt/gte/lte compares numerically.
       example: "30"
+    trigger_mode:
+      name: Trigger Mode
+      description: schedule (default) or hebcal_event.
+      example: "hebcal_event"
+    hebcal_event_kind:
+      name: Hebcal Event Kind
+      description: shabbat or holiday (used when trigger_mode=hebcal_event).
+      example: "shabbat"
+    hebcal_event_phase:
+      name: Hebcal Event Phase
+      description: start or end (used when trigger_mode=hebcal_event).
+      example: "start"
+    hebcal_holiday_mode:
+      name: Hebcal Holiday Mode
+      description: all, yomtov (holiday behaves like Shabbat), or regular (non-yomtov holidays only).
+      example: "yomtov"
+    hebcal_offset_minutes:
+      name: Hebcal Offset Minutes
+      description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
+      example: -120
     enabled:
       name: Enabled
       description: Enable task on creation.
@@ -186,6 +206,26 @@ create_timeline:
       name: Skip If State
       description: Condition value. For eq compares as state text, for gt/lt/gte/lte compares numerically.
       example: "50"
+    trigger_mode:
+      name: Trigger Mode
+      description: schedule (default) or hebcal_event.
+      example: "hebcal_event"
+    hebcal_event_kind:
+      name: Hebcal Event Kind
+      description: shabbat or holiday (used when trigger_mode=hebcal_event).
+      example: "holiday"
+    hebcal_event_phase:
+      name: Hebcal Event Phase
+      description: start or end (used when trigger_mode=hebcal_event).
+      example: "start"
+    hebcal_holiday_mode:
+      name: Hebcal Holiday Mode
+      description: all, yomtov (holiday behaves like Shabbat), or regular (non-yomtov holidays only).
+      example: "regular"
+    hebcal_offset_minutes:
+      name: Hebcal Offset Minutes
+      description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
+      example: -90
     enabled:
       name: Enabled
       description: Enable timeline on creation.
@@ -266,6 +306,26 @@ update_schedule:
       name: Skip If State
       description: Condition value. For eq compares as state text, for gt/lt/gte/lte compares numerically.
       example: "25"
+    trigger_mode:
+      name: Trigger Mode
+      description: schedule or hebcal_event.
+      example: "hebcal_event"
+    hebcal_event_kind:
+      name: Hebcal Event Kind
+      description: shabbat or holiday (used when trigger_mode=hebcal_event).
+      example: "shabbat"
+    hebcal_event_phase:
+      name: Hebcal Event Phase
+      description: start or end (used when trigger_mode=hebcal_event).
+      example: "end"
+    hebcal_holiday_mode:
+      name: Hebcal Holiday Mode
+      description: all, yomtov (holiday behaves like Shabbat), or regular (non-yomtov holidays only).
+      example: "all"
+    hebcal_offset_minutes:
+      name: Hebcal Offset Minutes
+      description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
+      example: 30
     enabled:
       name: Enabled
       description: Enable/disable this task.

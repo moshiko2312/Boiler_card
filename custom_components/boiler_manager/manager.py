@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
+import json
 import logging
 import re
 import uuid
@@ -34,6 +35,10 @@ from .const import (
     ATTR_ENABLED,
     ATTR_END_TIME,
     ATTR_END_DATE,
+    ATTR_HEBCAL_EVENT_KIND,
+    ATTR_HEBCAL_EVENT_PHASE,
+    ATTR_HEBCAL_HOLIDAY_MODE,
+    ATTR_HEBCAL_OFFSET_MINUTES,
     ATTR_MINUTES,
     ATTR_MONTHS,
     ATTR_POINT_TIME,
@@ -43,6 +48,7 @@ from .const import (
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
+    ATTR_TRIGGER_MODE,
     ATTR_TIMELINE_POINTS,
     ATTR_SKIP_IF_STATE,
     CONF_BOILER_ENTITY,
@@ -78,6 +84,18 @@ from .const import (
     TASK_TYPE_TIMELINE,
     TASK_TYPE_WINDOW,
     TASK_TYPES,
+    TRIGGER_MODE_HEBCAL_EVENT,
+    TRIGGER_MODE_SCHEDULE,
+    TRIGGER_MODES,
+    HEBCAL_EVENT_KIND_HOLIDAY,
+    HEBCAL_EVENT_KIND_SHABBAT,
+    HEBCAL_EVENT_KINDS,
+    HEBCAL_EVENT_PHASE_START,
+    HEBCAL_EVENT_PHASES,
+    HEBCAL_HOLIDAY_MODE_ALL,
+    HEBCAL_HOLIDAY_MODE_REGULAR,
+    HEBCAL_HOLIDAY_MODE_YOMTOV,
+    HEBCAL_HOLIDAY_MODES,
     WEEKDAY_LABELS,
     signal_state_updated,
     signal_tasks_updated,
@@ -92,6 +110,8 @@ STATE_KEY_VACATION_MODE = "vacation_mode"
 SWITCHER_TIMER_MAX_MINUTES = 150
 SWITCHER_TIMER_DOMAIN = "switcher_kis"
 SWITCHER_TIMER_SERVICE = "turn_on_with_timer"
+HEBCAL_EVENT_MAX_OFFSET_MINUTES = 24 * 60
+HEBCAL_CACHE_RELOAD_INTERVAL_SECONDS = 60
 SUN_TIME_MAX_OFFSET_MINUTES = 120
 SUN_TIME_PATTERN = re.compile(
     r"^(sunrise|sunset)(?:\s*([+-])\s*(\d{1,3}))?$",
@@ -141,6 +161,11 @@ class BoilerTask:
     condition_operator: str | None
     skip_if_state: str | None
     enabled: bool
+    trigger_mode: str = TRIGGER_MODE_SCHEDULE
+    hebcal_event_kind: str | None = None
+    hebcal_event_phase: str | None = None
+    hebcal_holiday_mode: str | None = None
+    hebcal_offset_minutes: int = 0
     timeline_points: list[BoilerTimelinePoint] = field(default_factory=list)
     once_started: bool = False
 
@@ -162,6 +187,11 @@ class BoilerTask:
             ATTR_CONDITION_OPERATOR: self.condition_operator,
             ATTR_SKIP_IF_STATE: self.skip_if_state,
             ATTR_ENABLED: self.enabled,
+            ATTR_TRIGGER_MODE: self.trigger_mode,
+            ATTR_HEBCAL_EVENT_KIND: self.hebcal_event_kind,
+            ATTR_HEBCAL_EVENT_PHASE: self.hebcal_event_phase,
+            ATTR_HEBCAL_HOLIDAY_MODE: self.hebcal_holiday_mode,
+            ATTR_HEBCAL_OFFSET_MINUTES: self.hebcal_offset_minutes,
             "once_started": self.once_started,
         }
 
@@ -192,6 +222,9 @@ class BoilerManager:
         # Task ids temporarily skipped until the current active segment ends
         # (used for user-initiated OFF so the task resumes only on its next event).
         self._snoozed_task_until: dict[str, datetime] = {}
+        self._hebcal_windows_cache: list[dict] = []
+        self._hebcal_windows_cache_mtime: float | None = None
+        self._hebcal_windows_last_checked_at: datetime | None = None
 
     @property
     def name(self) -> str:
@@ -267,7 +300,7 @@ class BoilerManager:
     @property
     def mode_attributes(self) -> dict:
         """Additional mode attrs for sensors/UI."""
-        attrs: dict[str, str | int | list[str] | None] = {
+        attrs: dict[str, str | int | bool | list[str] | None] = {
             "entry_id": self.entry.entry_id,
             "boiler_entity": self.boiler_entity,
             "active_tasks_count": len(self._active_task_ids),
@@ -283,6 +316,26 @@ class BoilerManager:
         else:
             attrs["manual_until"] = None
         attrs["manual_duration_seconds"] = self._manual_duration_seconds
+        current_hebcal = self._current_hebcal_window(dt_util.now())
+        next_shabbat = self._next_hebcal_window(dt_util.now(), kind="shabbat")
+        next_holiday = self._next_hebcal_window(dt_util.now(), kind="holiday")
+        next_yomtov = self._next_hebcal_window(dt_util.now(), kind="holiday", work_prohibited=True)
+        if current_hebcal:
+            attrs["hebcal_active"] = True
+            attrs["hebcal_kind"] = str(current_hebcal.get("kind") or "").strip().lower() or None
+            attrs["hebcal_work_prohibited"] = bool(current_hebcal.get("work_prohibited"))
+            attrs["hebcal_label"] = str(current_hebcal.get("label") or "").strip() or None
+        else:
+            attrs["hebcal_active"] = False
+            attrs["hebcal_kind"] = None
+            attrs["hebcal_work_prohibited"] = False
+            attrs["hebcal_label"] = None
+        attrs["hebcal_next_shabbat_start"] = next_shabbat.get("starts_at") if next_shabbat else None
+        attrs["hebcal_next_shabbat_end"] = next_shabbat.get("ends_at") if next_shabbat else None
+        attrs["hebcal_next_holiday_start"] = next_holiday.get("starts_at") if next_holiday else None
+        attrs["hebcal_next_holiday_end"] = next_holiday.get("ends_at") if next_holiday else None
+        attrs["hebcal_next_yomtov_start"] = next_yomtov.get("starts_at") if next_yomtov else None
+        attrs["hebcal_next_yomtov_end"] = next_yomtov.get("ends_at") if next_yomtov else None
         return attrs
 
     @property
@@ -357,6 +410,11 @@ class BoilerManager:
         condition_entity: str | None = None,
         condition_operator: str | None = None,
         skip_if_state: str | None = None,
+        trigger_mode: str | None = None,
+        hebcal_event_kind: str | None = None,
+        hebcal_event_phase: str | None = None,
+        hebcal_holiday_mode: str | None = None,
+        hebcal_offset_minutes: int | None = None,
         enabled: bool,
     ) -> BoilerTask:
         """Create a new schedule task."""
@@ -379,6 +437,19 @@ class BoilerManager:
             condition_operator,
             skip_if_state,
         )
+        (
+            normalized_trigger_mode,
+            normalized_hebcal_event_kind,
+            normalized_hebcal_event_phase,
+            normalized_hebcal_holiday_mode,
+            normalized_hebcal_offset_minutes,
+        ) = _normalize_task_trigger(
+            trigger_mode,
+            hebcal_event_kind,
+            hebcal_event_phase,
+            hebcal_holiday_mode,
+            hebcal_offset_minutes,
+        )
 
         task_name = str(name or "").strip() or f"Task {normalized_start}-{normalized_end}"
         task_id = uuid.uuid4().hex[:10]
@@ -399,6 +470,11 @@ class BoilerManager:
             condition_operator=normalized_condition_operator,
             skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
+            trigger_mode=normalized_trigger_mode,
+            hebcal_event_kind=normalized_hebcal_event_kind,
+            hebcal_event_phase=normalized_hebcal_event_phase,
+            hebcal_holiday_mode=normalized_hebcal_holiday_mode,
+            hebcal_offset_minutes=normalized_hebcal_offset_minutes,
             once_started=False,
         )
 
@@ -430,6 +506,11 @@ class BoilerManager:
         condition_entity: str | None = None,
         condition_operator: str | None = None,
         skip_if_state: str | None = None,
+        trigger_mode: str | None = None,
+        hebcal_event_kind: str | None = None,
+        hebcal_event_phase: str | None = None,
+        hebcal_holiday_mode: str | None = None,
+        hebcal_offset_minutes: int | None = None,
         enabled: bool,
     ) -> BoilerTask:
         """Create a new timeline task (multiple points on same day pattern)."""
@@ -449,6 +530,19 @@ class BoilerManager:
             condition_entity,
             condition_operator,
             skip_if_state,
+        )
+        (
+            normalized_trigger_mode,
+            normalized_hebcal_event_kind,
+            normalized_hebcal_event_phase,
+            normalized_hebcal_holiday_mode,
+            normalized_hebcal_offset_minutes,
+        ) = _normalize_task_trigger(
+            trigger_mode,
+            hebcal_event_kind,
+            hebcal_event_phase,
+            hebcal_holiday_mode,
+            hebcal_offset_minutes,
         )
         timeline_points = _normalize_timeline_points(points)
         first_start, last_end = _timeline_time_bounds(timeline_points)
@@ -472,6 +566,11 @@ class BoilerManager:
             condition_operator=normalized_condition_operator,
             skip_if_state=normalized_skip_if_state,
             enabled=bool(enabled),
+            trigger_mode=normalized_trigger_mode,
+            hebcal_event_kind=normalized_hebcal_event_kind,
+            hebcal_event_phase=normalized_hebcal_event_phase,
+            hebcal_holiday_mode=normalized_hebcal_holiday_mode,
+            hebcal_offset_minutes=normalized_hebcal_offset_minutes,
             once_started=False,
         )
 
@@ -537,6 +636,11 @@ class BoilerManager:
         condition_entity: str | None = None,
         condition_operator: str | None = None,
         skip_if_state: str | None = None,
+        trigger_mode: str | None = None,
+        hebcal_event_kind: str | None = None,
+        hebcal_event_phase: str | None = None,
+        hebcal_holiday_mode: str | None = None,
+        hebcal_offset_minutes: int | None = None,
         enabled: bool | None = None,
     ) -> BoilerTask:
         """Update task fields."""
@@ -631,6 +735,35 @@ class BoilerManager:
                     next_condition_entity,
                     next_condition_operator,
                     next_skip_if_state,
+                )
+            if (
+                trigger_mode is not None
+                or hebcal_event_kind is not None
+                or hebcal_event_phase is not None
+                or hebcal_holiday_mode is not None
+                or hebcal_offset_minutes is not None
+            ):
+                next_trigger_mode = task.trigger_mode if trigger_mode is None else trigger_mode
+                next_event_kind = task.hebcal_event_kind if hebcal_event_kind is None else hebcal_event_kind
+                next_event_phase = task.hebcal_event_phase if hebcal_event_phase is None else hebcal_event_phase
+                next_holiday_mode = (
+                    task.hebcal_holiday_mode if hebcal_holiday_mode is None else hebcal_holiday_mode
+                )
+                next_offset = (
+                    task.hebcal_offset_minutes if hebcal_offset_minutes is None else hebcal_offset_minutes
+                )
+                (
+                    task.trigger_mode,
+                    task.hebcal_event_kind,
+                    task.hebcal_event_phase,
+                    task.hebcal_holiday_mode,
+                    task.hebcal_offset_minutes,
+                ) = _normalize_task_trigger(
+                    next_trigger_mode,
+                    next_event_kind,
+                    next_event_phase,
+                    next_holiday_mode,
+                    next_offset,
                 )
             if enabled is not None:
                 task.enabled = bool(enabled)
@@ -1009,6 +1142,82 @@ class BoilerManager:
         self._schedule_driven = True
         await self._async_turn_on_entity()
 
+    def _hebcal_windows(self, now: datetime) -> list[dict]:
+        """Return cached Hebcal windows from local file, reloading occasionally."""
+        cache_path = hebcal_cache.hebcal_cache_path(self.hass, self.entry.entry_id)
+        now_utc = dt_util.as_utc(now)
+        if (
+            self._hebcal_windows_last_checked_at is not None
+            and (now_utc - self._hebcal_windows_last_checked_at).total_seconds() < HEBCAL_CACHE_RELOAD_INTERVAL_SECONDS
+        ):
+            return list(self._hebcal_windows_cache)
+
+        self._hebcal_windows_last_checked_at = now_utc
+        try:
+            stat = cache_path.stat()
+        except OSError:
+            self._hebcal_windows_cache = []
+            self._hebcal_windows_cache_mtime = None
+            return []
+
+        if self._hebcal_windows_cache_mtime is not None and stat.st_mtime == self._hebcal_windows_cache_mtime:
+            return list(self._hebcal_windows_cache)
+
+        try:
+            payload = json.loads(cache_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self._hebcal_windows_cache = []
+            self._hebcal_windows_cache_mtime = stat.st_mtime
+            return []
+
+        windows_raw = payload.get("windows") if isinstance(payload, dict) else None
+        windows = windows_raw if isinstance(windows_raw, list) else []
+        self._hebcal_windows_cache = [item for item in windows if isinstance(item, dict)]
+        self._hebcal_windows_cache_mtime = stat.st_mtime
+        return list(self._hebcal_windows_cache)
+
+    def _current_hebcal_window(self, now: datetime) -> dict | None:
+        """Return currently active Hebcal window (if any)."""
+        if not self.hebcal_enabled:
+            return None
+        now_utc = dt_util.as_utc(now)
+        for item in self._hebcal_windows(now):
+            start = _parse_stored_datetime(item.get("starts_at"))
+            end = _parse_stored_datetime(item.get("ends_at"))
+            if start is None or end is None or start >= end:
+                continue
+            if start <= now_utc < end:
+                return item
+        return None
+
+    def _next_hebcal_window(
+        self,
+        now: datetime,
+        *,
+        kind: str | None = None,
+        work_prohibited: bool | None = None,
+    ) -> dict | None:
+        """Return upcoming Hebcal window, optionally filtered by kind."""
+        if not self.hebcal_enabled:
+            return None
+        now_utc = dt_util.as_utc(now)
+        kind_filter = str(kind or "").strip().lower()
+        best_item: dict | None = None
+        best_start: datetime | None = None
+        for item in self._hebcal_windows(now):
+            item_kind = str(item.get("kind") or "").strip().lower()
+            if kind_filter and item_kind != kind_filter:
+                continue
+            if work_prohibited is not None and bool(item.get("work_prohibited")) is not work_prohibited:
+                continue
+            start = _parse_stored_datetime(item.get("starts_at"))
+            if start is None or start < now_utc:
+                continue
+            if best_start is None or start < best_start:
+                best_start = start
+                best_item = item
+        return best_item
+
     def _tasks_active_now(self, now: datetime) -> list[BoilerTask]:
         """Return tasks active for provided timestamp."""
         if self._vacation_mode:
@@ -1031,29 +1240,29 @@ class BoilerManager:
                     continue
                 self._snoozed_task_until.pop(task.task_id, None)
 
-            current_windows = _task_time_windows(task, self.hass, current_date)
+            current_windows = _task_time_windows(task, self, current_date)
             for start, end in current_windows:
                 if start == end:
                     continue
 
                 # Same-day window, e.g. 10:00 -> 12:00.
                 if start < end:
-                    if _task_matches_schedule_day(task, current_date.weekday(), current_date) and start <= now_time < end:
+                    if _task_matches_window_day(task, current_date.weekday(), current_date) and start <= now_time < end:
                         active.append(task)
                         break
                     continue
 
                 # Cross-midnight window, e.g. 22:00 -> 02:00.
                 if now_time >= start:
-                    if _task_matches_schedule_day(task, current_date.weekday(), current_date):
+                    if _task_matches_window_day(task, current_date.weekday(), current_date):
                         active.append(task)
                         break
             else:
-                previous_windows = _task_time_windows(task, self.hass, previous_date)
+                previous_windows = _task_time_windows(task, self, previous_date)
                 for start, end in previous_windows:
                     if start == end or start < end:
                         continue
-                    if now_time < end and _task_matches_schedule_day(task, previous_date.weekday(), previous_date):
+                    if now_time < end and _task_matches_window_day(task, previous_date.weekday(), previous_date):
                         active.append(task)
                         break
 
@@ -1112,27 +1321,27 @@ class BoilerManager:
         next_date = current_date + timedelta(days=1)
 
         latest_end_local: datetime | None = None
-        for start, end in _task_time_windows(task, self.hass, current_date):
+        for start, end in _task_time_windows(task, self, current_date):
             if start == end:
                 continue
 
             end_local: datetime | None = None
             if start < end:
-                if _task_matches_schedule_day(task, weekday, current_date) and start <= now_time < end:
+                if _task_matches_window_day(task, weekday, current_date) and start <= now_time < end:
                     end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
             else:
-                if now_time >= start and _task_matches_schedule_day(task, weekday, current_date):
+                if now_time >= start and _task_matches_window_day(task, weekday, current_date):
                     end_local = datetime.combine(next_date, end, tzinfo=tzinfo)
 
             if end_local and (latest_end_local is None or end_local > latest_end_local):
                 latest_end_local = end_local
 
-        for start, end in _task_time_windows(task, self.hass, previous_date):
+        for start, end in _task_time_windows(task, self, previous_date):
             if start == end or start < end:
                 continue
 
             end_local: datetime | None = None
-            if now_time < end and _task_matches_schedule_day(task, previous_date.weekday(), previous_date):
+            if now_time < end and _task_matches_window_day(task, previous_date.weekday(), previous_date):
                 end_local = datetime.combine(current_date, end, tzinfo=tzinfo)
 
             if end_local and (latest_end_local is None or end_local > latest_end_local):
@@ -1266,6 +1475,19 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_CONDITION_OPERATOR),
         raw.get(ATTR_SKIP_IF_STATE),
     )
+    (
+        trigger_mode,
+        hebcal_event_kind,
+        hebcal_event_phase,
+        hebcal_holiday_mode,
+        hebcal_offset_minutes,
+    ) = _normalize_task_trigger(
+        raw.get(ATTR_TRIGGER_MODE),
+        raw.get(ATTR_HEBCAL_EVENT_KIND),
+        raw.get(ATTR_HEBCAL_EVENT_PHASE),
+        raw.get(ATTR_HEBCAL_HOLIDAY_MODE),
+        raw.get(ATTR_HEBCAL_OFFSET_MINUTES),
+    )
     enabled = bool(raw.get(ATTR_ENABLED, True))
     once_started = bool(raw.get("once_started", False))
 
@@ -1285,6 +1507,11 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         condition_operator=condition_operator,
         skip_if_state=skip_if_state,
         enabled=enabled,
+        trigger_mode=trigger_mode,
+        hebcal_event_kind=hebcal_event_kind,
+        hebcal_event_phase=hebcal_event_phase,
+        hebcal_holiday_mode=hebcal_holiday_mode,
+        hebcal_offset_minutes=hebcal_offset_minutes,
         once_started=once_started,
     )
 
@@ -1306,6 +1533,11 @@ def _task_to_export_dict(task: BoilerTask) -> dict:
         ATTR_CONDITION_OPERATOR: task.condition_operator,
         ATTR_SKIP_IF_STATE: task.skip_if_state,
         ATTR_ENABLED: bool(task.enabled),
+        ATTR_TRIGGER_MODE: task.trigger_mode,
+        ATTR_HEBCAL_EVENT_KIND: task.hebcal_event_kind,
+        ATTR_HEBCAL_EVENT_PHASE: task.hebcal_event_phase,
+        ATTR_HEBCAL_HOLIDAY_MODE: task.hebcal_holiday_mode,
+        ATTR_HEBCAL_OFFSET_MINUTES: int(task.hebcal_offset_minutes),
     }
 
 
@@ -1331,6 +1563,19 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_CONDITION_ENTITY),
         raw.get(ATTR_CONDITION_OPERATOR),
         raw.get(ATTR_SKIP_IF_STATE),
+    )
+    (
+        trigger_mode,
+        hebcal_event_kind,
+        hebcal_event_phase,
+        hebcal_holiday_mode,
+        hebcal_offset_minutes,
+    ) = _normalize_task_trigger(
+        raw.get(ATTR_TRIGGER_MODE),
+        raw.get(ATTR_HEBCAL_EVENT_KIND),
+        raw.get(ATTR_HEBCAL_EVENT_PHASE),
+        raw.get(ATTR_HEBCAL_HOLIDAY_MODE),
+        raw.get(ATTR_HEBCAL_OFFSET_MINUTES),
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
 
@@ -1377,6 +1622,11 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         condition_operator=condition_operator,
         skip_if_state=skip_if_state,
         enabled=enabled,
+        trigger_mode=trigger_mode,
+        hebcal_event_kind=hebcal_event_kind,
+        hebcal_event_phase=hebcal_event_phase,
+        hebcal_holiday_mode=hebcal_holiday_mode,
+        hebcal_offset_minutes=hebcal_offset_minutes,
         once_started=False,
     )
 
@@ -1577,6 +1827,89 @@ def _normalize_task_type(value: str | None) -> str:
     return normalized
 
 
+def _normalize_trigger_mode(value: str | None) -> str:
+    """Normalize task trigger mode token."""
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return TRIGGER_MODE_SCHEDULE
+    if normalized not in TRIGGER_MODES:
+        raise BoilerManagerError(f"Unsupported trigger_mode: {value}")
+    return normalized
+
+
+def _normalize_hebcal_event_kind(value: str | None) -> str | None:
+    """Normalize Hebcal event kind for hebcal_event trigger mode."""
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized not in HEBCAL_EVENT_KINDS:
+        raise BoilerManagerError(f"Unsupported hebcal_event_kind: {value}")
+    return normalized
+
+
+def _normalize_hebcal_event_phase(value: str | None) -> str | None:
+    """Normalize Hebcal event phase for hebcal_event trigger mode."""
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized not in HEBCAL_EVENT_PHASES:
+        raise BoilerManagerError(f"Unsupported hebcal_event_phase: {value}")
+    return normalized
+
+
+def _normalize_hebcal_holiday_mode(value: str | None) -> str | None:
+    """Normalize Hebcal holiday subtype filter."""
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized not in HEBCAL_HOLIDAY_MODES:
+        raise BoilerManagerError(f"Unsupported hebcal_holiday_mode: {value}")
+    return normalized
+
+
+def _normalize_hebcal_offset_minutes(value: int | str | None) -> int:
+    """Normalize Hebcal event offset minutes."""
+    if value in (None, ""):
+        return 0
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as err:
+        raise BoilerManagerError(f"Invalid hebcal_offset_minutes: {value}") from err
+    if parsed < -HEBCAL_EVENT_MAX_OFFSET_MINUTES or parsed > HEBCAL_EVENT_MAX_OFFSET_MINUTES:
+        raise BoilerManagerError(
+            f"hebcal_offset_minutes out of range: {value} (allowed ±{HEBCAL_EVENT_MAX_OFFSET_MINUTES})"
+        )
+    return parsed
+
+
+def _normalize_task_trigger(
+    trigger_mode: str | None,
+    hebcal_event_kind: str | None,
+    hebcal_event_phase: str | None,
+    hebcal_holiday_mode: str | None,
+    hebcal_offset_minutes: int | str | None,
+) -> tuple[str, str | None, str | None, str | None, int]:
+    """Normalize all trigger-related task fields."""
+    mode = _normalize_trigger_mode(trigger_mode)
+    kind = _normalize_hebcal_event_kind(hebcal_event_kind)
+    phase = _normalize_hebcal_event_phase(hebcal_event_phase)
+    holiday_mode = _normalize_hebcal_holiday_mode(hebcal_holiday_mode)
+    offset = _normalize_hebcal_offset_minutes(hebcal_offset_minutes)
+
+    if mode == TRIGGER_MODE_HEBCAL_EVENT:
+        if kind is None:
+            kind = HEBCAL_EVENT_KIND_SHABBAT
+        if phase is None:
+            phase = HEBCAL_EVENT_PHASE_START
+        if kind != HEBCAL_EVENT_KIND_HOLIDAY:
+            holiday_mode = None
+        elif holiday_mode is None:
+            holiday_mode = HEBCAL_HOLIDAY_MODE_ALL
+        return mode, kind, phase, holiday_mode, offset
+
+    return TRIGGER_MODE_SCHEDULE, None, None, None, 0
+
+
 def _normalize_task_condition(
     condition_entity: str | None,
     condition_operator: str | None,
@@ -1767,12 +2100,15 @@ def _timeline_time_bounds(points: list[BoilerTimelinePoint]) -> tuple[str, str]:
     return start, end
 
 
-def _task_time_windows(task: BoilerTask, hass: HomeAssistant, day_date: date) -> list[tuple[time, time]]:
+def _task_time_windows(task: BoilerTask, manager: BoilerManager, day_date: date) -> list[tuple[time, time]]:
     """Return normalized active windows for one task on a specific date."""
+    if task.trigger_mode == TRIGGER_MODE_HEBCAL_EVENT:
+        return _task_hebcal_event_windows(task, manager, day_date)
+
     if task.task_type == TASK_TYPE_TIMELINE and task.timeline_points:
         windows: list[tuple[time, time]] = []
         for point in task.timeline_points:
-            start = _resolve_schedule_time_for_date(hass, point.at, day_date)
+            start = _resolve_schedule_time_for_date(manager.hass, point.at, day_date)
             if start is None:
                 continue
             start_dt = datetime.combine(day_date, start)
@@ -1783,15 +2119,56 @@ def _task_time_windows(task: BoilerTask, hass: HomeAssistant, day_date: date) ->
             windows.append((start, end))
         return windows
 
-    start = _resolve_schedule_time_for_date(hass, task.start_time, day_date)
-    end = _resolve_schedule_time_for_date(hass, task.end_time, day_date)
+    start = _resolve_schedule_time_for_date(manager.hass, task.start_time, day_date)
+    end = _resolve_schedule_time_for_date(manager.hass, task.end_time, day_date)
     if start is None or end is None:
         return []
     return [(start, end)]
 
 
+def _task_hebcal_event_windows(
+    task: BoilerTask,
+    manager: BoilerManager,
+    day_date: date,
+) -> list[tuple[time, time]]:
+    """Build one-day windows from Hebcal event anchors."""
+    kind = task.hebcal_event_kind or HEBCAL_EVENT_KIND_SHABBAT
+    phase = task.hebcal_event_phase or HEBCAL_EVENT_PHASE_START
+    holiday_mode = task.hebcal_holiday_mode or HEBCAL_HOLIDAY_MODE_ALL
+    offset = int(task.hebcal_offset_minutes or 0)
+    duration_minutes = max(1, _minutes_between(task.start_time, task.end_time))
+
+    windows: list[tuple[time, time]] = []
+    for item in manager._hebcal_windows(dt_util.now()):
+        raw_kind = str(item.get("kind") or "").strip().lower()
+        if raw_kind != kind:
+            continue
+        if raw_kind == HEBCAL_EVENT_KIND_HOLIDAY:
+            work_prohibited = bool(item.get("work_prohibited"))
+            if holiday_mode == HEBCAL_HOLIDAY_MODE_YOMTOV and not work_prohibited:
+                continue
+            if holiday_mode == HEBCAL_HOLIDAY_MODE_REGULAR and work_prohibited:
+                continue
+        anchor_raw = item.get("starts_at") if phase == HEBCAL_EVENT_PHASE_START else item.get("ends_at")
+        anchor = _parse_stored_datetime(anchor_raw)
+        if anchor is None:
+            continue
+        local_anchor = dt_util.as_local(anchor) + timedelta(minutes=offset)
+        if local_anchor.date() != day_date:
+            continue
+        start = local_anchor.time().replace(second=0, microsecond=0)
+        end = (local_anchor + timedelta(minutes=duration_minutes)).time().replace(second=0, microsecond=0)
+        windows.append((start, end))
+    return windows
+
+
 def _task_duplicate_signature(task: BoilerTask) -> str:
     """Stable signature for duplicate detection."""
+    trigger_mode = _normalize_trigger_mode(task.trigger_mode)
+    hebcal_kind = _normalize_hebcal_event_kind(task.hebcal_event_kind)
+    hebcal_phase = _normalize_hebcal_event_phase(task.hebcal_event_phase)
+    hebcal_holiday_mode = _normalize_hebcal_holiday_mode(task.hebcal_holiday_mode)
+    hebcal_offset = _normalize_hebcal_offset_minutes(task.hebcal_offset_minutes)
     task_type = TASK_TYPE_TIMELINE if task.task_type == TASK_TYPE_TIMELINE else TASK_TYPE_WINDOW
     days = ",".join(str(day) for day in sorted(set(task.days)))
     months = ",".join(str(month) for month in sorted(set(task.months)))
@@ -1818,6 +2195,11 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
                 recurrence,
                 range_start,
                 range_end,
+                trigger_mode,
+                hebcal_kind or "",
+                hebcal_phase or "",
+                hebcal_holiday_mode or "",
+                str(hebcal_offset),
             ]
         )
 
@@ -1833,6 +2215,11 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
             recurrence,
             range_start,
             range_end,
+            trigger_mode,
+            hebcal_kind or "",
+            hebcal_phase or "",
+            hebcal_holiday_mode or "",
+            str(hebcal_offset),
         ]
     )
 
@@ -1899,6 +2286,13 @@ def _task_matches_schedule_day(task: BoilerTask, weekday: int, day_date: date) -
         return False
 
     return True
+
+
+def _task_matches_window_day(task: BoilerTask, weekday: int, day_date: date) -> bool:
+    """Check day matching for active window evaluation."""
+    if task.trigger_mode == TRIGGER_MODE_HEBCAL_EVENT:
+        return True
+    return _task_matches_schedule_day(task, weekday, day_date)
 
 
 def _duration_to_seconds(*, duration: str | None, minutes: int | None) -> int:
