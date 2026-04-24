@@ -9,7 +9,9 @@
           "boiler_entity": "Boiler entity",
           "temperature_sensor": "Temperature sensor (optional)",
           "power_sensor": "Power sensor (optional)",
-          "current_sensor": "Current sensor (optional)"
+          "current_sensor": "Current sensor (optional)",
+          "hebcal_enabled": "Download Hebcal calendar cache (daily)",
+          "hebcal_city": "Hebcal city token (e.g. IL-Jerusalem)"
         }
       }
     },
@@ -26,7 +28,9 @@
           "boiler_entity": "Boiler entity",
           "temperature_sensor": "Temperature sensor (optional)",
           "power_sensor": "Power sensor (optional)",
-          "current_sensor": "Current sensor (optional)"
+          "current_sensor": "Current sensor (optional)",
+          "hebcal_enabled": "Download Hebcal calendar cache (daily)",
+          "hebcal_city": "Hebcal city token (e.g. IL-Jerusalem)"
         }
       }
     }

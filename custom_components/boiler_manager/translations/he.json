@@ -9,7 +9,9 @@
           "boiler_entity": "ישות דוד",
           "temperature_sensor": "חיישן טמפרטורה (אופציונלי)",
           "power_sensor": "חיישן צריכה (אופציונלי)",
-          "current_sensor": "חיישן זרם (אופציונלי)"
+          "current_sensor": "חיישן זרם (אופציונלי)",
+          "hebcal_enabled": "הורדת מטמון Hebcal (יומי)",
+          "hebcal_city": "מזהה עיר Hebcal (למשל IL-Jerusalem)"
         }
       }
     },
@@ -26,7 +28,9 @@
           "boiler_entity": "ישות דוד",
           "temperature_sensor": "חיישן טמפרטורה (אופציונלי)",
           "power_sensor": "חיישן צריכה (אופציונלי)",
-          "current_sensor": "חיישן זרם (אופציונלי)"
+          "current_sensor": "חיישן זרם (אופציונלי)",
+          "hebcal_enabled": "הורדת מטמון Hebcal (יומי)",
+          "hebcal_city": "מזהה עיר Hebcal (למשל IL-Jerusalem)"
         }
       }
     }

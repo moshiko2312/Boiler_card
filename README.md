@@ -24,6 +24,7 @@ Custom boiler control solution for Home Assistant with:
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
 - Separate `Import/Export` tab in the same menu
+- `Holidays & Shabbat` tab: Hebcal file status, global timer/task rules, Hebcal window scope (Shabbat / holidays / both), and a scrollable list of all windows from the local cache (read-only; rules apply automatically when status is **Active**)
 - Create, edit, enable/disable, and delete tasks from card UI
 - Import/Export tasks directly from dedicated Import/Export tab
   - Import mode buttons: `merge` / `replace`
@@ -161,15 +162,25 @@ Custom boiler control solution for Home Assistant with:
   - Current sensor
   - Voltage sensor
   - Flow image URL/path
+  - Hebcal: `hebcal_local_enabled`, optional `hebcal_cache_path`, `auto_entry_id`, `integration_entry_id` (see **Holidays & Shabbat (Hebcal)** below — timer/task rules and window scope are edited in the card **menu tab**, not duplicated here)
 - Right-side preview:
   - Real-time visual feedback while editing.
 
+### 7) Holidays & Shabbat tab (optional screenshot)
+![Holidays and Shabbat tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/08-holidays-shabbat-tab.png)
+
+- Add `docs/screenshots/08-holidays-shabbat-tab.png` when you want this image to load; until then the link above may 404.
+- Purpose: Jewish calendar windows from the local Hebcal cache, plus global rules for timers and tasks during “active” holiday/Shabbat time.
+- In-tab controls persist to the card YAML via `config-changed` (save the dashboard after changing rules).
+
 ## Project Structure
 
-- `www/boiler-card/boiler-card.js` - source frontend card
-- `custom_components/boiler_manager/` - integration
-- `lovelace/boiler-card-example.yaml` - example card config
-- `home-assistant/packages/boiler_hot_water.yaml` - optional legacy package flow
+- `custom_components/boiler_manager/` — Home Assistant integration (Python + bundled frontend).
+- `custom_components/boiler_manager/frontend/boiler-card.js` — Lovelace card source shipped with the integration (also copied to `www` on integration load).
+- `www/boiler-card/boiler-card.js` — Mirror of the card script for repo consistency; keep it in sync with `frontend/boiler-card.js` when developing outside HA.
+- `custom_components/boiler_manager/hebcal_cache.py` — Fetches Hebcal JSON and writes the normalized cache file under `www/boiler-card/`.
+- `lovelace/boiler-card-example.yaml` — example card config
+- `home-assistant/packages/boiler_hot_water.yaml` — optional legacy package flow
 
 ## Installation
 
@@ -202,6 +213,8 @@ Note:
 
 On integration startup, card assets are auto-copied to:
 - `/config/www/boiler-card/boiler-card.js`
+
+The same directory receives **`hebcal-<config_entry_id>.json`** when Hebcal is enabled (integration option). The card loads it as `/local/boiler-card/hebcal-<entry_id>.json` (with optional override via `hebcal_cache_path` on the card).
 
 ### 3) Lovelace Resource Registration (Automatic + Safe + Backup)
 
@@ -339,6 +352,17 @@ switcher_timer_values: "15,30,45,60,90,120"
   - Enabling vacation performs immediate forced OFF for the configured boiler entity.
   - During vacation, timer activation is blocked until vacation is disabled.
   - Hamburger/menu stays available so vacation can always be disabled from the UI.
+
+### Holidays & Shabbat (Hebcal)
+
+- **Backend:** With `hebcal_enabled` on the integration (default for new entries), Boiler Manager refreshes the Hebcal cache on setup and once per day, and writes normalized windows to `/config/www/boiler-card/hebcal-<entry_id>.json`.
+- **Service:** `boiler_manager.refresh_hebcal` — same targeting as other services (`entry_id` or `boiler_entity`).
+- **Card tab** (`☰` → `Holidays & Shabbat`):
+  - **Status** — *Active* when any of: configured `holiday_entity` / `shabbat_entity` (YAML) says “on”, or current time falls inside a Hebcal window allowed by **Hebcal window scope** (Shabbat only / holidays only / both).
+  - **Timer rule** / **Task rule** — global behavior while status is Active (allow / block / postpone / force off). Changed in-tab; Lovelace stores them on the card.
+  - **Window list** — full read-only list from the JSON (labels, start→end, kind, past/now/upcoming). It does not assign rules per row; it is for verification and planning.
+  - **Per-task exceptions** — still use the task editor **Condition** block (`condition_entity`, `condition_operator`, `skip_if_state`) if one task needs different logic than the global task rule.
+- **Card editor:** Hebcal on/off, optional manual JSON path, entry id helpers — **not** the duplicate timer/task/scope controls (those stay in the tab).
 
 ### Import / Export (From Card UI)
 
@@ -514,6 +538,18 @@ Fallback:
 - `boiler_manager.import_tasks`
 - `boiler_manager.set_vacation_mode`
 
+### Hebcal cache
+
+- `boiler_manager.refresh_hebcal` — forces a download and rewrite of `hebcal-<entry_id>.json` for the matching config entry.
+
+Example:
+
+```yaml
+service: boiler_manager.refresh_hebcal
+data:
+  boiler_entity: switch.boiler
+```
+
 ### Vacation Mode example
 
 ```yaml
@@ -676,6 +712,8 @@ data:
 
 Recent highlights:
 - `0.1.5`
+  - Hebcal: integration-backed local JSON cache (`hebcal_cache.py`), daily refresh, `boiler_manager.refresh_hebcal` service, integration strings/options.
+  - Card: **Holidays & Shabbat** menu tab (policies, Hebcal scope, scrollable full window list, compact layout); card editor lists Hebcal/entry fields only (no duplicate policy fields).
   - Added generic regular-mode timer configuration (`timer_values`) with default `15,30,60`.
   - Dynamic quick-button row and timer grid layout now auto-adjust to configured timer count.
   - Added import task selection list screenshot/docs update for Import/Export flow.

@@ -99,7 +99,7 @@ const I18N = {
     menu_import_export: "ייבוא/ייצוא",
     menu_holidays_shabbat: "חגים ושבתות",
     holidays_shabbat_title: "חגים ושבתות",
-    holidays_shabbat_description: "ניהול מקורות וכללים לחגים ושבתות עבור טיימרים ומשימות.",
+    holidays_shabbat_description: "כללים גלובליים חלים כשהמצב למעלה «פעיל». רשימת החלונות להצגה בלבד.",
     holidays_shabbat_status_label: "סטטוס",
     holidays_shabbat_sources_label: "מקורות",
     holidays_shabbat_timer_rule_label: "כלל טיימרים",
@@ -109,6 +109,32 @@ const I18N = {
     holidays_shabbat_source_holiday: "חג",
     holidays_shabbat_source_shabbat: "שבת",
     holidays_shabbat_source_not_set: "לא הוגדר",
+    holidays_shabbat_source_hebcal: "Hebcal (מקומי)",
+    holidays_shabbat_hebcal_waiting: "טוען…",
+    holidays_shabbat_hebcal_no_cache: "אין קובץ (הפעל Hebcal באפשרויות האינטגרציה, שמור והפעל מחדש)",
+    holidays_shabbat_hebcal_idle: "לא בחלון מוגבל",
+    holidays_shabbat_hebcal_meta_label: "Hebcal — קובץ",
+    holidays_shabbat_hebcal_meta_off: "לא בשימוש (כבה טעינת מטמון או אין נתיב)",
+    holidays_shabbat_hebcal_meta_loading: "טוען מהשרת…",
+    holidays_shabbat_hebcal_meta_err: "טעינה נכשלה",
+    holidays_shabbat_hebcal_meta_ok: "נטען",
+    holidays_shabbat_hebcal_meta_windows: "חלונות",
+    holidays_shabbat_hebcal_meta_items: "פריטים",
+    holidays_shabbat_hebcal_meta_json_err: "פענוח JSON נכשל",
+    holidays_shabbat_hebcal_meta_invalid_payload: "תגובה לא תקינה",
+    holidays_shabbat_hebcal_need_entry: "הוסף מזהה כניסה או נתיב קובץ, או וודא שיש רק כניסת Boiler Manager אחת (או כבה 'זיהוי אוטומטי' והזן ידנית). הקובץ: hebcal-<מזהה>.json",
+    holidays_shabbat_hebcal_scope_label: "חלונות Hebcal שמפעילים כללים",
+    holidays_shabbat_hebcal_scope_both: "שבת וחגים (ברירת מחדל)",
+    holidays_shabbat_hebcal_scope_shabbat: "שבת בלבד",
+    holidays_shabbat_hebcal_scope_holiday: "יום טוב / חג בלבד",
+    holidays_shabbat_practical_hint: "משימה בודדת: עורך משימה ← תנאי + דלג אם מצב (למשל on).",
+    holidays_shabbat_windows_title: "כל החלונות מהקובץ (שבת / חג)",
+    holidays_shabbat_windows_empty: "אין חלונות בקובץ Hebcal.",
+    holidays_shabbat_window_kind_shabbat: "שבת",
+    holidays_shabbat_window_kind_holiday: "חג",
+    holidays_shabbat_window_state_active: "עכשיו",
+    holidays_shabbat_window_state_past: "עבר",
+    holidays_shabbat_window_state_upcoming: "עתיד",
     holiday_policy_allow: "ללא הגבלה",
     holiday_policy_block: "חסימה",
     holiday_policy_postpone: "דחייה",
@@ -243,7 +269,7 @@ const I18N = {
     menu_import_export: "Import/Export",
     menu_holidays_shabbat: "Holidays & Shabbat",
     holidays_shabbat_title: "Holidays & Shabbat",
-    holidays_shabbat_description: "Manage holiday and Shabbat sources and rules for timers and tasks.",
+    holidays_shabbat_description: "Global rules apply when status is Active. The list is read-only from Hebcal.",
     holidays_shabbat_status_label: "Status",
     holidays_shabbat_sources_label: "Sources",
     holidays_shabbat_timer_rule_label: "Timer Rule",
@@ -253,6 +279,32 @@ const I18N = {
     holidays_shabbat_source_holiday: "Holiday",
     holidays_shabbat_source_shabbat: "Shabbat",
     holidays_shabbat_source_not_set: "Not set",
+    holidays_shabbat_source_hebcal: "Hebcal (local file)",
+    holidays_shabbat_hebcal_waiting: "Loading…",
+    holidays_shabbat_hebcal_no_cache: "No cache file (enable Hebcal in integration options, restart)",
+    holidays_shabbat_hebcal_idle: "Not in a restricted window",
+    holidays_shabbat_hebcal_meta_label: "Hebcal file",
+    holidays_shabbat_hebcal_meta_off: "Not used (cache off or no URL)",
+    holidays_shabbat_hebcal_meta_loading: "Loading from server…",
+    holidays_shabbat_hebcal_meta_err: "Load failed",
+    holidays_shabbat_hebcal_meta_ok: "Loaded",
+    holidays_shabbat_hebcal_meta_windows: "windows",
+    holidays_shabbat_hebcal_meta_items: "items",
+    holidays_shabbat_hebcal_meta_json_err: "Invalid JSON",
+    holidays_shabbat_hebcal_meta_invalid_payload: "Invalid response body",
+    holidays_shabbat_hebcal_need_entry: "Add entry ID or file URL, or ensure only one Boiler Manager entry exists (or turn off auto-detect and set manually). File: hebcal-<entry_id>.json",
+    holidays_shabbat_hebcal_scope_label: "Hebcal windows that trigger rules",
+    holidays_shabbat_hebcal_scope_both: "Shabbat and holidays (default)",
+    holidays_shabbat_hebcal_scope_shabbat: "Shabbat only",
+    holidays_shabbat_hebcal_scope_holiday: "Yom Tov / holidays only",
+    holidays_shabbat_practical_hint: "Single task: task editor → Condition + Skip if state (e.g. on).",
+    holidays_shabbat_windows_title: "All windows from file (Shabbat / holiday)",
+    holidays_shabbat_windows_empty: "No windows in Hebcal file.",
+    holidays_shabbat_window_kind_shabbat: "Shabbat",
+    holidays_shabbat_window_kind_holiday: "Holiday",
+    holidays_shabbat_window_state_active: "Now",
+    holidays_shabbat_window_state_past: "Past",
+    holidays_shabbat_window_state_upcoming: "Upcoming",
     holiday_policy_allow: "No restriction",
     holiday_policy_block: "Block",
     holiday_policy_postpone: "Postpone",
@@ -387,7 +439,7 @@ const I18N = {
     menu_import_export: "Импорт/Экспорт",
     menu_holidays_shabbat: "Праздники и Шаббат",
     holidays_shabbat_title: "Праздники и Шаббат",
-    holidays_shabbat_description: "Управление источниками и правилами праздников/Шаббата для таймеров и задач.",
+    holidays_shabbat_description: "Глобальные правила при статусе «Активно». Список только для просмотра.",
     holidays_shabbat_status_label: "Статус",
     holidays_shabbat_sources_label: "Источники",
     holidays_shabbat_timer_rule_label: "Правило таймера",
@@ -397,6 +449,32 @@ const I18N = {
     holidays_shabbat_source_holiday: "Праздник",
     holidays_shabbat_source_shabbat: "Шаббат",
     holidays_shabbat_source_not_set: "Не задано",
+    holidays_shabbat_source_hebcal: "Hebcal (локальный файл)",
+    holidays_shabbat_hebcal_waiting: "Загрузка…",
+    holidays_shabbat_hebcal_no_cache: "Нет файла (включите Hebcal в настройках интеграции, перезапуск)",
+    holidays_shabbat_hebcal_idle: "Вне ограниченного окна",
+    holidays_shabbat_hebcal_meta_label: "Hebcal файл",
+    holidays_shabbat_hebcal_meta_off: "Не используется",
+    holidays_shabbat_hebcal_meta_loading: "Загрузка…",
+    holidays_shabbat_hebcal_meta_err: "Ошибка загрузки",
+    holidays_shabbat_hebcal_meta_ok: "Загружено",
+    holidays_shabbat_hebcal_meta_windows: "окон",
+    holidays_shabbat_hebcal_meta_items: "записей",
+    holidays_shabbat_hebcal_meta_json_err: "Неверный JSON",
+    holidays_shabbat_hebcal_meta_invalid_payload: "Некорректный ответ",
+    holidays_shabbat_hebcal_need_entry: "Укажите ID или URL, или одна запись Boiler Manager (или отключите авто). Файл: hebcal-<entry_id>.json",
+    holidays_shabbat_hebcal_scope_label: "Окна Hebcal для правил",
+    holidays_shabbat_hebcal_scope_both: "Шаббат и праздники",
+    holidays_shabbat_hebcal_scope_shabbat: "Только Шаббат",
+    holidays_shabbat_hebcal_scope_holiday: "Только праздники",
+    holidays_shabbat_practical_hint: "Одна задача: редактор → Условие + пропуск при состоянии.",
+    holidays_shabbat_windows_title: "Все окна из файла",
+    holidays_shabbat_windows_empty: "Нет окон в файле Hebcal.",
+    holidays_shabbat_window_kind_shabbat: "Шаббат",
+    holidays_shabbat_window_kind_holiday: "Праздник",
+    holidays_shabbat_window_state_active: "Сейчас",
+    holidays_shabbat_window_state_past: "Прошло",
+    holidays_shabbat_window_state_upcoming: "Будет",
     holiday_policy_allow: "Без ограничений",
     holiday_policy_block: "Блокировать",
     holiday_policy_postpone: "Отложить",
@@ -531,7 +609,7 @@ const I18N = {
     menu_import_export: "Import/Export",
     menu_holidays_shabbat: "Fetes et Shabbat",
     holidays_shabbat_title: "Fetes et Shabbat",
-    holidays_shabbat_description: "Gestion des sources et regles fetes/Chabbat pour minuteries et taches.",
+    holidays_shabbat_description: "Regles globales si statut Actif. Liste lecture seule depuis Hebcal.",
     holidays_shabbat_status_label: "Statut",
     holidays_shabbat_sources_label: "Sources",
     holidays_shabbat_timer_rule_label: "Regle minuterie",
@@ -541,6 +619,32 @@ const I18N = {
     holidays_shabbat_source_holiday: "Fete",
     holidays_shabbat_source_shabbat: "Chabbat",
     holidays_shabbat_source_not_set: "Non defini",
+    holidays_shabbat_source_hebcal: "Hebcal (fichier local)",
+    holidays_shabbat_hebcal_waiting: "Chargement…",
+    holidays_shabbat_hebcal_no_cache: "Pas de cache (activer Hebcal dans l'integration, redemarrer)",
+    holidays_shabbat_hebcal_idle: "Pas dans une fenetre restreinte",
+    holidays_shabbat_hebcal_meta_label: "Hebcal fichier",
+    holidays_shabbat_hebcal_meta_off: "Non utilise",
+    holidays_shabbat_hebcal_meta_loading: "Chargement…",
+    holidays_shabbat_hebcal_meta_err: "Echec du chargement",
+    holidays_shabbat_hebcal_meta_ok: "Charge",
+    holidays_shabbat_hebcal_meta_windows: "fenetres",
+    holidays_shabbat_hebcal_meta_items: "elements",
+    holidays_shabbat_hebcal_meta_json_err: "JSON invalide",
+    holidays_shabbat_hebcal_meta_invalid_payload: "Reponse invalide",
+    holidays_shabbat_hebcal_need_entry: "Ajoutez ID ou URL, ou une seule entree Boiler Manager (ou desactivez l'auto). Fichier: hebcal-<entry_id>.json",
+    holidays_shabbat_hebcal_scope_label: "Fenetres Hebcal pour les regles",
+    holidays_shabbat_hebcal_scope_both: "Chabbat et fetes",
+    holidays_shabbat_hebcal_scope_shabbat: "Chabbat seulement",
+    holidays_shabbat_hebcal_scope_holiday: "Fetes seulement",
+    holidays_shabbat_practical_hint: "Une tache: editeur → Condition + ignorer si etat.",
+    holidays_shabbat_windows_title: "Toutes les fenetres du fichier",
+    holidays_shabbat_windows_empty: "Pas de fenetres dans le fichier Hebcal.",
+    holidays_shabbat_window_kind_shabbat: "Chabbat",
+    holidays_shabbat_window_kind_holiday: "Fete",
+    holidays_shabbat_window_state_active: "Maintenant",
+    holidays_shabbat_window_state_past: "Passe",
+    holidays_shabbat_window_state_upcoming: "A venir",
     holiday_policy_allow: "Sans restriction",
     holiday_policy_block: "Bloquer",
     holiday_policy_postpone: "Reporter",
@@ -619,6 +723,10 @@ const DEFAULT_CONFIG = {
   holiday_active_states: "on,home,active,true",
   holiday_timer_policy: "allow",
   holiday_task_policy: "allow",
+  hebcal_local_enabled: true,
+  hebcal_cache_path: "",
+  hebcal_window_scope: "both",
+  auto_entry_id: true,
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   duration_entity: "",
   timer_entity: "",
@@ -667,6 +775,14 @@ class BoilerWaterCard extends HTMLElement {
     this._selectedDurationOptionLocal = "30m";
     this._lastLegacyTimerCancelAt = 0;
     this._lastLegacyTimerCancelEntity = "";
+    this._hebcalCache = null;
+    this._hebcalFetchInFlight = false;
+    this._hebcalLastAttempt = 0;
+    this._hebcalScheduledUrl = "";
+    this._hebcalLastResolvedEntryId = "";
+    this._hebcalFetchError = "";
+    this._hebcalLastHttpStatus = 0;
+    this._holidaysShabbatInlineBound = false;
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
@@ -1225,37 +1341,196 @@ class BoilerWaterCard extends HTMLElement {
           color: rgba(234, 241, 252, 0.86);
         }
 
-        .holidays-shabbat-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 8px;
+        .holidays-shabbat-sources-line {
+          margin: 0;
+          font-size: 0.76rem;
+          line-height: 1.35;
+          color: rgba(200, 216, 240, 0.88);
+          word-break: break-word;
         }
 
-        .holidays-shabbat-field {
-          margin: 0;
+        .holidays-shabbat-settings-row {
           display: grid;
-          gap: 3px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          align-items: stretch;
+        }
+
+        .holidays-shabbat-setting {
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+          min-height: 72px;
         }
 
         .holidays-shabbat-label {
-          font-size: 0.74rem;
+          font-size: 0.72rem;
           font-weight: 700;
           color: rgba(202, 220, 244, 0.9);
         }
 
-        .holidays-shabbat-value {
-          font-size: 0.86rem;
-          font-weight: 800;
-          color: #eef5ff;
+        .holidays-shabbat-hebcal-block {
+          margin-top: 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .holidays-shabbat-hebcal-row {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .holidays-shabbat-hebcal-meta {
+          font-size: 0.74rem;
+          font-weight: 600;
+          color: rgba(200, 216, 240, 0.92);
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          direction: ltr;
+          unicode-bidi: isolate;
+          text-align: left;
+          display: block;
           line-height: 1.35;
           word-break: break-word;
         }
 
-        .holidays-shabbat-description {
-          margin: 0;
-          font-size: 0.8rem;
+        .holidays-shabbat-hebcal-meta.error {
+          color: #ffb4a8;
+        }
+
+        .holidays-shabbat-policy-select {
+          width: 100%;
+          max-width: 100%;
+          min-height: 40px;
+          border-radius: 10px;
+          border: 1px solid rgba(120, 140, 170, 0.35);
+          background: rgba(20, 32, 52, 0.55);
+          color: #eef5ff;
+          font-size: 0.82rem;
+          font-weight: 700;
+          padding: 6px 10px;
+          box-sizing: border-box;
+          margin-top: auto;
+        }
+
+        .holidays-shabbat-windows-section {
+          margin-top: 4px;
+          min-height: 0;
+        }
+
+        .holidays-shabbat-windows-head {
+          margin-bottom: 4px;
+        }
+
+        .holidays-shabbat-windows-title {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: rgba(210, 224, 248, 0.95);
+        }
+
+        .holidays-shabbat-window-list {
+          max-height: min(42vh, 280px);
+          overflow-y: auto;
+          overflow-x: hidden;
+          border: 1px solid rgba(120, 140, 170, 0.35);
+          border-radius: 10px;
+          background: rgba(6, 12, 22, 0.45);
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .holidays-shabbat-windows-empty {
+          padding: 10px 8px;
+          font-size: 0.78rem;
+          color: rgba(190, 206, 230, 0.85);
+          text-align: center;
+        }
+
+        .holidays-shabbat-window-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 6px 10px;
+          padding: 7px 8px;
+          border-bottom: 1px solid rgba(120, 140, 170, 0.18);
+          align-items: center;
+          font-size: 0.76rem;
+        }
+
+        .holidays-shabbat-window-row:last-child {
+          border-bottom: none;
+        }
+
+        .holidays-shabbat-window-main {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .holidays-shabbat-window-name {
+          font-weight: 700;
+          color: #eef5ff;
+          line-height: 1.25;
+        }
+
+        .holidays-shabbat-window-range {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          direction: ltr;
+          text-align: start;
+          unicode-bidi: isolate;
+          font-size: 0.68rem;
+          color: rgba(186, 202, 228, 0.88);
+        }
+
+        .holidays-shabbat-window-badges {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 3px;
+          flex-shrink: 0;
+        }
+
+        .holidays-shabbat-badge {
+          padding: 2px 6px;
+          border-radius: 6px;
+          font-size: 0.62rem;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .holidays-shabbat-badge-kind-shabbat {
+          background: rgba(100, 140, 255, 0.32);
+          color: #e8f0ff;
+        }
+
+        .holidays-shabbat-badge-kind-holiday {
+          background: rgba(255, 170, 90, 0.28);
+          color: #fff4e8;
+        }
+
+        .holidays-shabbat-badge-state-active {
+          background: rgba(60, 180, 120, 0.35);
+          color: #e8fff4;
+        }
+
+        .holidays-shabbat-badge-state-past {
+          background: rgba(120, 130, 150, 0.28);
+          color: rgba(230, 236, 248, 0.82);
+        }
+
+        .holidays-shabbat-badge-state-upcoming {
+          background: rgba(90, 160, 220, 0.25);
+          color: #e8f4ff;
+        }
+
+        .holidays-shabbat-footnote {
+          margin: 8px 0 0;
+          font-size: 0.72rem;
           line-height: 1.4;
-          color: rgba(211, 225, 245, 0.84);
+          color: rgba(185, 200, 225, 0.82);
         }
 
         .import-export-grid {
@@ -2671,16 +2946,16 @@ class BoilerWaterCard extends HTMLElement {
             grid-column: 1 / -1;
           }
 
-          .holidays-shabbat-grid {
+          .holidays-shabbat-settings-row {
             grid-template-columns: minmax(0, 1fr);
+          }
+
+          .holidays-shabbat-setting {
+            min-height: 0;
           }
 
           .holidays-shabbat-status {
             font-size: 0.8rem;
-          }
-
-          .holidays-shabbat-value {
-            font-size: 0.82rem;
           }
 
           #import-select-modal-panel {
@@ -3070,21 +3345,34 @@ class BoilerWaterCard extends HTMLElement {
             <div class="tasks-card holidays-shabbat-card">
               <p class="tasks-title" id="holidays-shabbat-title">Holidays &amp; Shabbat</p>
               <p class="holidays-shabbat-status inactive" id="holidays-shabbat-status">Inactive</p>
-              <div class="holidays-shabbat-grid">
-                <p class="holidays-shabbat-field">
-                  <span class="holidays-shabbat-label" id="holidays-shabbat-sources-label">Sources</span>
-                  <span class="holidays-shabbat-value" id="holidays-shabbat-sources-value">Not set</span>
-                </p>
-                <p class="holidays-shabbat-field">
+              <p class="holidays-shabbat-sources-line" id="holidays-shabbat-sources-line"></p>
+              <div class="holidays-shabbat-settings-row">
+                <div class="holidays-shabbat-setting">
                   <span class="holidays-shabbat-label" id="holidays-shabbat-timer-rule-label">Timer Rule</span>
-                  <span class="holidays-shabbat-value" id="holidays-shabbat-timer-rule-value">No restriction</span>
-                </p>
-                <p class="holidays-shabbat-field">
+                  <select id="holidays-shabbat-timer-policy" class="holidays-shabbat-policy-select" aria-label="Timer policy"></select>
+                </div>
+                <div class="holidays-shabbat-setting">
                   <span class="holidays-shabbat-label" id="holidays-shabbat-task-rule-label">Task Rule</span>
-                  <span class="holidays-shabbat-value" id="holidays-shabbat-task-rule-value">No restriction</span>
-                </p>
+                  <select id="holidays-shabbat-task-policy" class="holidays-shabbat-policy-select" aria-label="Task policy"></select>
+                </div>
               </div>
-              <p class="holidays-shabbat-description" id="holidays-shabbat-description">This tab is ready for Hebcal settings and holiday/shabbat rules for timers and tasks.</p>
+              <div class="holidays-shabbat-hebcal-block" id="holidays-shabbat-hebcal-block" hidden>
+                <div class="holidays-shabbat-hebcal-row">
+                  <span class="holidays-shabbat-label" id="holidays-shabbat-hebcal-label">Hebcal</span>
+                  <span class="holidays-shabbat-hebcal-meta" id="holidays-shabbat-hebcal-meta" dir="ltr"></span>
+                </div>
+                <div class="holidays-shabbat-setting" id="holidays-shabbat-hebcal-scope-wrap" hidden>
+                  <span class="holidays-shabbat-label" id="holidays-shabbat-hebcal-scope-label"></span>
+                  <select id="holidays-shabbat-hebcal-scope" class="holidays-shabbat-policy-select" aria-label="Hebcal scope"></select>
+                </div>
+              </div>
+              <div class="holidays-shabbat-windows-section" id="holidays-shabbat-windows-section" hidden>
+                <div class="holidays-shabbat-windows-head">
+                  <span class="holidays-shabbat-windows-title" id="holidays-shabbat-windows-title"></span>
+                </div>
+                <div class="holidays-shabbat-window-list" id="holidays-shabbat-window-list" role="list"></div>
+              </div>
+              <p class="holidays-shabbat-footnote" id="holidays-shabbat-footnote"></p>
             </div>
           </div>
         </div>
@@ -3338,13 +3626,21 @@ class BoilerWaterCard extends HTMLElement {
       importExportTitle: this.shadowRoot.getElementById("import-export-title"),
       holidaysShabbatTitle: this.shadowRoot.getElementById("holidays-shabbat-title"),
       holidaysShabbatStatus: this.shadowRoot.getElementById("holidays-shabbat-status"),
-      holidaysShabbatSourcesLabel: this.shadowRoot.getElementById("holidays-shabbat-sources-label"),
-      holidaysShabbatSourcesValue: this.shadowRoot.getElementById("holidays-shabbat-sources-value"),
+      holidaysShabbatSourcesLine: this.shadowRoot.getElementById("holidays-shabbat-sources-line"),
       holidaysShabbatTimerRuleLabel: this.shadowRoot.getElementById("holidays-shabbat-timer-rule-label"),
-      holidaysShabbatTimerRuleValue: this.shadowRoot.getElementById("holidays-shabbat-timer-rule-value"),
+      holidaysShabbatTimerPolicySelect: this.shadowRoot.getElementById("holidays-shabbat-timer-policy"),
       holidaysShabbatTaskRuleLabel: this.shadowRoot.getElementById("holidays-shabbat-task-rule-label"),
-      holidaysShabbatTaskRuleValue: this.shadowRoot.getElementById("holidays-shabbat-task-rule-value"),
-      holidaysShabbatDescription: this.shadowRoot.getElementById("holidays-shabbat-description"),
+      holidaysShabbatTaskPolicySelect: this.shadowRoot.getElementById("holidays-shabbat-task-policy"),
+      holidaysShabbatWindowsSection: this.shadowRoot.getElementById("holidays-shabbat-windows-section"),
+      holidaysShabbatWindowsTitle: this.shadowRoot.getElementById("holidays-shabbat-windows-title"),
+      holidaysShabbatWindowList: this.shadowRoot.getElementById("holidays-shabbat-window-list"),
+      holidaysShabbatFootnote: this.shadowRoot.getElementById("holidays-shabbat-footnote"),
+      holidaysShabbatHebcalBlock: this.shadowRoot.getElementById("holidays-shabbat-hebcal-block"),
+      holidaysShabbatHebcalLabel: this.shadowRoot.getElementById("holidays-shabbat-hebcal-label"),
+      holidaysShabbatHebcalMeta: this.shadowRoot.getElementById("holidays-shabbat-hebcal-meta"),
+      holidaysShabbatHebcalScopeWrap: this.shadowRoot.getElementById("holidays-shabbat-hebcal-scope-wrap"),
+      holidaysShabbatHebcalScopeLabel: this.shadowRoot.getElementById("holidays-shabbat-hebcal-scope-label"),
+      holidaysShabbatHebcalScopeSelect: this.shadowRoot.getElementById("holidays-shabbat-hebcal-scope"),
       tasksAddBtn: this.shadowRoot.getElementById("tasks-add-btn"),
       tasksVacationBtn: this.shadowRoot.getElementById("tasks-vacation-btn"),
       tasksImportBtn: this.shadowRoot.getElementById("tasks-import-btn"),
@@ -3548,6 +3844,15 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
+    const resolvedEntry = this._resolvedIntegrationEntryId();
+    if (resolvedEntry !== this._hebcalLastResolvedEntryId) {
+      this._hebcalLastResolvedEntryId = resolvedEntry;
+      if (resolvedEntry) {
+        this._hebcalLastAttempt = 0;
+      }
+    }
+    this._maybeRefreshHebcalCache();
+
     const cfg = this._config;
     const boiler = this._hass.states[cfg.boiler_entity];
     const duration = this._hass.states[cfg.duration_entity];
@@ -3591,17 +3896,14 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.holidaysShabbatTitle) {
       this._elements.holidaysShabbatTitle.textContent = this._t("holidays_shabbat_title");
     }
-    if (this._elements.holidaysShabbatSourcesLabel) {
-      this._elements.holidaysShabbatSourcesLabel.textContent = this._t("holidays_shabbat_sources_label");
-    }
     if (this._elements.holidaysShabbatTimerRuleLabel) {
       this._elements.holidaysShabbatTimerRuleLabel.textContent = this._t("holidays_shabbat_timer_rule_label");
     }
     if (this._elements.holidaysShabbatTaskRuleLabel) {
       this._elements.holidaysShabbatTaskRuleLabel.textContent = this._t("holidays_shabbat_task_rule_label");
     }
-    if (this._elements.holidaysShabbatDescription) {
-      this._elements.holidaysShabbatDescription.textContent = this._t("holidays_shabbat_description");
+    if (this._elements.holidaysShabbatFootnote) {
+      this._elements.holidaysShabbatFootnote.textContent = `${this._t("holidays_shabbat_description")} ${this._t("holidays_shabbat_practical_hint")}`.trim();
     }
     const hasTasksView = this._hasTasksView();
     const hasImportExportView = this._hasImportExportView();
@@ -4925,13 +5227,425 @@ class BoilerWaterCard extends HTMLElement {
     };
   }
 
+  _normalizedIntegrationEntryId() {
+    let raw = String(this._config?.integration_entry_id || "").trim();
+    raw = raw.replace(/^["']+|["']+$/g, "");
+    return raw.trim();
+  }
+
+  /** Hebcal fetch is on unless explicitly turned off (handles unset / empty from older YAML). */
+  _isHebcalLocalFetchEnabled() {
+    const v = this._config?.hebcal_local_enabled;
+    if (v === false) {
+      return false;
+    }
+    if (v === true) {
+      return true;
+    }
+    const s = String(v ?? "").trim().toLowerCase();
+    if (s === "false" || s === "0" || s === "off" || s === "no") {
+      return false;
+    }
+    return true;
+  }
+
+  _isAutoEntryIdEnabled() {
+    const v = this._config?.auto_entry_id;
+    if (v === false) {
+      return false;
+    }
+    const s = String(v ?? "").trim().toLowerCase();
+    if (s === "false" || s === "0" || s === "off" || s === "no") {
+      return false;
+    }
+    return true;
+  }
+
+  _boilerManagerCandidates() {
+    const states = this._hass?.states;
+    if (!states) {
+      return [];
+    }
+    const candidates = new Map();
+    Object.values(states).forEach((stateObj) => {
+      const attrs = stateObj?.attributes || {};
+      const boilerEntity = String(attrs.boiler_entity || "").trim();
+      if (!boilerEntity || !boilerEntity.includes(".")) {
+        return;
+      }
+      const hasBoilerManagerMarkers = (
+        String(attrs.entry_id || "").trim()
+        || attrs.task_id !== undefined
+        || attrs.active_tasks_count !== undefined
+      );
+      if (!hasBoilerManagerMarkers) {
+        return;
+      }
+      const entryId = String(attrs.entry_id || "").trim();
+      const key = entryId ? `entry:${entryId}` : `boiler:${boilerEntity.toLowerCase()}`;
+      if (!candidates.has(key)) {
+        candidates.set(key, { entryId, boilerEntity });
+      }
+    });
+    return Array.from(candidates.values());
+  }
+
+  _resolvedIntegrationEntryId() {
+    const direct = this._normalizedIntegrationEntryId();
+    if (direct) {
+      return direct;
+    }
+    if (!this._isAutoEntryIdEnabled() || !this._hass?.states) {
+      return "";
+    }
+    const mgrCandidates = this._boilerManagerCandidates();
+    const boiler = String(this._config?.boiler_entity || "").trim().toLowerCase();
+
+    if (boiler && mgrCandidates.length > 0) {
+      const forBoiler = mgrCandidates.filter(
+        (c) => String(c.boilerEntity || "").trim().toLowerCase() === boiler,
+      );
+      const idSet = new Set(
+        forBoiler.map((c) => String(c.entryId || "").trim()).filter((id) => id.length > 0),
+      );
+      if (idSet.size === 1) {
+        return [...idSet][0];
+      }
+    }
+
+    if (mgrCandidates.length === 1 && mgrCandidates[0].entryId) {
+      return String(mgrCandidates[0].entryId).trim();
+    }
+    return this._entryIdFromModeSensorsFallback();
+  }
+
+  /** When generic candidate scan misses, match Boiler Manager mode sensors (entry_id on attributes). */
+  _entryIdFromModeSensorsFallback() {
+    if (!this._hass?.states) {
+      return "";
+    }
+    const boiler = String(this._config?.boiler_entity || "").trim().toLowerCase();
+    let list = Object.values(this._hass.states)
+      .filter((s) => s?.entity_id?.startsWith("sensor."))
+      .filter((s) => {
+        const a = s?.attributes || {};
+        return (
+          a.active_tasks_count !== undefined
+          && String(a.entry_id || "").trim().length > 0
+          && String(a.boiler_entity || "").includes(".")
+        );
+      });
+    if (boiler) {
+      list = list.filter(
+        (s) => String(s?.attributes?.boiler_entity || "").trim().toLowerCase() === boiler,
+      );
+    }
+    const ids = [...new Set(list.map((s) => String(s.attributes.entry_id || "").trim()).filter(Boolean))];
+    if (ids.length !== 1) {
+      return "";
+    }
+    return ids[0];
+  }
+
+  _hebcalCacheUrl() {
+    const manual = String(this._config?.hebcal_cache_path || "").trim();
+    if (manual) {
+      return manual;
+    }
+    if (!this._isHebcalLocalFetchEnabled()) {
+      return "";
+    }
+    const entryId = this._resolvedIntegrationEntryId();
+    if (!entryId) {
+      return "";
+    }
+    return `/local/boiler-card/hebcal-${entryId}.json`;
+  }
+
+  _maybeRefreshHebcalCache() {
+    const url = this._hebcalCacheUrl();
+    if (!this._hass) {
+      return;
+    }
+    if (!url) {
+      this._hebcalCache = null;
+      this._hebcalFetchError = "";
+      this._hebcalLastHttpStatus = 0;
+      return;
+    }
+    const now = Date.now();
+    if (url !== this._hebcalScheduledUrl) {
+      this._hebcalScheduledUrl = url;
+      this._hebcalLastAttempt = 0;
+      this._hebcalCache = null;
+      this._hebcalFetchError = "";
+      this._hebcalLastHttpStatus = 0;
+    }
+    if (this._hebcalFetchInFlight) {
+      return;
+    }
+    if (now - this._hebcalLastAttempt < 5 * 60 * 1000) {
+      return;
+    }
+    this._hebcalFetchInFlight = true;
+    this._hebcalLastAttempt = now;
+    this._hebcalFetchError = "";
+    const stamp = now;
+    const sep = url.includes("?") ? "&" : "?";
+    if (this.shadowRoot?.querySelector("ha-card")) {
+      this._syncHolidaysShabbatPanel();
+    }
+    fetch(`${url}${sep}t=${stamp}`, { cache: "no-store" })
+      .then(async (resp) => {
+        this._hebcalLastHttpStatus = resp.status;
+        if (!resp.ok) {
+          const st = resp.statusText ? `${resp.status} ${resp.statusText}`.trim() : `HTTP ${resp.status}`;
+          this._hebcalFetchError = st;
+          this._hebcalCache = null;
+          return;
+        }
+        let data;
+        try {
+          data = await resp.json();
+        } catch (e) {
+          this._hebcalFetchError = e?.message || this._t("holidays_shabbat_hebcal_meta_json_err");
+          this._hebcalCache = null;
+          return;
+        }
+        if (data && typeof data === "object") {
+          this._hebcalFetchError = "";
+          this._hebcalCache = data;
+        } else {
+          this._hebcalFetchError = this._t("holidays_shabbat_hebcal_meta_invalid_payload");
+          this._hebcalCache = null;
+        }
+      })
+      .catch((err) => {
+        this._hebcalCache = null;
+        this._hebcalFetchError = err?.message || String(err || "network");
+      })
+      .finally(() => {
+        this._hebcalFetchInFlight = false;
+        if (this._hass && this.shadowRoot?.querySelector("ha-card")) {
+          const boiler = this._hass.states[this._config.boiler_entity];
+          const timer = this._hass.states[this._config.timer_entity];
+          const managerMode = this._boilerManagerModeEntity();
+          this._maybeEnforceHolidayRules(managerMode, boiler, timer);
+          this._syncHolidaysShabbatPanel();
+          this._syncHolidayShabbatNotice();
+        }
+      });
+  }
+
+  _normalizeHebcalWindowScope(raw) {
+    const s = String(raw ?? "both").trim().toLowerCase();
+    if (s === "shabbat" || s === "shabbat_only") {
+      return "shabbat";
+    }
+    if (s === "holiday" || s === "holidays" || s === "yom_tov" || s === "yom-tov") {
+      return "holiday";
+    }
+    return "both";
+  }
+
+  _patchCardConfig(patch) {
+    const next = { ...this._config, ...patch };
+    this._config = next;
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { config: next },
+    }));
+    this._sync();
+  }
+
+  _maybeBindHolidaysShabbatInlineControls() {
+    if (this._holidaysShabbatInlineBound) {
+      return;
+    }
+    const timerSel = this._elements.holidaysShabbatTimerPolicySelect;
+    const taskSel = this._elements.holidaysShabbatTaskPolicySelect;
+    const scopeSel = this._elements.holidaysShabbatHebcalScopeSelect;
+    if (!timerSel || !taskSel || !scopeSel) {
+      return;
+    }
+    this._holidaysShabbatInlineBound = true;
+    timerSel.addEventListener("change", (event) => {
+      const v = String(event?.target?.value || "allow").trim().toLowerCase();
+      this._patchCardConfig({ holiday_timer_policy: v });
+    });
+    taskSel.addEventListener("change", (event) => {
+      const v = String(event?.target?.value || "allow").trim().toLowerCase();
+      this._patchCardConfig({ holiday_task_policy: v });
+    });
+    scopeSel.addEventListener("change", (event) => {
+      const v = this._normalizeHebcalWindowScope(event?.target?.value);
+      this._patchCardConfig({ hebcal_window_scope: v });
+    });
+  }
+
+  _fillHolidayPolicySelect(select) {
+    if (!select) {
+      return;
+    }
+    const specs = [
+      ["allow", "holiday_policy_allow"],
+      ["block", "holiday_policy_block"],
+      ["postpone", "holiday_policy_postpone"],
+      ["force_off", "holiday_policy_force_off"],
+    ];
+    specs.forEach(([val, key], idx) => {
+      let opt = select.options[idx];
+      if (!opt) {
+        opt = document.createElement("option");
+        select.appendChild(opt);
+      }
+      opt.value = val;
+      opt.textContent = this._t(key);
+    });
+    while (select.options.length > specs.length) {
+      select.remove(select.options.length - 1);
+    }
+  }
+
+  _fillHebcalScopeSelect(select) {
+    if (!select) {
+      return;
+    }
+    const specs = [
+      ["both", "holidays_shabbat_hebcal_scope_both"],
+      ["shabbat", "holidays_shabbat_hebcal_scope_shabbat"],
+      ["holiday", "holidays_shabbat_hebcal_scope_holiday"],
+    ];
+    specs.forEach(([val, key], idx) => {
+      let opt = select.options[idx];
+      if (!opt) {
+        opt = document.createElement("option");
+        select.appendChild(opt);
+      }
+      opt.value = val;
+      opt.textContent = this._t(key);
+    });
+    while (select.options.length > specs.length) {
+      select.remove(select.options.length - 1);
+    }
+  }
+
+  _syncHolidaysInlinePolicySelects() {
+    this._fillHolidayPolicySelect(this._elements.holidaysShabbatTimerPolicySelect);
+    this._fillHolidayPolicySelect(this._elements.holidaysShabbatTaskPolicySelect);
+    const tPol = this._holidayTimerPolicy();
+    const taskPol = this._holidayTaskPolicy();
+    const ts = this._elements.holidaysShabbatTimerPolicySelect;
+    const tas = this._elements.holidaysShabbatTaskPolicySelect;
+    if (ts && ts.value !== tPol) {
+      ts.value = tPol;
+    }
+    if (tas && tas.value !== taskPol) {
+      tas.value = taskPol;
+    }
+  }
+
+  _syncHebcalScopeUi() {
+    const wrap = this._elements.holidaysShabbatHebcalScopeWrap;
+    const scopeLabel = this._elements.holidaysShabbatHebcalScopeLabel;
+    const scopeSel = this._elements.holidaysShabbatHebcalScopeSelect;
+    if (!wrap || !scopeLabel || !scopeSel) {
+      return;
+    }
+    if (!this._hebcalMetaPanelWanted() || !this._hebcalCacheUrl()) {
+      wrap.hidden = true;
+      return;
+    }
+    wrap.hidden = false;
+    scopeLabel.textContent = this._t("holidays_shabbat_hebcal_scope_label");
+    this._fillHebcalScopeSelect(scopeSel);
+    const sc = this._normalizeHebcalWindowScope(this._config?.hebcal_window_scope);
+    if (scopeSel.value !== sc) {
+      scopeSel.value = sc;
+    }
+  }
+
+  _hebcalWindowStatuses() {
+    const out = {
+      shabbat: false,
+      holiday: false,
+      active: false,
+      label: "",
+    };
+    if (!this._hebcalCacheUrl()) {
+      return out;
+    }
+    const payload = this._hebcalCache;
+    if (!payload || !Array.isArray(payload.windows)) {
+      return out;
+    }
+    const scope = this._normalizeHebcalWindowScope(this._config?.hebcal_window_scope);
+    const now = new Date();
+    const labels = [];
+    for (const w of payload.windows) {
+      const start = w.starts_at ? new Date(w.starts_at) : null;
+      const end = w.ends_at ? new Date(w.ends_at) : null;
+      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        continue;
+      }
+      const kind = String(w.kind || "").toLowerCase();
+      if (scope === "shabbat" && kind !== "shabbat") {
+        continue;
+      }
+      if (scope === "holiday" && kind !== "holiday") {
+        continue;
+      }
+      if (now >= start && now < end) {
+        if (kind === "shabbat") {
+          out.shabbat = true;
+        } else if (kind === "holiday") {
+          out.holiday = true;
+        }
+        out.active = true;
+        const piece = String(w.label || w.hebrew || "").trim();
+        if (piece && !labels.includes(piece)) {
+          labels.push(piece);
+        }
+      }
+    }
+    out.label = labels.slice(0, 3).join(", ");
+    return out;
+  }
+
+  _hebcalSummaryText(hebcalWin) {
+    const base = this._t("holidays_shabbat_source_hebcal");
+    if (!this._isHebcalLocalFetchEnabled()) {
+      return "";
+    }
+    const url = this._hebcalCacheUrl();
+    if (!url) {
+      return `${base}: ${this._t("holidays_shabbat_hebcal_need_entry")}`;
+    }
+    if (this._hebcalFetchInFlight && !this._hebcalCache) {
+      return `${base}: ${this._t("holidays_shabbat_hebcal_waiting")}`;
+    }
+    if (!this._hebcalCache) {
+      return `${base}: ${this._t("holidays_shabbat_hebcal_no_cache")}`;
+    }
+    if (hebcalWin.active) {
+      return hebcalWin.label
+        ? `${base}: ${hebcalWin.label}`
+        : `${base}: ${this._t("holidays_shabbat_status_active")}`;
+    }
+    return `${base}: ${this._t("holidays_shabbat_hebcal_idle")}`;
+  }
+
   _holidayShabbatStatus() {
     const holiday = this._holidaySourceStatus(this._config?.holiday_entity);
     const shabbat = this._holidaySourceStatus(this._config?.shabbat_entity);
+    const hebcal = this._hebcalWindowStatuses();
+    const active = Boolean(holiday.active || shabbat.active || hebcal.active);
     return {
       holiday,
       shabbat,
-      active: holiday.active || shabbat.active,
+      hebcal,
+      active,
     };
   }
 
@@ -4972,8 +5686,6 @@ class BoilerWaterCard extends HTMLElement {
 
   _syncHolidaysShabbatPanel() {
     const status = this._holidayShabbatStatus();
-    const timerPolicy = this._holidayTimerPolicy();
-    const taskPolicy = this._holidayTaskPolicy();
 
     if (this._elements.holidaysShabbatStatus) {
       this._elements.holidaysShabbatStatus.textContent = status.active
@@ -4981,17 +5693,176 @@ class BoilerWaterCard extends HTMLElement {
         : this._t("holidays_shabbat_status_inactive");
       this._elements.holidaysShabbatStatus.classList.toggle("inactive", !status.active);
     }
-    if (this._elements.holidaysShabbatSourcesValue) {
+    if (this._elements.holidaysShabbatSourcesLine) {
       const holidayLine = this._holidaySourceSummaryLine("holiday", status.holiday);
       const shabbatLine = this._holidaySourceSummaryLine("shabbat", status.shabbat);
-      this._elements.holidaysShabbatSourcesValue.textContent = `${holidayLine} • ${shabbatLine}`;
+      const hebcalPart = this._hebcalSummaryText(status.hebcal);
+      const parts = [holidayLine, shabbatLine];
+      if (hebcalPart) {
+        parts.push(hebcalPart);
+      }
+      const line = `${this._t("holidays_shabbat_sources_label")}: ${parts.join(" • ")}`;
+      this._elements.holidaysShabbatSourcesLine.textContent = line;
+      this._elements.holidaysShabbatSourcesLine.title = line;
     }
-    if (this._elements.holidaysShabbatTimerRuleValue) {
-      this._elements.holidaysShabbatTimerRuleValue.textContent = this._holidayPolicyLabel(timerPolicy);
+    this._maybeBindHolidaysShabbatInlineControls();
+    this._syncHolidaysInlinePolicySelects();
+    this._syncHolidaysHebcalMeta();
+    this._syncHebcalScopeUi();
+    this._syncHolidaysWindowList();
+  }
+
+  _syncHolidaysWindowList() {
+    const section = this._elements.holidaysShabbatWindowsSection;
+    const list = this._elements.holidaysShabbatWindowList;
+    const title = this._elements.holidaysShabbatWindowsTitle;
+    if (!section || !list || !title) {
+      return;
     }
-    if (this._elements.holidaysShabbatTaskRuleValue) {
-      this._elements.holidaysShabbatTaskRuleValue.textContent = this._holidayPolicyLabel(taskPolicy);
+    title.textContent = this._t("holidays_shabbat_windows_title");
+    const payload = this._hebcalCache;
+    const windows = (payload && Array.isArray(payload.windows)) ? payload.windows : [];
+    if (!this._hebcalMetaPanelWanted() || !this._hebcalCacheUrl()) {
+      section.hidden = true;
+      list.innerHTML = "";
+      return;
     }
+    section.hidden = false;
+    if (this._hebcalFetchInFlight && !payload) {
+      list.innerHTML = `<div class="holidays-shabbat-windows-empty">${this._escapeHtml(this._t("holidays_shabbat_hebcal_meta_loading"))}</div>`;
+      return;
+    }
+    if (windows.length === 0) {
+      list.innerHTML = `<div class="holidays-shabbat-windows-empty">${this._escapeHtml(this._t("holidays_shabbat_windows_empty"))}</div>`;
+      return;
+    }
+    const now = Date.now();
+    const sorted = [...windows].sort((a, b) => {
+      const ta = new Date(a?.starts_at || 0).getTime();
+      const tb = new Date(b?.starts_at || 0).getTime();
+      return ta - tb;
+    });
+    const lang = this._lang();
+    const locale = lang === "he" ? "he-IL" : lang === "ru" ? "ru-RU" : lang === "fr" ? "fr-FR" : "en-GB";
+    const fmt = (iso) => {
+      const d = iso ? new Date(iso) : null;
+      if (!d || Number.isNaN(d.getTime())) {
+        return "—";
+      }
+      return d.toLocaleString(locale, { dateStyle: "short", timeStyle: "short" });
+    };
+    const rowsHtml = sorted.map((w) => {
+      const start = w?.starts_at ? new Date(w.starts_at) : null;
+      const end = w?.ends_at ? new Date(w.ends_at) : null;
+      let state = "upcoming";
+      if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        const t0 = start.getTime();
+        const t1 = end.getTime();
+        if (now >= t0 && now < t1) {
+          state = "active";
+        } else if (now >= t1) {
+          state = "past";
+        }
+      }
+      const kind = String(w?.kind || "").toLowerCase();
+      const kindKey = kind === "holiday" ? "holidays_shabbat_window_kind_holiday" : "holidays_shabbat_window_kind_shabbat";
+      const stateKey = state === "active"
+        ? "holidays_shabbat_window_state_active"
+        : state === "past"
+          ? "holidays_shabbat_window_state_past"
+          : "holidays_shabbat_window_state_upcoming";
+      const rawName = String(w?.label || w?.hebrew || w?.title || "").trim() || this._t(kindKey);
+      const name = this._escapeHtml(rawName);
+      const range = this._escapeHtml(`${fmt(w?.starts_at)} → ${fmt(w?.ends_at)}`);
+      const kindClass = kind === "holiday" ? "holidays-shabbat-badge-kind-holiday" : "holidays-shabbat-badge-kind-shabbat";
+      const stateClass = state === "active"
+        ? "holidays-shabbat-badge-state-active"
+        : state === "past"
+          ? "holidays-shabbat-badge-state-past"
+          : "holidays-shabbat-badge-state-upcoming";
+      return `<div class="holidays-shabbat-window-row" role="listitem">
+        <div class="holidays-shabbat-window-main">
+          <span class="holidays-shabbat-window-name">${name}</span>
+          <span class="holidays-shabbat-window-range">${range}</span>
+        </div>
+        <div class="holidays-shabbat-window-badges">
+          <span class="holidays-shabbat-badge ${kindClass}">${this._escapeHtml(this._t(kindKey))}</span>
+          <span class="holidays-shabbat-badge ${stateClass}">${this._escapeHtml(this._t(stateKey))}</span>
+        </div>
+      </div>`;
+    }).join("");
+    list.innerHTML = rowsHtml;
+  }
+
+  _hebcalMetaPanelWanted() {
+    const manual = String(this._config?.hebcal_cache_path || "").trim();
+    return Boolean(manual) || this._isHebcalLocalFetchEnabled();
+  }
+
+  _truncateHebcalUrlDisplay(url, maxLen = 72) {
+    const s = String(url || "");
+    if (s.length <= maxLen) {
+      return s;
+    }
+    return `${s.slice(0, Math.max(0, maxLen - 1))}…`;
+  }
+
+  _syncHolidaysHebcalMeta() {
+    const block = this._elements.holidaysShabbatHebcalBlock;
+    const label = this._elements.holidaysShabbatHebcalLabel;
+    const meta = this._elements.holidaysShabbatHebcalMeta;
+    if (!block || !label || !meta) {
+      return;
+    }
+    if (!this._hebcalMetaPanelWanted()) {
+      block.hidden = true;
+      return;
+    }
+    block.hidden = false;
+    label.textContent = this._t("holidays_shabbat_hebcal_meta_label");
+    meta.classList.remove("error");
+    const url = this._hebcalCacheUrl();
+    const urlDisp = url ? this._truncateHebcalUrlDisplay(url) : "";
+    if (!url) {
+      meta.classList.add("error");
+      meta.textContent = this._t("holidays_shabbat_hebcal_need_entry");
+      return;
+    }
+    if (this._hebcalFetchInFlight && !this._hebcalCache) {
+      meta.textContent = `${this._t("holidays_shabbat_hebcal_meta_loading")} • ${urlDisp}`;
+      return;
+    }
+    if (this._hebcalFetchError) {
+      meta.classList.add("error");
+      const bits = [this._t("holidays_shabbat_hebcal_meta_err"), this._hebcalFetchError, urlDisp].filter(Boolean);
+      meta.textContent = bits.join(" • ");
+      return;
+    }
+    const payload = this._hebcalCache;
+    if (!payload || typeof payload !== "object") {
+      meta.classList.add("error");
+      const hint = this._hebcalLastHttpStatus
+        ? `HTTP ${this._hebcalLastHttpStatus}`
+        : this._t("holidays_shabbat_hebcal_no_cache");
+      meta.textContent = `${this._t("holidays_shabbat_hebcal_meta_err")}: ${hint} • ${urlDisp}`;
+      return;
+    }
+    const fetched = String(payload.fetched_at || payload.fetchedAt || "").trim();
+    const winCount = Array.isArray(payload.windows) ? payload.windows.length : 0;
+    const items = payload.items_count ?? payload.itemsCount;
+    const winWord = this._t("holidays_shabbat_hebcal_meta_windows");
+    const parts = [
+      this._t("holidays_shabbat_hebcal_meta_ok"),
+      urlDisp,
+      `${winCount} ${winWord}`,
+    ];
+    if (fetched) {
+      parts.push(`fetched_at=${fetched}`);
+    }
+    if (items != null && String(items).trim() !== "") {
+      parts.push(`${items} ${this._t("holidays_shabbat_hebcal_meta_items")}`);
+    }
+    meta.textContent = parts.join(" • ");
   }
 
   _syncHolidayShabbatNotice() {
@@ -7184,7 +8055,7 @@ class BoilerWaterCard extends HTMLElement {
       return [];
     }
 
-    const desiredEntryId = String(this._config.integration_entry_id || "").trim();
+    const desiredEntryId = this._resolvedIntegrationEntryId();
     const desiredBoiler = String(this._config.boiler_entity || "").trim().toLowerCase();
 
     const entities = Object.values(this._hass.states)
@@ -7944,7 +8815,7 @@ class BoilerWaterCard extends HTMLElement {
 
   _builtInServiceBaseData() {
     const data = {};
-    const configuredEntryId = String(this._config.integration_entry_id || "").trim();
+    const configuredEntryId = this._resolvedIntegrationEntryId();
     if (configuredEntryId && this._isKnownEntryId(configuredEntryId)) {
       data.entry_id = configuredEntryId;
     }
@@ -8304,6 +9175,14 @@ class BoilerWaterCard extends HTMLElement {
     return "he";
   }
 
+  _escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   _t(key) {
     const lang = this._lang();
     return I18N[lang]?.[key] ?? I18N.he[key] ?? key;
@@ -8361,7 +9240,7 @@ class BoilerWaterCard extends HTMLElement {
       return null;
     }
 
-    const desiredEntryId = String(this._config.integration_entry_id || "").trim();
+    const desiredEntryId = this._resolvedIntegrationEntryId();
     const desiredBoiler = String(this._config.boiler_entity || "").trim().toLowerCase();
     const candidates = Object.values(this._hass.states)
       .filter((state) => state?.entity_id?.startsWith("sensor."))
@@ -8570,7 +9449,7 @@ class BoilerWaterCardEditor extends HTMLElement {
       return;
     }
 
-    if (!this._hass || !this._shouldAutofillBoilerEntity()) {
+    if (!this._hass) {
       return;
     }
 
@@ -8579,7 +9458,16 @@ class BoilerWaterCardEditor extends HTMLElement {
       return;
     }
 
-    const nextConfig = { ...this._config, ...defaults };
+    let nextConfig = { ...this._config };
+    if (this._shouldAutofillBoilerEntity()) {
+      nextConfig = { ...nextConfig, ...defaults };
+    } else {
+      const curEntry = String(nextConfig.integration_entry_id || "").trim();
+      if (!curEntry && defaults.integration_entry_id) {
+        nextConfig.integration_entry_id = defaults.integration_entry_id;
+      }
+    }
+
     const changed = JSON.stringify(nextConfig) !== JSON.stringify(this._config);
     if (!changed) {
       return;
@@ -8965,6 +9853,26 @@ class BoilerWaterCardEditor extends HTMLElement {
         label: labels.boiler_flow_image,
         selector: { text: {} },
       },
+      {
+        name: "auto_entry_id",
+        label: labels.auto_entry_id,
+        selector: { boolean: {} },
+      },
+      {
+        name: "integration_entry_id",
+        label: labels.integration_entry_id,
+        selector: { text: {} },
+      },
+      {
+        name: "hebcal_local_enabled",
+        label: labels.hebcal_local_enabled,
+        selector: { boolean: {} },
+      },
+      {
+        name: "hebcal_cache_path",
+        label: labels.hebcal_cache_path,
+        selector: { text: {} },
+      },
     ];
   }
 
@@ -9074,6 +9982,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_timer_values: "ערכי טיימר בדקות (לדוגמה: 15,30,45,60)",
         timer_values: "ערכי טיימר בדקות (גנרי, לדוגמה: 20,40,90)",
         boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
+        auto_entry_id: "זיהוי אוטומטי של כניסת Boiler Manager (כבה אם כמה כניסות)",
+        integration_entry_id: "מזהה כניסה ידני (ריק = אוטומטי כשיש כניסה אחת)",
+        hebcal_local_enabled: "טען מטמון Hebcal מקומי (/local/boiler-card/hebcal-…)",
+        hebcal_cache_path: "נתיב קובץ Hebcal ידני (ריק = אוטומטי לפי entry)",
       },
       en: {
         language: "Language",
@@ -9091,6 +10003,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_timer_values: "Switcher Timer Values in minutes (e.g. 15,30,45,60)",
         timer_values: "Timer Values in minutes (generic, e.g. 20,40,90)",
         boiler_flow_image: "Water Flow Image (path / URL)",
+        auto_entry_id: "Auto-detect Boiler Manager entry (off if multiple entries)",
+        integration_entry_id: "Manual entry ID (empty = auto when only one entry)",
+        hebcal_local_enabled: "Load Hebcal cache from /local/boiler-card/hebcal-…",
+        hebcal_cache_path: "Custom Hebcal JSON URL/path (empty = auto from entry ID)",
       },
       ru: {
         language: "Язык",
@@ -9108,6 +10024,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_timer_values: "Значения таймера Switcher в минутах (например 15,30,45,60)",
         timer_values: "Значения таймера в минутах (общие, например 20,40,90)",
         boiler_flow_image: "Изображение потока (путь / URL)",
+        auto_entry_id: "Авто-определение записи Boiler Manager (выкл. при нескольких)",
+        integration_entry_id: "ID записи вручную (пусто = авто при одной записи)",
+        hebcal_local_enabled: "Загружать кеш Hebcal из /local/boiler-card/hebcal-…",
+        hebcal_cache_path: "Свой URL/путь JSON Hebcal (пусто = авто по entry)",
       },
       fr: {
         language: "Langue",
@@ -9125,6 +10045,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_timer_values: "Valeurs minuterie Switcher en minutes (ex: 15,30,45,60)",
         timer_values: "Valeurs minuterie en minutes (générique, ex: 20,40,90)",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
+        auto_entry_id: "Detecter auto l'entree Boiler Manager (off si plusieurs)",
+        integration_entry_id: "ID d'entree manuel (vide = auto si une entree)",
+        hebcal_local_enabled: "Charger le cache Hebcal (/local/boiler-card/hebcal-…)",
+        hebcal_cache_path: "URL/chemin JSON Hebcal (vide = auto selon entry)",
       },
     };
 

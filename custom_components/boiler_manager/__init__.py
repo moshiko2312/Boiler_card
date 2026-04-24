@@ -55,6 +55,7 @@ from .const import (
     SERVICE_DELETE_SCHEDULE,
     SERVICE_EXPORT_TASKS,
     SERVICE_IMPORT_TASKS,
+    SERVICE_REFRESH_HEBCAL,
     SERVICE_RUN_TIMED,
     SERVICE_SET_VACATION_MODE,
     SERVICE_TURN_OFF,
@@ -381,6 +382,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             result["total"],
         )
 
+    async def _refresh_hebcal(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        await manager.async_refresh_hebcal()
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_TURN_ON_CONTINUOUS,
@@ -441,6 +446,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         _wrap_service_errors(_import_tasks),
         schema=IMPORT_TASKS_SCHEMA,
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REFRESH_HEBCAL,
+        _wrap_service_errors(_refresh_hebcal),
+        schema=vol.Schema(BASE_SERVICE_SCHEMA),
+    )
 
     hass.data[DOMAIN][DATA_SERVICES_REGISTERED] = True
 
@@ -459,6 +470,7 @@ def _async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_DELETE_SCHEDULE,
         SERVICE_EXPORT_TASKS,
         SERVICE_IMPORT_TASKS,
+        SERVICE_REFRESH_HEBCAL,
     ):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)

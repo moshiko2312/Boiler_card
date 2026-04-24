@@ -9,7 +9,9 @@
           "boiler_entity": "Entité du chauffe-eau",
           "temperature_sensor": "Capteur de température (optionnel)",
           "power_sensor": "Capteur de puissance (optionnel)",
-          "current_sensor": "Capteur de courant (optionnel)"
+          "current_sensor": "Capteur de courant (optionnel)",
+          "hebcal_enabled": "Télécharger le cache Hebcal (quotidien)",
+          "hebcal_city": "Ville Hebcal (ex. IL-Jerusalem)"
         }
       }
     },
@@ -26,7 +28,9 @@
           "boiler_entity": "Entité du chauffe-eau",
           "temperature_sensor": "Capteur de température (optionnel)",
           "power_sensor": "Capteur de puissance (optionnel)",
-          "current_sensor": "Capteur de courant (optionnel)"
+          "current_sensor": "Capteur de courant (optionnel)",
+          "hebcal_enabled": "Télécharger le cache Hebcal (quotidien)",
+          "hebcal_city": "Ville Hebcal (ex. IL-Jerusalem)"
         }
       }
     }

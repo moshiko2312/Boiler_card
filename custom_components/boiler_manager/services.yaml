@@ -343,3 +343,16 @@ import_tasks:
           months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
           recurrence: "forever"
           enabled: true
+
+refresh_hebcal:
+  name: Refresh Hebcal cache
+  description: Download Jewish calendar / Shabbat data from Hebcal and save JSON under /config/www/boiler-card/hebcal-<entry_id>.json for the Lovelace card.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"

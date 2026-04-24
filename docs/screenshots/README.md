@@ -9,5 +9,6 @@ Put the UI screenshots here with these exact names:
 5. `05-import-export-tab.png`
 6. `06-replace-confirmation.png`
 7. `07-card-editor.png`
+8. `08-holidays-shabbat-tab.png` (optional until added — README section 7 links to it)
 
 These images are referenced by the root `README.md` under **UI Screenshots & Professional Walkthrough**.

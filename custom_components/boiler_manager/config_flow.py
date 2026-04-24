@@ -11,7 +11,10 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BOILER_ENTITY,
+    CONF_HEBCAL_CITY,
+    CONF_HEBCAL_ENABLED,
     CONF_NAME,
+    DEFAULT_HEBCAL_CITY,
     DEFAULT_NAME,
     DOMAIN,
 )
@@ -30,7 +33,12 @@ class BoilerManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._async_abort_entries_match({CONF_BOILER_ENTITY: user_input[CONF_BOILER_ENTITY]})
 
             title = str(user_input.get(CONF_NAME) or DEFAULT_NAME)
-            return self.async_create_entry(title=title, data=user_input)
+            data = {
+                **user_input,
+                CONF_HEBCAL_ENABLED: True,
+                CONF_HEBCAL_CITY: DEFAULT_HEBCAL_CITY,
+            }
+            return self.async_create_entry(title=title, data=data)
 
         schema = vol.Schema(
             {
@@ -70,6 +78,10 @@ class BoilerManagerOptionsFlow(config_entries.OptionsFlow):
                 ),
                 vol.Required(CONF_BOILER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig()
+                ),
+                vol.Optional(CONF_HEBCAL_ENABLED, default=True): selector.BooleanSelector(),
+                vol.Optional(CONF_HEBCAL_CITY, default=DEFAULT_HEBCAL_CITY): selector.TextSelector(
+                    selector.TextSelectorConfig()
                 ),
             }
         )

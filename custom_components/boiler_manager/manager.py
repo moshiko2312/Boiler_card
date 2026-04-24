@@ -15,10 +15,15 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import sun as sun_helper
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_time_change,
+    async_track_time_interval,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from . import hebcal_cache
 from .const import (
     ATTR_CONDITION_OPERATOR,
     ATTR_CONDITION_ENTITY,
@@ -42,6 +47,8 @@ from .const import (
     ATTR_SKIP_IF_STATE,
     CONF_BOILER_ENTITY,
     CONF_CURRENT_SENSOR,
+    CONF_HEBCAL_CITY,
+    CONF_HEBCAL_ENABLED,
     CONF_NAME,
     CONF_POWER_SENSOR,
     CONF_TEMPERATURE_SENSOR,
@@ -53,6 +60,7 @@ from .const import (
     CONDITION_OPERATORS,
     DOMAIN,
     DAY_NAME_TO_INDEX,
+    DEFAULT_HEBCAL_CITY,
     DEFAULT_NAME,
     MODE_MANUAL_CONTINUOUS,
     MODE_MANUAL_TIMED,
@@ -173,6 +181,7 @@ class BoilerManager:
         self._tasks: dict[str, BoilerTask] = {}
         self._unsub_scheduler = None
         self._unsub_timed_off = None
+        self._unsub_hebcal_daily = None
 
         self._manual_continuous = False
         self._manual_until: datetime | None = None
@@ -211,6 +220,22 @@ class BoilerManager:
         """Configured current sensor entity."""
         value = str(self.entry.options.get(CONF_CURRENT_SENSOR) or self.entry.data.get(CONF_CURRENT_SENSOR) or "").strip()
         return value or None
+
+    @property
+    def hebcal_enabled(self) -> bool:
+        """Whether Hebcal JSON cache refresh is enabled for this entry (on by default, opt-out in options)."""
+        if CONF_HEBCAL_ENABLED in self.entry.options:
+            return bool(self.entry.options.get(CONF_HEBCAL_ENABLED))
+        if CONF_HEBCAL_ENABLED in self.entry.data:
+            return bool(self.entry.data.get(CONF_HEBCAL_ENABLED))
+        return True
+
+    @property
+    def hebcal_city(self) -> str:
+        """Hebcal city query token (e.g. IL-Jerusalem)."""
+        raw = self.entry.options.get(CONF_HEBCAL_CITY) or self.entry.data.get(CONF_HEBCAL_CITY)
+        text = str(raw or "").strip()
+        return text or DEFAULT_HEBCAL_CITY
 
     @property
     def tasks(self) -> list[BoilerTask]:
@@ -282,13 +307,41 @@ class BoilerManager:
         await self._async_apply_schedule_state()
         self._async_notify_state()
 
+        if self.hebcal_enabled:
+            await hebcal_cache.async_refresh_hebcal_cache(self.hass, self.entry, city=self.hebcal_city)
+
+            @callback
+            def _hebcal_daily_refresh(*_args: object) -> None:
+                self.hass.async_create_task(
+                    hebcal_cache.async_refresh_hebcal_cache(self.hass, self.entry, city=self.hebcal_city)
+                )
+
+            self._unsub_hebcal_daily = async_track_time_change(
+                self.hass,
+                _hebcal_daily_refresh,
+                hour=3,
+                minute=0,
+                second=0,
+            )
+
     async def async_unload(self) -> None:
         """Unload manager resources."""
         if self._unsub_scheduler:
             self._unsub_scheduler()
             self._unsub_scheduler = None
+        if self._unsub_hebcal_daily is not None:
+            self._unsub_hebcal_daily()
+            self._unsub_hebcal_daily = None
         self._cancel_timed_off()
         await self._async_save()
+
+    async def async_refresh_hebcal(self) -> bool:
+        """Fetch Hebcal and refresh local JSON cache (manual or automation)."""
+        return await hebcal_cache.async_refresh_hebcal_cache(
+            self.hass,
+            self.entry,
+            city=self.hebcal_city,
+        )
 
     async def async_create_task(
         self,
