@@ -59,4 +59,5 @@ but `custom_components/boiler_manager/frontend/` is the source of truth.
 - Keep module boundaries clear (runtime vs shell template vs editor vs i18n/themes/config).
 - When adding new user-facing text, update `boiler-i18n.js` (all supported languages).
 - When adding new visual themes, implement in `boiler-themes.js` and expose through editor labels.
+- Keep `tasks-vacation-btn` state styling consistent: default theme uses high-contrast dark text for active state, and dark-glass uses blue active/focus styling only when active.
 - After frontend changes, verify that mirrored files in `www/boiler-card/` are in sync.

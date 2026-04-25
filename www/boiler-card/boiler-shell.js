@@ -574,8 +574,8 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         .tasks-vacation-btn.active {
           border-color: rgba(255, 194, 102, 0.98);
           background: linear-gradient(165deg, #f7bc5a, #d8891a);
-          color: #fff8ec;
-          text-shadow: 0 1px 1px rgba(83, 39, 3, 0.45);
+          color: #1b1103;
+          text-shadow: none;
           box-shadow:
             0 3px 9px rgba(130, 73, 10, 0.3),
             inset 0 1px 0 rgba(255, 233, 198, 0.4);
