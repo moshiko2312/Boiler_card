@@ -110,7 +110,7 @@ const I18N = {
     task_type: "סוג",
     task_type_window: "חלון זמן",
     task_type_holiday_shabbat: "חגים/שבתות",
-    task_type_timeline: "טיים ליין",
+    task_type_timeline: "ציר זמן",
     timeline_points: "נקודות זמן",
     timeline_add_point: "הוסף נקודה",
     timeline_remove_point: "הסר",
@@ -706,6 +706,7 @@ const DEFAULT_CONFIG = {
   switcher_icon_sensor: "",
   switcher_timer_values: "15,30,45,60",
   timer_values: "15,30,60",
+  card_theme: "classic",
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   hide_boiler_flow_image: false,
   duration_entity: "",
@@ -841,6 +842,8 @@ class BoilerWaterCard extends HTMLElement {
     this._quickTimersRenderKey = "";
     this._tasksListRenderKey = "";
     this._historyListRenderKey = "";
+    const cardTheme = this._normalizeCardTheme(this._config?.card_theme);
+    this.setAttribute("data-card-theme", cardTheme);
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -866,6 +869,213 @@ class BoilerWaterCard extends HTMLElement {
           border: 1px solid var(--ha-card-border-color, var(--divider-color, rgba(120, 140, 170, 0.25)));
           box-shadow: var(--ha-card-box-shadow, 0 12px 26px rgba(20, 40, 80, 0.1));
           animation: card-enter 260ms ease;
+        }
+
+        ha-card.theme-dark-glass {
+          background:
+            radial-gradient(140% 120% at 0% 0%, rgba(76, 141, 255, 0.18) 0%, rgba(76, 141, 255, 0) 55%),
+            radial-gradient(120% 100% at 100% 0%, rgba(108, 92, 231, 0.16) 0%, rgba(108, 92, 231, 0) 52%),
+            linear-gradient(180deg, rgba(20, 27, 45, 0.98) 0%, rgba(14, 20, 34, 0.95) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow:
+            0 14px 32px rgba(0, 0, 0, 0.34),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+        ha-card.theme-dark-glass .wrap {
+          color: #ecf4ff;
+        }
+        ha-card.theme-dark-glass .subtitle,
+        ha-card.theme-dark-glass .sensors-chips,
+        ha-card.theme-dark-glass .boiler-muted {
+          color: rgba(225, 236, 255, 0.78);
+        }
+        ha-card.theme-dark-glass .boiler-visual {
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        }
+        ha-card.theme-dark-glass .boiler-icon {
+          border-color: rgba(194, 214, 247, 0.6);
+          background: linear-gradient(180deg, rgba(37, 48, 68, 0.95) 0%, rgba(31, 41, 59, 0.9) 100%);
+        }
+        ha-card.theme-dark-glass .boiler-main-image {
+          filter: saturate(1.08) contrast(1.06) brightness(1.04);
+        }
+        ha-card.theme-amber-glow {
+          background:
+            radial-gradient(140% 120% at 0% 0%, rgba(255, 170, 64, 0.14) 0%, rgba(255, 170, 64, 0) 58%),
+            radial-gradient(120% 100% at 100% 0%, rgba(255, 129, 64, 0.11) 0%, rgba(255, 129, 64, 0) 55%),
+            radial-gradient(120% 100% at 100% 0%, rgba(108, 92, 231, 0.14) 0%, rgba(108, 92, 231, 0) 52%),
+            linear-gradient(180deg, rgba(20, 27, 45, 0.98) 0%, rgba(14, 20, 34, 0.95) 100%);
+          border: 1px solid rgba(255, 176, 92, 0.42);
+          box-shadow:
+            0 14px 32px rgba(0, 0, 0, 0.38),
+            0 0 0 1px rgba(255, 156, 64, 0.24),
+            inset 0 1px 0 rgba(255, 219, 173, 0.16);
+        }
+        ha-card.theme-amber-glow .wrap {
+          color: #fff4e8;
+        }
+        ha-card.theme-amber-glow .subtitle {
+          color: rgba(255, 223, 194, 0.84);
+        }
+        ha-card.theme-amber-glow .boiler-visual {
+          border: 1px solid rgba(255, 188, 123, 0.44);
+          background: linear-gradient(160deg, rgba(255, 210, 160, 0.16), rgba(255, 180, 120, 0.08));
+          box-shadow: inset 0 1px 0 rgba(255, 224, 184, 0.16);
+        }
+        ha-card.theme-amber-glow .boiler-icon {
+          border-color: rgba(255, 186, 116, 0.65);
+          background: linear-gradient(180deg, rgba(37, 48, 68, 0.95) 0%, rgba(31, 41, 59, 0.9) 100%);
+        }
+        ha-card.theme-amber-glow .boiler-main-image {
+          filter: saturate(1.1) contrast(1.07) brightness(1.05);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-backdrop {
+          background: rgba(4, 10, 20, 0.72);
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-backdrop {
+          background: rgba(10, 7, 5, 0.74);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-panel,
+        :host([data-card-theme="dark-glass"]) .confirm-modal-panel,
+        :host([data-card-theme="dark-glass"]) .guide-modal-panel {
+          background:
+            radial-gradient(140% 120% at 0% 0%, rgba(76, 141, 255, 0.16) 0%, rgba(76, 141, 255, 0) 55%),
+            radial-gradient(120% 100% at 100% 0%, rgba(108, 92, 231, 0.14) 0%, rgba(108, 92, 231, 0) 52%),
+            linear-gradient(180deg, rgba(20, 27, 45, 0.98) 0%, rgba(14, 20, 34, 0.95) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          box-shadow:
+            0 16px 34px rgba(0, 0, 0, 0.36),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          color: #eaf2ff;
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-panel,
+        :host([data-card-theme="amber-glow"]) .confirm-modal-panel,
+        :host([data-card-theme="amber-glow"]) .guide-modal-panel {
+          background:
+            radial-gradient(140% 120% at 0% 0%, rgba(255, 170, 64, 0.13) 0%, rgba(255, 170, 64, 0) 58%),
+            radial-gradient(120% 100% at 100% 0%, rgba(255, 129, 64, 0.1) 0%, rgba(255, 129, 64, 0) 55%),
+            radial-gradient(120% 100% at 100% 0%, rgba(108, 92, 231, 0.12) 0%, rgba(108, 92, 231, 0) 52%),
+            linear-gradient(180deg, rgba(20, 27, 45, 0.98) 0%, rgba(14, 20, 34, 0.95) 100%);
+          border: 1px solid rgba(255, 179, 98, 0.42);
+          box-shadow:
+            0 16px 34px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(255, 152, 68, 0.22),
+            inset 0 1px 0 rgba(255, 214, 168, 0.14);
+          color: #fff0df;
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-head,
+        :host([data-card-theme="dark-glass"]) .guide-modal-head,
+        :host([data-card-theme="dark-glass"]) .tasks-head,
+        :host([data-card-theme="dark-glass"]) .history-head {
+          border-bottom-color: rgba(255, 255, 255, 0.14);
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-head,
+        :host([data-card-theme="amber-glow"]) .guide-modal-head,
+        :host([data-card-theme="amber-glow"]) .tasks-head,
+        :host([data-card-theme="amber-glow"]) .history-head {
+          border-bottom-color: rgba(255, 196, 135, 0.36);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-title,
+        :host([data-card-theme="dark-glass"]) .tasks-title,
+        :host([data-card-theme="dark-glass"]) .confirm-modal-title,
+        :host([data-card-theme="dark-glass"]) .schedule-label {
+          color: #ecf4ff;
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-title,
+        :host([data-card-theme="amber-glow"]) .tasks-title,
+        :host([data-card-theme="amber-glow"]) .confirm-modal-title,
+        :host([data-card-theme="amber-glow"]) .schedule-label {
+          color: #fff0df;
+        }
+        :host([data-card-theme="dark-glass"]) .menu-view .tasks-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+        :host([data-card-theme="amber-glow"]) .menu-view .tasks-card {
+          background: rgba(255, 191, 138, 0.06);
+          border: 1px solid rgba(255, 190, 130, 0.28);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-panel input,
+        :host([data-card-theme="dark-glass"]) .timer-modal-panel select,
+        :host([data-card-theme="dark-glass"]) .timer-modal-panel textarea,
+        :host([data-card-theme="dark-glass"]) .confirm-modal-panel input,
+        :host([data-card-theme="dark-glass"]) .confirm-modal-panel select {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.18);
+          color: #eaf2ff;
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-panel input,
+        :host([data-card-theme="amber-glow"]) .timer-modal-panel select,
+        :host([data-card-theme="amber-glow"]) .timer-modal-panel textarea,
+        :host([data-card-theme="amber-glow"]) .confirm-modal-panel input,
+        :host([data-card-theme="amber-glow"]) .confirm-modal-panel select {
+          background: rgba(255, 209, 165, 0.08);
+          border-color: rgba(255, 196, 136, 0.34);
+          color: #fff1e2;
+        }
+        :host([data-card-theme="dark-glass"]) .timer-modal-panel input::placeholder,
+        :host([data-card-theme="dark-glass"]) .confirm-modal-panel input::placeholder {
+          color: rgba(226, 238, 255, 0.6);
+        }
+        :host([data-card-theme="amber-glow"]) .timer-modal-panel input::placeholder,
+        :host([data-card-theme="amber-glow"]) .confirm-modal-panel input::placeholder {
+          color: rgba(255, 220, 188, 0.62);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-btn,
+        :host([data-card-theme="dark-glass"]) .tasks-add-btn,
+        :host([data-card-theme="dark-glass"]) .tasks-vacation-btn,
+        :host([data-card-theme="dark-glass"]) .tasks-export-btn,
+        :host([data-card-theme="dark-glass"]) .tasks-import-btn,
+        :host([data-card-theme="dark-glass"]) .tasks-mode-btn,
+        :host([data-card-theme="dark-glass"]) .schedule-type-btn,
+        :host([data-card-theme="dark-glass"]) .schedule-section-btn,
+        :host([data-card-theme="dark-glass"]) .schedule-action-btn,
+        :host([data-card-theme="dark-glass"]) .confirm-action-btn,
+        :host([data-card-theme="dark-glass"]) .guide-tab-btn {
+          background: rgba(255, 255, 255, 0.08);
+          color: #eaf2ff;
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+        :host([data-card-theme="amber-glow"]) .timer-btn,
+        :host([data-card-theme="amber-glow"]) .tasks-add-btn,
+        :host([data-card-theme="amber-glow"]) .tasks-vacation-btn,
+        :host([data-card-theme="amber-glow"]) .tasks-export-btn,
+        :host([data-card-theme="amber-glow"]) .tasks-import-btn,
+        :host([data-card-theme="amber-glow"]) .tasks-mode-btn,
+        :host([data-card-theme="amber-glow"]) .schedule-type-btn,
+        :host([data-card-theme="amber-glow"]) .schedule-section-btn,
+        :host([data-card-theme="amber-glow"]) .schedule-action-btn,
+        :host([data-card-theme="amber-glow"]) .confirm-action-btn,
+        :host([data-card-theme="amber-glow"]) .guide-tab-btn {
+          background: rgba(255, 199, 146, 0.08);
+          color: #fff0df;
+          border-color: rgba(255, 196, 136, 0.34);
+          box-shadow: 0 0 0 1px rgba(255, 157, 73, 0.1);
+        }
+        :host([data-card-theme="dark-glass"]) .timer-btn.active,
+        :host([data-card-theme="dark-glass"]) .tasks-mode-btn.active,
+        :host([data-card-theme="dark-glass"]) .schedule-type-btn.active,
+        :host([data-card-theme="dark-glass"]) .schedule-section-btn.active,
+        :host([data-card-theme="dark-glass"]) .schedule-action-btn.primary,
+        :host([data-card-theme="dark-glass"]) .confirm-action-btn.primary,
+        :host([data-card-theme="dark-glass"]) .guide-tab-btn.active {
+          background: linear-gradient(165deg, rgba(102, 190, 224, 0.94), rgba(49, 146, 186, 0.9));
+          color: #ffffff;
+          border-color: rgba(125, 210, 240, 0.86);
+        }
+        :host([data-card-theme="amber-glow"]) .timer-btn.active,
+        :host([data-card-theme="amber-glow"]) .tasks-mode-btn.active,
+        :host([data-card-theme="amber-glow"]) .schedule-type-btn.active,
+        :host([data-card-theme="amber-glow"]) .schedule-section-btn.active,
+        :host([data-card-theme="amber-glow"]) .schedule-action-btn.primary,
+        :host([data-card-theme="amber-glow"]) .confirm-action-btn.primary,
+        :host([data-card-theme="amber-glow"]) .guide-tab-btn.active {
+          background: linear-gradient(165deg, rgba(255, 183, 102, 0.96), rgba(241, 126, 42, 0.92));
+          color: #ffffff;
+          border-color: rgba(255, 193, 129, 0.9);
+          box-shadow: 0 0 0 1px rgba(255, 164, 74, 0.38), 0 0 14px rgba(255, 150, 68, 0.26);
         }
 
         .wrap {
@@ -3436,7 +3646,7 @@ class BoilerWaterCard extends HTMLElement {
 
       </style>
 
-      <ha-card>
+      <ha-card class="theme-${cardTheme}">
         <div class="wrap">
           <div class="row">
             <h2 class="title" id="title"></h2>
@@ -10295,6 +10505,17 @@ class BoilerWaterCard extends HTMLElement {
     options.push("No Timer");
     return options;
   }
+
+  _normalizeCardTheme(theme) {
+    const normalized = String(theme || "").trim().toLowerCase();
+    if (normalized === "dark_glass" || normalized === "dark-glass") {
+      return "dark-glass";
+    }
+    if (normalized === "amber_glow" || normalized === "amber-glow") {
+      return "amber-glow";
+    }
+    return "classic";
+  }
 }
 
 class BoilerWaterCardEditor extends HTMLElement {
@@ -10302,7 +10523,8 @@ class BoilerWaterCardEditor extends HTMLElement {
     super();
     this._config = { ...DEFAULT_CONFIG };
     this._hass = null;
-    this._form = null;
+    this._forms = {};
+    this._editorRoot = null;
   }
 
   setConfig(config) {
@@ -10612,42 +10834,34 @@ class BoilerWaterCardEditor extends HTMLElement {
     }
 
     const labels = this._labels();
-    if (!this._form) {
-      this.innerHTML = "";
-      this._form = document.createElement("ha-form");
-      this._form.computeLabel = (schema) => schema.label;
-      this._form.addEventListener("value-changed", (event) => this._onValueChanged(event));
-      this.appendChild(this._form);
-    }
-
-    this._form.hass = this._hass;
-    this._form.data = this._config;
     const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
-    this._form.schema = [
-      {
-        name: "language",
-        label: labels.language,
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: [
-              { value: "he", label: "עברית" },
-              { value: "en", label: "English" },
-              { value: "ru", label: "Русский" },
-              { value: "fr", label: "Français" },
-            ],
-          },
-        },
-      },
+    this._ensureEditorLayout();
+
+    const languageOptions = [
+      { value: "he", label: labels.lang_option_he || "עברית" },
+      { value: "en", label: labels.lang_option_en || "English" },
+      { value: "ru", label: labels.lang_option_ru || "Русский" },
+      { value: "fr", label: labels.lang_option_fr || "Français" },
+    ];
+    const cityOptions = [
+      { value: "", label: labels.hebcal_city_keep_integration },
+      ...HEBCAL_CITY_META.map((row) => {
+        const lang = this._normalizeLanguage(this._config?.language);
+        const label = row[lang] || row.en;
+        return { value: row.value, label };
+      }),
+    ];
+    const themeOptions = [
+      { value: "classic", label: labels.card_theme_classic || "Classic" },
+      { value: "dark_glass", label: labels.card_theme_dark_glass || "Dark Glass" },
+      { value: "amber_glow", label: labels.card_theme_amber_glow || "Amber Glow" },
+    ];
+
+    const generalSchema = [
       {
         name: "title",
         label: labels.title,
         selector: { text: {} },
-      },
-      {
-        name: "switcher_mode",
-        label: labels.switcher_mode,
-        selector: { boolean: {} },
       },
       {
         name: "boiler_entity",
@@ -10657,6 +10871,8 @@ class BoilerWaterCardEditor extends HTMLElement {
           ? { entity: { domain: "switch" } }
           : { entity: {} },
       },
+    ];
+    const integrationSchema = [
       {
         name: "hebcal_city",
         label: labels.hebcal_city,
@@ -10664,72 +10880,78 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: {
           select: {
             mode: "dropdown",
-            options: [
-              { value: "", label: labels.hebcal_city_keep_integration },
-              ...HEBCAL_CITY_META.map((row) => {
-                const lang = this._normalizeLanguage(this._config?.language);
-                const label = row[lang] || row.en;
-                return { value: row.value, label };
-              }),
-            ],
+            options: cityOptions,
           },
         },
       },
-      ...(isSwitcherMode
-        ? [
-          {
-            name: "switcher_time_left_sensor",
-            label: labels.switcher_time_left_sensor,
-            selector: { entity: { domain: "sensor" } },
+    ];
+    const modeSchema = isSwitcherMode
+      ? [
+        {
+          name: "switcher_time_left_sensor",
+          label: labels.switcher_time_left_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "switcher_sensor_1",
+          label: labels.switcher_sensor_1,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "switcher_sensor_2",
+          label: labels.switcher_sensor_2,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "switcher_icon_sensor",
+          label: labels.switcher_icon_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "switcher_timer_values",
+          label: labels.switcher_timer_values,
+          selector: { text: {} },
+        },
+      ]
+      : [
+        {
+          name: "timer_values",
+          label: labels.timer_values,
+          selector: { text: {} },
+        },
+        {
+          name: "temperature_sensor",
+          label: labels.temperature_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "power_sensor",
+          label: labels.power_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "current_sensor",
+          label: labels.current_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "voltage_sensor",
+          label: labels.voltage_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+      ];
+    const displaySchema = [
+      {
+        name: "card_theme",
+        label: labels.card_theme || "Card theme",
+        description: labels.card_theme_desc || "Choose between the current look and a darker glass theme.",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: themeOptions,
           },
-          {
-            name: "switcher_sensor_1",
-            label: labels.switcher_sensor_1,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "switcher_sensor_2",
-            label: labels.switcher_sensor_2,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "switcher_icon_sensor",
-            label: labels.switcher_icon_sensor,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "switcher_timer_values",
-            label: labels.switcher_timer_values,
-            selector: { text: {} },
-          },
-        ]
-        : [
-          {
-            name: "timer_values",
-            label: labels.timer_values,
-            selector: { text: {} },
-          },
-          {
-            name: "temperature_sensor",
-            label: labels.temperature_sensor,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "power_sensor",
-            label: labels.power_sensor,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "current_sensor",
-            label: labels.current_sensor,
-            selector: { entity: { domain: "sensor" } },
-          },
-          {
-            name: "voltage_sensor",
-            label: labels.voltage_sensor,
-            selector: { entity: { domain: "sensor" } },
-          },
-        ]),
+        },
+      },
       {
         name: "boiler_flow_image",
         label: labels.boiler_flow_image,
@@ -10747,6 +10969,459 @@ class BoilerWaterCardEditor extends HTMLElement {
         selector: { text: {} },
       },
     ];
+
+    this._setSectionForm("general", generalSchema);
+    this._setSectionForm("integration", integrationSchema);
+    this._setSectionForm("mode", modeSchema);
+    this._setSectionForm("display", displaySchema);
+    this._renderLanguageChips(languageOptions);
+    this._renderDeviceProfiles();
+  }
+
+  _setSectionForm(sectionKey, schema) {
+    const form = this._forms?.[sectionKey];
+    if (!form) {
+      return;
+    }
+    form.hass = this._hass;
+    form.data = this._config;
+    form.schema = schema;
+  }
+
+  _ensureEditorLayout() {
+    const labels = this._labels();
+    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
+    const modeTitleText = isSwitcherMode
+      ? (labels.editor_mode_switcher_title || "Switcher mode settings")
+      : (labels.editor_mode_regular_title || "Regular mode settings");
+    const modeDescText = isSwitcherMode
+      ? (labels.editor_mode_switcher_desc || "Auto-detected Switcher fields and timer profile.")
+      : (labels.editor_mode_regular_desc || "Generic timer values and sensor entities used by the card.");
+    if (this._editorRoot) {
+      const modeTitle = this.querySelector("[data-editor-mode-title]");
+      const modeDesc = this.querySelector("[data-editor-mode-desc]");
+      if (modeTitle) {
+        modeTitle.textContent = modeTitleText;
+      }
+      if (modeDesc) {
+        modeDesc.textContent = modeDescText;
+      }
+      const sectionGeneralTitle = this.querySelector("[data-section-general-title]");
+      const sectionGeneralDesc = this.querySelector("[data-section-general-desc]");
+      const sectionHolidaysTitle = this.querySelector("[data-section-holidays-title]");
+      const sectionHolidaysDesc = this.querySelector("[data-section-holidays-desc]");
+      const sectionDisplayTitle = this.querySelector("[data-section-display-title]");
+      const sectionDisplayDesc = this.querySelector("[data-section-display-desc]");
+      if (sectionGeneralTitle) sectionGeneralTitle.textContent = labels.editor_section_general || "General";
+      if (sectionGeneralDesc) sectionGeneralDesc.textContent = labels.editor_section_general_desc || "Core card identity and primary boiler entity selection.";
+      if (sectionHolidaysTitle) sectionHolidaysTitle.textContent = labels.editor_section_holidays || "Holidays & Shabbat";
+      if (sectionHolidaysDesc) sectionHolidaysDesc.textContent = labels.editor_section_holidays_desc || "Hebcal city synchronization through Boiler Manager options.";
+      if (sectionDisplayTitle) sectionDisplayTitle.textContent = labels.editor_section_display || "Display & Compatibility";
+      if (sectionDisplayDesc) sectionDisplayDesc.textContent = labels.editor_section_display_desc || "Flow image and optional active-state mapping for holiday entities.";
+      this._syncSectionCollapseState();
+      return;
+    }
+
+    this.innerHTML = `
+      <style>
+        .bm-editor-root {
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 16px;
+          background:
+            radial-gradient(120% 100% at 0% 0%, rgba(76, 141, 255, 0.16) 0%, rgba(76, 141, 255, 0) 55%),
+            radial-gradient(120% 100% at 100% 0%, rgba(108, 92, 231, 0.14) 0%, rgba(108, 92, 231, 0) 52%),
+            linear-gradient(180deg, rgba(20, 27, 45, 0.95) 0%, rgba(14, 20, 34, 0.9) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          box-shadow:
+            0 10px 28px rgba(0, 0, 0, 0.32),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+        .bm-editor-card {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 14px;
+          padding: 12px;
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%),
+            rgba(10, 14, 24, 0.38);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 6px 16px rgba(0, 0, 0, 0.22);
+          backdrop-filter: blur(8px);
+        }
+        .bm-editor-header {
+          margin: -2px -2px 10px;
+          width: calc(100% + 4px);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          border: 0;
+          background: transparent;
+          cursor: pointer;
+          color: inherit;
+          padding: 0;
+          text-align: start;
+        }
+        .bm-editor-header:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 2px;
+          border-radius: 10px;
+        }
+        .bm-editor-title-wrap {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+        .bm-editor-icon {
+          font-size: 15px;
+          opacity: 0.9;
+          line-height: 1;
+          width: 18px;
+          text-align: center;
+          flex: 0 0 auto;
+        }
+        .bm-editor-title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.3;
+        }
+        .bm-editor-chevron {
+          color: var(--secondary-text-color);
+          transition: transform 0.15s ease;
+          transform: rotate(0deg);
+          flex: 0 0 auto;
+        }
+        .bm-editor-card[data-collapsed="true"] .bm-editor-chevron {
+          transform: rotate(-90deg);
+        }
+        .bm-editor-desc {
+          margin: 0 0 8px;
+          color: var(--secondary-text-color);
+          font-size: 12px;
+        }
+        .bm-editor-lang-wrap {
+          margin: 0 0 12px;
+        }
+        .bm-editor-profile-wrap {
+          margin: 0 0 12px;
+        }
+        .bm-editor-profile-label {
+          margin: 0 0 6px;
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+        .bm-editor-profile-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 8px;
+        }
+        .bm-editor-profile-card {
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.02);
+          color: inherit;
+          padding: 10px;
+          cursor: pointer;
+          text-align: start;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+        }
+        .bm-editor-profile-card:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.26);
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .bm-editor-profile-card[data-active="true"] {
+          border-color: var(--primary-color);
+          background:
+            color-mix(in srgb, var(--primary-color) 22%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 55%, transparent);
+        }
+        .bm-editor-profile-card:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 1px;
+        }
+        .bm-editor-profile-thumb {
+          width: 48px;
+          height: 48px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.08);
+          flex: 0 0 auto;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .bm-editor-profile-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .bm-editor-profile-name {
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.2;
+          margin-bottom: 2px;
+        }
+        .bm-editor-profile-subtitle {
+          font-size: 11px;
+          line-height: 1.3;
+          color: var(--secondary-text-color);
+        }
+        .bm-editor-lang-label {
+          margin: 0 0 6px;
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+        .bm-editor-lang-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .bm-editor-lang-chip {
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.02);
+          color: inherit;
+          padding: 6px 10px;
+          font-size: 12px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+        }
+        .bm-editor-lang-chip:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 255, 255, 0.26);
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .bm-editor-lang-chip[data-active="true"] {
+          border-color: var(--primary-color);
+          background: color-mix(in srgb, var(--primary-color) 22%, transparent);
+          font-weight: 600;
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 55%, transparent);
+        }
+        .bm-editor-lang-chip:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: 1px;
+        }
+        .bm-editor-body[hidden] {
+          display: none !important;
+        }
+      </style>
+      <div class="bm-editor-root">
+        <section class="bm-editor-card" data-section-key="general" data-collapsed="false">
+          <button class="bm-editor-header" type="button" data-section-toggle="general" aria-expanded="true">
+            <span class="bm-editor-title-wrap">
+              <span class="bm-editor-icon" aria-hidden="true">⚙</span>
+              <h3 class="bm-editor-title" data-section-general-title>${labels.editor_section_general || "General"}</h3>
+            </span>
+            <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="bm-editor-body" data-section-body="general">
+            <p class="bm-editor-desc" data-section-general-desc>${labels.editor_section_general_desc || "Core card identity and primary boiler entity selection."}</p>
+            <div class="bm-editor-profile-wrap">
+              <p class="bm-editor-profile-label" data-profile-label></p>
+              <div class="bm-editor-profile-list" data-device-profiles></div>
+            </div>
+            <div class="bm-editor-lang-wrap">
+              <p class="bm-editor-lang-label" data-language-label></p>
+              <div class="bm-editor-lang-chips" data-language-chips></div>
+            </div>
+            <div data-section-form="general"></div>
+          </div>
+        </section>
+        <section class="bm-editor-card" data-section-key="integration" data-collapsed="false">
+          <button class="bm-editor-header" type="button" data-section-toggle="integration" aria-expanded="true">
+            <span class="bm-editor-title-wrap">
+              <span class="bm-editor-icon" aria-hidden="true">✡</span>
+              <h3 class="bm-editor-title" data-section-holidays-title>${labels.editor_section_holidays || "Holidays & Shabbat"}</h3>
+            </span>
+            <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="bm-editor-body" data-section-body="integration">
+            <p class="bm-editor-desc" data-section-holidays-desc>${labels.editor_section_holidays_desc || "Hebcal city synchronization through Boiler Manager options."}</p>
+            <div data-section-form="integration"></div>
+          </div>
+        </section>
+        <section class="bm-editor-card" data-section-key="mode" data-collapsed="false">
+          <button class="bm-editor-header" type="button" data-section-toggle="mode" aria-expanded="true">
+            <span class="bm-editor-title-wrap">
+              <span class="bm-editor-icon" aria-hidden="true">⏱</span>
+              <h3 class="bm-editor-title" data-editor-mode-title>${modeTitleText}</h3>
+            </span>
+            <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="bm-editor-body" data-section-body="mode">
+            <p class="bm-editor-desc" data-editor-mode-desc>${modeDescText}</p>
+            <div data-section-form="mode"></div>
+          </div>
+        </section>
+        <section class="bm-editor-card" data-section-key="display" data-collapsed="false">
+          <button class="bm-editor-header" type="button" data-section-toggle="display" aria-expanded="true">
+            <span class="bm-editor-title-wrap">
+              <span class="bm-editor-icon" aria-hidden="true">🖼</span>
+              <h3 class="bm-editor-title" data-section-display-title>${labels.editor_section_display || "Display & Compatibility"}</h3>
+            </span>
+            <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="bm-editor-body" data-section-body="display">
+            <p class="bm-editor-desc" data-section-display-desc>${labels.editor_section_display_desc || "Flow image and optional active-state mapping for holiday entities."}</p>
+            <div data-section-form="display"></div>
+          </div>
+        </section>
+      </div>
+    `;
+    this._editorRoot = this.querySelector(".bm-editor-root");
+    this._forms = {};
+    ["general", "integration", "mode", "display"].forEach((sectionKey) => {
+      const mount = this.querySelector(`[data-section-form="${sectionKey}"]`);
+      if (!mount) {
+        return;
+      }
+      const form = document.createElement("ha-form");
+      form.computeLabel = (schema) => schema.label;
+      form.addEventListener("value-changed", (event) => this._onValueChanged(event));
+      mount.appendChild(form);
+      this._forms[sectionKey] = form;
+    });
+    this._bindSectionToggles();
+    this._syncSectionCollapseState();
+  }
+
+  _renderLanguageChips(options) {
+    const langMount = this.querySelector("[data-language-chips]");
+    const langLabel = this.querySelector("[data-language-label]");
+    if (!langMount || !langLabel) {
+      return;
+    }
+    const labels = this._labels();
+    langLabel.textContent = labels.language;
+    const activeLang = this._normalizeLanguage(this._config?.language);
+    const flagByLang = {
+      he: "🇮🇱",
+      en: "🇬🇧",
+      ru: "🇷🇺",
+      fr: "🇫🇷",
+    };
+    langMount.innerHTML = "";
+    options.forEach((option) => {
+      const value = this._normalizeLanguage(option.value);
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "bm-editor-lang-chip";
+      chip.dataset.active = value === activeLang ? "true" : "false";
+      chip.innerHTML = `<span>${flagByLang[value] || "🌐"}</span><span>${option.label}</span>`;
+      chip.addEventListener("click", () => {
+        if (value === activeLang) {
+          return;
+        }
+        this._onValueChanged({ detail: { value: { language: value } } });
+      });
+      langMount.appendChild(chip);
+    });
+  }
+
+  _renderDeviceProfiles() {
+    const mount = this.querySelector("[data-device-profiles]");
+    const label = this.querySelector("[data-profile-label]");
+    if (!mount || !label) {
+      return;
+    }
+    const labels = this._labels();
+    label.textContent = labels.switcher_mode || "Device profile";
+    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
+    const profiles = [
+      {
+        id: "standard",
+        name: labels.profile_standard_name || "Standard Boiler",
+        subtitle: labels.profile_standard_desc || "Generic profile for regular switch/light entities",
+        image: "/local/boiler-card/boiler-flow.png",
+        switcherMode: false,
+      },
+      {
+        id: "switcher_touch",
+        name: labels.profile_switcher_name || "Switcher Touch",
+        subtitle: labels.profile_switcher_desc || "Switcher-specific sensors, timer behavior and defaults",
+        image: "/local/boiler-card/switcher-touch.png",
+        switcherMode: true,
+      },
+    ];
+    mount.innerHTML = "";
+    profiles.forEach((profile) => {
+      const active = isSwitcherMode === profile.switcherMode;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "bm-editor-profile-card";
+      button.dataset.active = active ? "true" : "false";
+      button.innerHTML = `
+        <span class="bm-editor-profile-thumb" aria-hidden="true">
+          <img src="${profile.image}" alt="${profile.name}">
+        </span>
+        <span>
+          <span class="bm-editor-profile-name">${profile.name}</span>
+          <span class="bm-editor-profile-subtitle">${profile.subtitle}</span>
+        </span>
+      `;
+      button.addEventListener("click", () => {
+        if (active) {
+          return;
+        }
+        this._onValueChanged({ detail: { value: { switcher_mode: profile.switcherMode } } });
+      });
+      mount.appendChild(button);
+    });
+  }
+
+  _bindSectionToggles() {
+    const toggles = this.querySelectorAll("[data-section-toggle]");
+    toggles.forEach((toggleButton) => {
+      toggleButton.addEventListener("click", () => {
+        const sectionKey = String(toggleButton.dataset.sectionToggle || "").trim();
+        if (!sectionKey) {
+          return;
+        }
+        this._toggleSection(sectionKey);
+      });
+    });
+  }
+
+  _toggleSection(sectionKey) {
+    const card = this.querySelector(`[data-section-key="${sectionKey}"]`);
+    if (!card) {
+      return;
+    }
+    const currentlyCollapsed = card.getAttribute("data-collapsed") === "true";
+    card.setAttribute("data-collapsed", currentlyCollapsed ? "false" : "true");
+    this._syncSectionCollapseState();
+  }
+
+  _syncSectionCollapseState() {
+    const cards = this.querySelectorAll("[data-section-key]");
+    cards.forEach((card) => {
+      const sectionKey = String(card.getAttribute("data-section-key") || "").trim();
+      if (!sectionKey) {
+        return;
+      }
+      const collapsed = card.getAttribute("data-collapsed") === "true";
+      const body = this.querySelector(`[data-section-body="${sectionKey}"]`);
+      const toggleButton = this.querySelector(`[data-section-toggle="${sectionKey}"]`);
+      if (body) {
+        body.hidden = collapsed;
+      }
+      if (toggleButton) {
+        toggleButton.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      }
+    });
   }
 
   _onValueChanged(event) {
@@ -10857,43 +11532,89 @@ class BoilerWaterCardEditor extends HTMLElement {
       he: {
         language: "שפה",
         title: "כותרת",
-        switcher_mode: "Switcher Mode",
+        switcher_mode: "פרופיל התקן",
         boiler_entity: "ישות דוד",
-        temperature_sensor: "סנסור טמפרטורה",
-        power_sensor: "סנסור צריכה (W)",
-        current_sensor: "סנסור זרם",
-        voltage_sensor: "סנסור מתח",
-        switcher_time_left_sensor: "סנסור זמן נותר (Switcher)",
-        switcher_sensor_1: "Sensor 1 - רק בזמן דלוק",
-        switcher_sensor_2: "Sensor 2 - תמיד מוצג",
-        switcher_icon_sensor: "סנסור טמפ׳ לאייקון/פרוגרס",
+        temperature_sensor: "🌡️ סנסור טמפרטורה",
+        power_sensor: "⚡ סנסור צריכה (W)",
+        current_sensor: "🔌 סנסור זרם",
+        voltage_sensor: "🔋 סנסור מתח",
+        switcher_time_left_sensor: "חיישן זמן נותר (סוויצ'ר)",
+        switcher_sensor_1: "חיישן 1 - מוצג רק כשהדוד דולק",
+        switcher_sensor_2: "חיישן 2 - תמיד מוצג",
+        switcher_icon_sensor: "חיישן טמפרטורה לאייקון ולהתקדמות",
         switcher_timer_values: "ערכי טיימר בדקות (לדוגמה: 15,30,45,60)",
         timer_values: "ערכי טיימר בדקות (גנרי, לדוגמה: 20,40,90)",
-        boiler_flow_image: "תמונת זרימת מים (נתיב / URL)",
+        card_theme: "ערכת נושא לכרטיס",
+        card_theme_desc: "קלאסי שומר על המראה הקיים. זכוכית כהה מוסיף רקע עמוק וכהה יותר.",
+        card_theme_classic: "קלאסי (נוכחי)",
+        card_theme_dark_glass: "זכוכית כהה",
+        card_theme_amber_glow: "זוהר כתום",
+        lang_option_he: "עברית",
+        lang_option_en: "אנגלית",
+        lang_option_ru: "רוסית",
+        lang_option_fr: "צרפתית",
+        editor_section_general: "כללי",
+        editor_section_general_desc: "זהות הכרטיס והגדרת ישות הדוד הראשית.",
+        editor_section_holidays: "חגים ושבת",
+        editor_section_holidays_desc: "סנכרון עיר לוח השנה דרך אפשרויות האינטגרציה.",
+        editor_mode_regular_title: "הגדרות מצב רגיל",
+        editor_mode_switcher_title: "הגדרות מצב סוויצ'ר",
+        editor_mode_regular_desc: "ערכי טיימר כלליים וחיישנים לשימוש הכרטיס.",
+        editor_mode_switcher_desc: "שדות סוויצ'ר שזוהו אוטומטית, כולל טיימרים וחיישנים ייעודיים.",
+        editor_section_display: "תצוגה ותאימות",
+        editor_section_display_desc: "תמונת זרימה ומיפוי מצבי חג/שבת לפי ישויות.",
+        profile_standard_name: "בוילר סטנדרטי",
+        profile_standard_desc: "פרופיל כללי לישויות רגילות מסוג מתג/תאורה",
+        profile_switcher_name: "סוויצ'ר טאץ'",
+        profile_switcher_desc: "חיישני סוויצ'ר ייעודיים, התנהגות טיימר וברירות מחדל מותאמות",
+        boiler_flow_image: "תמונת זרימת מים (נתיב או כתובת)",
         hide_boiler_flow_image: "הסתר תמונת זרימת המים בכרטיס",
-        hebcal_city: "עיר (חגים ושבת — Hebcal)",
+        hebcal_city: "עיר (חגים ושבת — לוח שנה)",
         hebcal_city_desc:
-          "נשמר באפשרויות האינטגרציה של Boiler Manager ומעדכן את קובץ ה־JSON המקומי. נדרש מזהה אינטגרציה (integration_entry_id) בכרטיס. \"כמו באינטגרציה\" מסיר את העיר מהאפשרויות ומשתמש בערך מהגדרת האינטגרציה.",
+          "נשמר באפשרויות האינטגרציה ומעדכן את קובץ הלוח המקומי. נדרש מזהה אינטגרציה (integration_entry_id) בכרטיס. \"כמו באינטגרציה\" מסיר את העיר מהאפשרויות ומשתמש בערך מהגדרת האינטגרציה.",
         hebcal_city_keep_integration: "כמו באינטגרציה (אל תשנה עיר)",
-        holiday_active_states: "חג/שבת — אילו ערכי state נחשבים \"פעיל\" (בעיקר עם holiday_entity / shabbat_entity ב־YAML)",
+        holiday_active_states: "חג/שבת — אילו ערכי מצב נחשבים \"פעיל\" (בעיקר עם holiday_entity / shabbat_entity בתצורת קוד)",
         holiday_active_states_desc:
-          "רשימה מופרדת בפסיקים של ערכי state ב־Home Assistant. כשמגדירים ב־YAML את holiday_entity ו/או shabbat_entity, הכרטיס משווה את ה־state שלהן לרשימה — אם יש התאמה, המקור נחשב פעיל ללוגיקת חג/שבת (יחד עם כללי הטאב בתפריט). אם משתמשים רק ב־Hebcal מהאינטגרציה בלי שני השדות האלה — אפשר להשאיר ברירת מחדל; השפעה מינימלית. דוגמה: on,home,active,true",
+          "רשימה מופרדת בפסיקים של ערכי מצב. כשמגדירים בתצורת קוד את holiday_entity ו/או shabbat_entity, הכרטיס משווה את המצב שלהן לרשימה — אם יש התאמה, המקור נחשב פעיל ללוגיקת חג/שבת (יחד עם כללי הטאב בתפריט). אם משתמשים רק בלוח השנה מהאינטגרציה בלי שני השדות האלה — אפשר להשאיר ברירת מחדל; השפעה מינימלית. דוגמה: on,home,active,true",
       },
       en: {
         language: "Language",
         title: "Title",
         switcher_mode: "Switcher Mode",
         boiler_entity: "Boiler Entity",
-        temperature_sensor: "Temperature Sensor",
-        power_sensor: "Power Sensor (W)",
-        current_sensor: "Current Sensor",
-        voltage_sensor: "Voltage Sensor",
+        temperature_sensor: "🌡️ Temperature Sensor",
+        power_sensor: "⚡ Power Sensor (W)",
+        current_sensor: "🔌 Current Sensor",
+        voltage_sensor: "🔋 Voltage Sensor",
         switcher_time_left_sensor: "Switcher Time Left Sensor",
         switcher_sensor_1: "Switcher Sensor 1 (On only)",
         switcher_sensor_2: "Switcher Sensor 2 (Always)",
         switcher_icon_sensor: "Switcher Icon Temperature Sensor",
         switcher_timer_values: "Switcher Timer Values in minutes (e.g. 15,30,45,60)",
         timer_values: "Timer Values in minutes (generic, e.g. 20,40,90)",
+        card_theme: "Card Theme",
+        card_theme_desc: "Classic keeps the existing look. Dark Glass applies a deeper dark background.",
+        card_theme_classic: "Classic (Current)",
+        card_theme_dark_glass: "Dark Glass",
+        card_theme_amber_glow: "Amber Glow",
+        lang_option_he: "Hebrew",
+        lang_option_en: "English",
+        lang_option_ru: "Russian",
+        lang_option_fr: "French",
+        editor_section_general: "General",
+        editor_section_general_desc: "Core card identity and primary boiler entity selection.",
+        editor_section_holidays: "Holidays & Shabbat",
+        editor_section_holidays_desc: "Hebcal city synchronization through Boiler Manager options.",
+        editor_mode_regular_title: "Regular mode settings",
+        editor_mode_switcher_title: "Switcher mode settings",
+        editor_mode_regular_desc: "Generic timer values and sensor entities used by the card.",
+        editor_mode_switcher_desc: "Auto-detected Switcher fields and timer profile.",
+        editor_section_display: "Display & Compatibility",
+        editor_section_display_desc: "Flow image and optional active-state mapping for holiday entities.",
+        profile_standard_name: "Standard Boiler",
+        profile_standard_desc: "Generic profile for regular switch/light entities",
+        profile_switcher_name: "Switcher Touch",
+        profile_switcher_desc: "Switcher-specific sensors, timer behavior and defaults",
         boiler_flow_image: "Water Flow Image (path / URL)",
         hide_boiler_flow_image: "Hide water flow image on card",
         hebcal_city: "City (holidays & Shabbat — Hebcal)",
@@ -10909,16 +11630,39 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Заголовок",
         switcher_mode: "Режим Switcher",
         boiler_entity: "Сущность бойлера",
-        temperature_sensor: "Датчик температуры",
-        power_sensor: "Датчик мощности (W)",
-        current_sensor: "Датчик тока",
-        voltage_sensor: "Датчик напряжения",
+        temperature_sensor: "🌡️ Датчик температуры",
+        power_sensor: "⚡ Датчик мощности (W)",
+        current_sensor: "🔌 Датчик тока",
+        voltage_sensor: "🔋 Датчик напряжения",
         switcher_time_left_sensor: "Switcher датчик оставшегося времени",
         switcher_sensor_1: "Switcher датчик 1 (только ВКЛ)",
         switcher_sensor_2: "Switcher датчик 2 (всегда)",
         switcher_icon_sensor: "Switcher датчик температуры иконки",
         switcher_timer_values: "Значения таймера Switcher в минутах (например 15,30,45,60)",
         timer_values: "Значения таймера в минутах (общие, например 20,40,90)",
+        card_theme: "Тема карточки",
+        card_theme_desc: "Классическая тема сохраняет текущий стиль. Темное стекло включает более глубокий темный фон.",
+        card_theme_classic: "Классическая (текущая)",
+        card_theme_dark_glass: "Темное стекло",
+        card_theme_amber_glow: "Янтарное свечение",
+        lang_option_he: "Иврит",
+        lang_option_en: "Английский",
+        lang_option_ru: "Русский",
+        lang_option_fr: "Французский",
+        editor_section_general: "Общие",
+        editor_section_general_desc: "Основные параметры карточки и выбор сущности бойлера.",
+        editor_section_holidays: "Праздники и Шаббат",
+        editor_section_holidays_desc: "Синхронизация города Hebcal через опции Boiler Manager.",
+        editor_mode_regular_title: "Настройки обычного режима",
+        editor_mode_switcher_title: "Настройки режима Switcher",
+        editor_mode_regular_desc: "Общие значения таймера и датчики, используемые карточкой.",
+        editor_mode_switcher_desc: "Автоопределенные поля Switcher и профиль таймера.",
+        editor_section_display: "Отображение и совместимость",
+        editor_section_display_desc: "Изображение потока и сопоставление активных состояний праздников/Шаббата.",
+        profile_standard_name: "Стандартный бойлер",
+        profile_standard_desc: "Общий профиль для обычных сущностей switch/light",
+        profile_switcher_name: "Switcher Touch",
+        profile_switcher_desc: "Поля датчиков Switcher, поведение таймера и специальные значения по умолчанию",
         boiler_flow_image: "Изображение потока (путь / URL)",
         hide_boiler_flow_image: "Скрыть изображение потока на карточке",
         hebcal_city: "Город (праздники и Шаббат — Hebcal)",
@@ -10934,16 +11678,39 @@ class BoilerWaterCardEditor extends HTMLElement {
         title: "Titre",
         switcher_mode: "Mode Switcher",
         boiler_entity: "Entité chauffe-eau",
-        temperature_sensor: "Capteur de température",
-        power_sensor: "Capteur de puissance (W)",
-        current_sensor: "Capteur de courant",
-        voltage_sensor: "Capteur de tension",
+        temperature_sensor: "🌡️ Capteur de température",
+        power_sensor: "⚡ Capteur de puissance (W)",
+        current_sensor: "🔌 Capteur de courant",
+        voltage_sensor: "🔋 Capteur de tension",
         switcher_time_left_sensor: "Capteur temps restant Switcher",
         switcher_sensor_1: "Capteur Switcher 1 (marche)",
         switcher_sensor_2: "Capteur Switcher 2 (toujours)",
         switcher_icon_sensor: "Capteur température icône Switcher",
         switcher_timer_values: "Valeurs minuterie Switcher en minutes (ex: 15,30,45,60)",
         timer_values: "Valeurs minuterie en minutes (générique, ex: 20,40,90)",
+        card_theme: "Theme de la carte",
+        card_theme_desc: "Le theme classique conserve le style actuel. Le verre sombre applique un fond plus profond.",
+        card_theme_classic: "Classique (actuel)",
+        card_theme_dark_glass: "Verre sombre",
+        card_theme_amber_glow: "Lueur ambree",
+        lang_option_he: "Hebreu",
+        lang_option_en: "Anglais",
+        lang_option_ru: "Russe",
+        lang_option_fr: "Francais",
+        editor_section_general: "General",
+        editor_section_general_desc: "Identite de base de la carte et selection de l'entite chauffe-eau principale.",
+        editor_section_holidays: "Fetes & Chabbat",
+        editor_section_holidays_desc: "Synchronisation de la ville Hebcal via les options Boiler Manager.",
+        editor_mode_regular_title: "Parametres mode normal",
+        editor_mode_switcher_title: "Parametres mode Switcher",
+        editor_mode_regular_desc: "Valeurs de minuterie generiques et capteurs utilises par la carte.",
+        editor_mode_switcher_desc: "Champs Switcher detectes automatiquement et profil minuterie.",
+        editor_section_display: "Affichage et compatibilite",
+        editor_section_display_desc: "Image de flux et mappage optionnel des etats actifs pour fetes/Chabbat.",
+        profile_standard_name: "Boiler standard",
+        profile_standard_desc: "Profil generique pour les entites switch/light standard",
+        profile_switcher_name: "Switcher Touch",
+        profile_switcher_desc: "Capteurs Switcher dedies, comportement minuterie et valeurs par defaut",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
         hide_boiler_flow_image: "Masquer l'image du flux sur la carte",
         hebcal_city: "Ville (fêtes et Chabbat — Hebcal)",
