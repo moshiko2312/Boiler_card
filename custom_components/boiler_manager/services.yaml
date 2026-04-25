@@ -416,3 +416,20 @@ refresh_hebcal:
       name: Boiler Entity
       description: Optional boiler entity to resolve matching entry.
       example: "switch.boiler"
+    hebcal_city:
+      name: Hebcal city
+      description: Optional Hebcal geo=city token (e.g. IL-Tel_Aviv). When set, updates the integration option then refreshes the cache. Pass an empty string to remove the option override and fall back to the value stored in the config entry.
+      example: "IL-Jerusalem"
+
+clear_task_history:
+  name: Clear task history log
+  description: Remove all entries from the Boiler Manager task history shown on the Mode sensor and card log view.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID (required if multiple entries exist).
+      example: "01JABCDEFGH1234567890"
+    boiler_entity:
+      name: Boiler Entity
+      description: Optional boiler entity to resolve matching entry.
+      example: "switch.boiler"

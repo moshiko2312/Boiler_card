@@ -50,6 +50,7 @@ from .const import (
     ATTR_SKIP_IF_STATE,
     ATTR_VACATION_MODE,
     CONF_BOILER_ENTITY,
+    CONF_HEBCAL_CITY,
     CONDITION_OPERATORS,
     DOMAIN,
     IMPORT_MODE_MERGE,
@@ -65,6 +66,7 @@ from .const import (
     SERVICE_EXPORT_TASKS,
     SERVICE_IMPORT_TASKS,
     SERVICE_REFRESH_HEBCAL,
+    SERVICE_CLEAR_TASK_HISTORY,
     SERVICE_RUN_TIMED,
     SERVICE_SET_VACATION_MODE,
     SERVICE_TURN_OFF,
@@ -72,7 +74,7 @@ from .const import (
     SERVICE_UPDATE_SCHEDULE,
     TASK_TYPES,
 )
-from .manager import BoilerManager, BoilerManagerError
+from .manager import BoilerManager, BoilerManagerError, async_user_label_from_context
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -216,6 +218,14 @@ VACATION_MODE_SCHEMA = vol.Schema(
     extra=vol.PREVENT_EXTRA,
 )
 
+REFRESH_HEBCAL_SCHEMA = vol.Schema(
+    {
+        **BASE_SERVICE_SCHEMA,
+        vol.Optional(CONF_HEBCAL_CITY): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
     """Set up integration domain storage."""
@@ -260,24 +270,29 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _turn_on_continuous(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
-        await manager.async_turn_on_continuous()
+        user = await async_user_label_from_context(hass, call.context)
+        await manager.async_turn_on_continuous(history_user=user)
 
     async def _run_timed(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
         duration = call.data.get(ATTR_DURATION)
         minutes = call.data.get(ATTR_MINUTES)
-        await manager.async_run_timed(duration=duration, minutes=minutes)
+        user = await async_user_label_from_context(hass, call.context)
+        await manager.async_run_timed(duration=duration, minutes=minutes, history_user=user)
 
     async def _turn_off(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
-        await manager.async_turn_off()
+        user = await async_user_label_from_context(hass, call.context)
+        await manager.async_turn_off(history_user=user)
 
     async def _set_vacation_mode(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
-        await manager.async_set_vacation_mode(call.data.get(ATTR_VACATION_MODE, True))
+        user = await async_user_label_from_context(hass, call.context)
+        await manager.async_set_vacation_mode(call.data.get(ATTR_VACATION_MODE, True), history_user=user)
 
     async def _create_schedule(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
+        user = await async_user_label_from_context(hass, call.context)
         await manager.async_create_task(
             name=call.data[ATTR_TASK_NAME],
             start_time=call.data[ATTR_START_TIME],
@@ -296,10 +311,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
             enabled=call.data.get(ATTR_ENABLED, True),
+            history_user=user,
         )
 
     async def _create_timeline(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
+        user = await async_user_label_from_context(hass, call.context)
         await manager.async_create_timeline(
             name=call.data[ATTR_TASK_NAME],
             points=call.data[ATTR_TIMELINE_POINTS],
@@ -317,10 +334,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
             enabled=call.data.get(ATTR_ENABLED, True),
+            history_user=user,
         )
 
     async def _update_schedule(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
+        user = await async_user_label_from_context(hass, call.context)
 
         if not any(
             key in call.data
@@ -369,11 +388,13 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
             enabled=call.data.get(ATTR_ENABLED),
+            history_user=user,
         )
 
     async def _delete_schedule(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
-        removed = await manager.async_delete_task(call.data[ATTR_TASK_ID])
+        user = await async_user_label_from_context(hass, call.context)
+        removed = await manager.async_delete_task(call.data[ATTR_TASK_ID], history_user=user)
         if not removed:
             raise ServiceValidationError(f"Task not found: {call.data[ATTR_TASK_ID]}")
 
@@ -416,7 +437,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         if not isinstance(tasks_payload, list):
             raise ServiceValidationError(f"'{ATTR_TASKS}' must be a list of task objects")
 
-        result = await manager.async_import_tasks(tasks_payload, mode=mode)
+        user = await async_user_label_from_context(hass, call.context)
+        result = await manager.async_import_tasks(tasks_payload, mode=mode, history_user=user)
         _LOGGER.info(
             "Imported tasks for entry %s (mode=%s, imported=%s, removed=%s, total=%s)",
             manager.entry.entry_id,
@@ -428,7 +450,20 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _refresh_hebcal(call: ServiceCall) -> None:
         manager = _resolve_manager(hass, call)
+        if CONF_HEBCAL_CITY in call.data:
+            raw = call.data.get(CONF_HEBCAL_CITY)
+            text = str(raw or "").strip()
+            merged = dict(manager.entry.options)
+            if not text:
+                merged.pop(CONF_HEBCAL_CITY, None)
+            else:
+                merged[CONF_HEBCAL_CITY] = text
+            hass.config_entries.async_update_entry(manager.entry, options=merged)
         await manager.async_refresh_hebcal()
+
+    async def _clear_task_history(call: ServiceCall) -> None:
+        manager = _resolve_manager(hass, call)
+        await manager.async_clear_task_history()
 
     hass.services.async_register(
         DOMAIN,
@@ -494,6 +529,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         DOMAIN,
         SERVICE_REFRESH_HEBCAL,
         _wrap_service_errors(_refresh_hebcal),
+        schema=REFRESH_HEBCAL_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CLEAR_TASK_HISTORY,
+        _wrap_service_errors(_clear_task_history),
         schema=vol.Schema(BASE_SERVICE_SCHEMA),
     )
 
@@ -515,6 +556,7 @@ def _async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_EXPORT_TASKS,
         SERVICE_IMPORT_TASKS,
         SERVICE_REFRESH_HEBCAL,
+        SERVICE_CLEAR_TASK_HISTORY,
     ):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)

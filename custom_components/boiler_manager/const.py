@@ -17,6 +17,34 @@ CONF_HEBCAL_CITY = "hebcal_city"
 DEFAULT_NAME = "Boiler Manager"
 DEFAULT_HEBCAL_CITY = "IL-Jerusalem"
 
+# Hebcal geo=city tokens (Israel) — https://www.hebcal.com/home/195/jewish-calendar-rest-api
+HEBCAL_GEO_CITY_IDS: tuple[str, ...] = (
+    "IL-Jerusalem",
+    "IL-Tel_Aviv",
+    "IL-Haifa",
+    "IL-Beer_Sheva",
+    "IL-Ashdod",
+    "IL-Netanya",
+    "IL-Rishon_LeTsiyon",
+    "IL-Petah_Tikva",
+    "IL-Holon",
+    "IL-Bnei_Brak",
+    "IL-Ashkelon",
+    "IL-Rehovot",
+    "IL-Herzliya",
+    "IL-Ramat_Gan",
+    "IL-Bat_Yam",
+    "IL-Kfar_Saba",
+    "IL-Raanana",
+    "IL-Modiin",
+    "IL-Lod",
+    "IL-Ramla",
+    "IL-Acre",
+    "IL-Nazareth",
+    "IL-Eilat",
+    "IL-Tiberias",
+)
+
 SERVICE_TURN_ON_CONTINUOUS = "turn_on_continuous"
 SERVICE_RUN_TIMED = "run_timed"
 SERVICE_TURN_OFF = "turn_off"
@@ -28,6 +56,7 @@ SERVICE_EXPORT_TASKS = "export_tasks"
 SERVICE_IMPORT_TASKS = "import_tasks"
 SERVICE_SET_VACATION_MODE = "set_vacation_mode"
 SERVICE_REFRESH_HEBCAL = "refresh_hebcal"
+SERVICE_CLEAR_TASK_HISTORY = "clear_task_history"
 
 ATTR_ENTRY_ID = "entry_id"
 ATTR_TASK_ID = "task_id"

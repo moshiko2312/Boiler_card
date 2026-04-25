@@ -7,7 +7,7 @@ Custom boiler control solution for Home Assistant with:
 - Timer control, recurring tasks, and timeline tasks
 - Task entities as real `switch` entities
 - Optional card sensors (temperature / power / current / voltage)
-- Mobile-friendly popups (Safari + Chrome)
+- Mobile-friendly popups (Safari + Chrome); task edit modal stays the same grid as desktop, with narrower time/duration fields on small screens only
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
 - Card editor auto-fills `boiler_entity` from Boiler Manager integration when a single matching entry is detected
@@ -54,12 +54,11 @@ Custom boiler control solution for Home Assistant with:
   - Menu remains usable so vacation mode can always be disabled
 - Scheduler tick every second for near-immediate start/stop transitions
 - Runtime state restore on Home Assistant restart (active manual timed/continuous sessions are recovered)
-- Mobile-first schedule/task modals:
-  - touch-friendly controls
-  - no horizontal scrolling
-  - centered/stable dialogs for Safari + Chrome
-  - sticky top toolbar in mobile tasks view
-  - timer page arrows hidden in tasks mode (list-only mode)
+- Schedule/task modals:
+  - Touch-friendly controls; `font-size: 16px` on most form inputs on narrow screens to reduce iOS zoom quirks
+  - Task editor (`#schedule-modal`) stays centered on small viewports (same overall layout as desktop)
+  - On `max-width: 760px` / `520px`, only **time** and **timeline duration** controls inside the task modal are visually tightened (`max-width`, padding, `min-height`); category grids and action buttons are unchanged
+  - Sticky top toolbar in mobile tasks list; timer page arrows hidden in tasks mode (list-only mode)
 
 ## UI Screenshots & Professional Walkthrough
 
@@ -162,7 +161,10 @@ Custom boiler control solution for Home Assistant with:
   - Current sensor
   - Voltage sensor
   - Flow image URL/path
-  - Hebcal: `hebcal_local_enabled`, optional `hebcal_cache_path`, `auto_entry_id`, `integration_entry_id` (see **Holidays & Shabbat (Hebcal)** below — timer/task rules and window scope are edited in the card **menu tab**, not duplicated here)
+  - `holiday_active_states` — which Home Assistant `state` strings count as “active” for optional YAML entities `holiday_entity` / `shabbat_entity` (see **`holiday_active_states` (card setting)** below)
+  - `integration_entry_id` — links the card to a Boiler Manager config entry (Hebcal JSON path, services, optional city sync)
+  - `hebcal_city` — dropdown of Hebcal `geo=city` tokens (Israel); when changed, the card calls `boiler_manager.refresh_hebcal` with `entry_id` + `hebcal_city` so the value is stored in **integration options** and the local JSON cache is refreshed (requires `integration_entry_id`). Choose “match integration” to clear the option override.
+  - Hebcal file path override remains via card YAML `hebcal_cache_path` when needed (see **Holidays & Shabbat (Hebcal)**); timer/task rules and window scope are edited in the card **menu tab**, not duplicated in the editor list above
 - Right-side preview:
   - Real-time visual feedback while editing.
 
@@ -261,6 +263,7 @@ service_delete_schedule: boiler_manager.delete_schedule
 service_import_tasks: boiler_manager.import_tasks
 service_export_tasks: boiler_manager.export_tasks
 service_set_vacation_mode: boiler_manager.set_vacation_mode
+service_clear_task_history: boiler_manager.clear_task_history
 
 # Optional regular-mode timer list (minutes, comma-separated)
 # Default is "15,30,60" when empty
@@ -356,7 +359,8 @@ switcher_timer_values: "15,30,45,60,90,120"
 ### Holidays & Shabbat (Hebcal)
 
 - **Backend:** With `hebcal_enabled` on the integration (default for new entries), Boiler Manager refreshes the Hebcal cache on setup and once per day, and writes normalized windows to `/config/www/boiler-card/hebcal-<entry_id>.json`.
-- **Service:** `boiler_manager.refresh_hebcal` — same targeting as other services (`entry_id` or `boiler_entity`).
+- **City:** Default token is `IL-Jerusalem` (`DEFAULT_HEBCAL_CITY`). Set or change **`hebcal_city`** under **Settings → Devices & services → Boiler Manager → Configure**, and/or use the **card editor** dropdown (see Card Editor above). Tokens follow Hebcal’s `geo=city` format (for example `IL-Tel_Aviv`).
+- **Service:** `boiler_manager.refresh_hebcal` — same targeting as other services (`entry_id` or `boiler_entity`). Optional field **`hebcal_city`**: when present, updates the integration’s `hebcal_city` option then refreshes the cache; an **empty string** removes the option override so the entry falls back to data/default.
 - **Card tab** (`☰` → `Holidays & Shabbat`):
   - **Status** — *Active* when any of: configured `holiday_entity` / `shabbat_entity` (YAML) says “on”, or current time falls inside a Hebcal window allowed by **Hebcal window scope** (Shabbat only / holidays only / both).
   - **Timer rule** / **Task rule** — global behavior while status is Active (allow / block / postpone / force off). Changed in-tab; Lovelace stores them on the card.
@@ -369,6 +373,15 @@ switcher_timer_values: "15,30,45,60,90,120"
   - `Phase = start` autofills/locks start time from next entry time.
   - `Phase = end` switches end-time control to timer-duration selection (same options as timeline), then derives start time automatically.
   - `Holiday + Yom Tov` follows the same start/end behavior as Shabbat.
+
+### `holiday_active_states` (card setting)
+
+This card setting is easy to misread: it is **not** a generic “map any entity” field. It only defines **which Home Assistant `state` values mean “this holiday/Shabbat source is active”** for the optional YAML keys `holiday_entity` and `shabbat_entity`.
+
+- **What it does:** The card splits the string on commas or whitespace, lowercases each token, and compares the current `state` of `holiday_entity` / `shabbat_entity` (when configured in YAML) to that list. A match marks that source as active for holiday/Shabbat logic (together with global rules in the **Holidays & Shabbat** menu tab).
+- **Default value in YAML/UI:** `on,home,active,true` — a reasonable default for binary sensors and many integrations. If you clear the field, the card still falls back internally to the same four tokens.
+- **When you should care:** Only if you use **YAML** to set `holiday_entity` and/or `shabbat_entity` (for example a custom Jewish-calendar sensor or a template entity). Then add whatever **exact** `state` strings that integration uses when it means “on” (check **Developer tools → States**). Example: a lock used as a signal might use `locked` / `unlocked` — you would add the one that means “active” for your setup.
+- **Hebcal-only:** If you rely on Boiler Manager’s Hebcal cache and attributes and you **do not** set `holiday_entity` / `shabbat_entity`, you can leave the default; this field has **almost no effect** on detection (Hebcal windows still drive status from the integration).
 
 ### Import / Export (From Card UI)
 
@@ -547,12 +560,33 @@ Fallback:
 
 ### Hebcal cache
 
-- `boiler_manager.refresh_hebcal` — forces a download and rewrite of `hebcal-<entry_id>.json` for the matching config entry.
+- `boiler_manager.refresh_hebcal` — forces a download and rewrite of `hebcal-<entry_id>.json` for the matching config entry. Optional **`hebcal_city`** updates the stored city for that entry (see Holidays & Shabbat above).
 
 Example:
 
 ```yaml
 service: boiler_manager.refresh_hebcal
+data:
+  boiler_entity: switch.boiler
+```
+
+Example (set city and refresh):
+
+```yaml
+service: boiler_manager.refresh_hebcal
+data:
+  entry_id: 01JABCDEFGH1234567890
+  hebcal_city: IL-Tel_Aviv
+```
+
+### Task history log
+
+- `boiler_manager.clear_task_history` — clears persisted task action history used by the Mode sensor attributes and the in-card history view (same `entry_id` / `boiler_entity` targeting as other services).
+
+Example:
+
+```yaml
+service: boiler_manager.clear_task_history
 data:
   boiler_entity: switch.boiler
 ```
@@ -712,12 +746,17 @@ data:
 
 ## Versioning & Changelog
 
-- Tag `v0.1.5`:
-  - GitHub release tag for dynamic timers, modal/mobile UX refinements, and vacation/switcher flow hardening.
-- Integration manifest `0.1.5`:
-  - Aligned with `v0.1.5` tag.
+- Tag `v0.1.6`:
+  - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
+- Integration manifest `0.1.6`:
+  - Aligned with `v0.1.6` tag.
 
 Recent highlights:
+- `0.1.6`
+  - **Hebcal city:** Card editor dropdown (`hebcal_city`) + `HEBCAL_GEO_CITY_IDS` in integration `const.py`; `refresh_hebcal` accepts optional `hebcal_city` (writes integration options, then refreshes JSON).
+  - **Task modal (mobile):** `#schedule-modal` centered like desktop; time / timeline duration inputs use tighter `max-width` and padding only under `max-width: 760px` / `520px` without changing button grids.
+  - **Guide:** In-card guide text documents city selection (card + integration).
+  - **Task history:** Persisted history, user labels from UI where available, `boiler_manager.clear_task_history` service, and card history controls (per integration changes in this release).
 - `0.1.5`
   - Hebcal: integration-backed local JSON cache (`hebcal_cache.py`), daily refresh, `boiler_manager.refresh_hebcal` service, integration strings/options.
   - Card: **Holidays & Shabbat** menu tab (policies, Hebcal scope, scrollable full window list, compact layout); card editor lists Hebcal/entry fields only (no duplicate policy fields).

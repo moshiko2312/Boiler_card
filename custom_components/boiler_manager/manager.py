@@ -11,7 +11,7 @@ import uuid
 
 from homeassistant.const import SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import sun as sun_helper
@@ -103,10 +103,33 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
+async def async_user_label_from_context(hass: HomeAssistant, context: object | None) -> str | None:
+    """Resolve a short display label for the HA user tied to a Context (UI / service call)."""
+    if not isinstance(context, Context):
+        return None
+    user_id = getattr(context, "user_id", None)
+    if not user_id:
+        return None
+    try:
+        user = await hass.auth.async_get_user(user_id)
+    except Exception:  # noqa: BLE001
+        return None
+    if user is None:
+        return None
+    name = (getattr(user, "name", None) or "").strip()
+    if name:
+        return name
+    return str(getattr(user, "id", user_id) or user_id)
+
+
 STATE_KEY_MANUAL_CONTINUOUS = "manual_continuous"
+STATE_KEY_MANUAL_CONTINUOUS_STARTED_AT = "manual_continuous_started_at"
 STATE_KEY_MANUAL_UNTIL = "manual_until"
 STATE_KEY_MANUAL_DURATION_SECONDS = "manual_duration_seconds"
 STATE_KEY_VACATION_MODE = "vacation_mode"
+STATE_KEY_TASK_HISTORY = "task_history"
+TASK_HISTORY_MAX_BYTES = 2 * 1024 * 1024
 SWITCHER_TIMER_MAX_MINUTES = 150
 SWITCHER_TIMER_DOMAIN = "switcher_kis"
 SWITCHER_TIMER_SERVICE = "turn_on_with_timer"
@@ -214,11 +237,13 @@ class BoilerManager:
         self._unsub_hebcal_daily = None
 
         self._manual_continuous = False
+        self._manual_continuous_started_at: datetime | None = None
         self._manual_until: datetime | None = None
         self._manual_duration_seconds: int | None = None
         self._vacation_mode = False
         self._schedule_driven = False
         self._active_task_ids: set[str] = set()
+        self._task_history: list[dict] = []
         # Task ids temporarily skipped until the current active segment ends
         # (used for user-initiated OFF so the task resumes only on its next event).
         self._snoozed_task_until: dict[str, datetime] = {}
@@ -300,7 +325,7 @@ class BoilerManager:
     @property
     def mode_attributes(self) -> dict:
         """Additional mode attrs for sensors/UI."""
-        attrs: dict[str, str | int | bool | list[str] | None] = {
+        attrs: dict[str, str | int | bool | list | None] = {
             "entry_id": self.entry.entry_id,
             "boiler_entity": self.boiler_entity,
             "active_tasks_count": len(self._active_task_ids),
@@ -315,11 +340,18 @@ class BoilerManager:
             attrs["manual_until"] = dt_util.as_local(self._manual_until).isoformat()
         else:
             attrs["manual_until"] = None
+        if self._manual_continuous and self._manual_continuous_started_at:
+            attrs["manual_continuous_started_at"] = dt_util.as_local(
+                self._manual_continuous_started_at
+            ).isoformat()
+        else:
+            attrs["manual_continuous_started_at"] = None
         attrs["manual_duration_seconds"] = self._manual_duration_seconds
         current_hebcal = self._current_hebcal_window(dt_util.now())
         next_shabbat = self._next_hebcal_window(dt_util.now(), kind="shabbat")
         next_holiday = self._next_hebcal_window(dt_util.now(), kind="holiday")
         next_yomtov = self._next_hebcal_window(dt_util.now(), kind="holiday", work_prohibited=True)
+        next_holiday_regular = self._next_hebcal_window(dt_util.now(), kind="holiday", work_prohibited=False)
         if current_hebcal:
             attrs["hebcal_active"] = True
             attrs["hebcal_kind"] = str(current_hebcal.get("kind") or "").strip().lower() or None
@@ -336,7 +368,37 @@ class BoilerManager:
         attrs["hebcal_next_holiday_end"] = next_holiday.get("ends_at") if next_holiday else None
         attrs["hebcal_next_yomtov_start"] = next_yomtov.get("starts_at") if next_yomtov else None
         attrs["hebcal_next_yomtov_end"] = next_yomtov.get("ends_at") if next_yomtov else None
+        attrs["hebcal_next_holiday_regular_start"] = (
+            next_holiday_regular.get("starts_at") if next_holiday_regular else None
+        )
+        attrs["hebcal_next_holiday_regular_end"] = next_holiday_regular.get("ends_at") if next_holiday_regular else None
+        attrs["task_history"] = list(self._task_history)
         return attrs
+
+    def _append_task_history(
+        self,
+        action: str,
+        details: str,
+        *,
+        user: str | None = None,
+    ) -> None:
+        """Append one history row and keep serialized payload under 2MB."""
+        row = {
+            "ts": dt_util.now().isoformat(),
+            "action": str(action or "").strip() or "event",
+            "details": str(details or "").strip(),
+        }
+        if user:
+            row["user"] = str(user).strip()
+        candidate = [*self._task_history, row]
+        try:
+            payload_size = len(json.dumps(candidate, ensure_ascii=False).encode("utf-8"))
+        except Exception:  # noqa: BLE001
+            payload_size = 0
+        if payload_size > TASK_HISTORY_MAX_BYTES:
+            self._task_history = [row]
+        else:
+            self._task_history = candidate
 
     @property
     def device_info(self) -> dict:
@@ -396,6 +458,12 @@ class BoilerManager:
             city=self.hebcal_city,
         )
 
+    async def async_clear_task_history(self) -> None:
+        """Clear persisted task history (card log / Mode sensor)."""
+        self._task_history = []
+        await self._async_save()
+        self._async_notify_state()
+
     async def async_create_task(
         self,
         *,
@@ -416,6 +484,7 @@ class BoilerManager:
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
         enabled: bool,
+        history_user: str | None = None,
     ) -> BoilerTask:
         """Create a new schedule task."""
         normalized_start = _normalize_schedule_time_string(start_time)
@@ -480,6 +549,11 @@ class BoilerManager:
 
         self._ensure_no_duplicate_task(task)
         self._tasks[task_id] = task
+        self._append_task_history(
+            "create_schedule",
+            f"{task_name} ({normalized_start}-{normalized_end})",
+            user=history_user,
+        )
         await self._async_save()
 
         async_dispatcher_send(
@@ -512,6 +586,7 @@ class BoilerManager:
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
         enabled: bool,
+        history_user: str | None = None,
     ) -> BoilerTask:
         """Create a new timeline task (multiple points on same day pattern)."""
         normalized_days = _normalize_days(days)
@@ -576,6 +651,11 @@ class BoilerManager:
 
         self._ensure_no_duplicate_task(task)
         self._tasks[task_id] = task
+        self._append_task_history(
+            "create_timeline",
+            f"{task_name} ({len(timeline_points)} points)",
+            user=history_user,
+        )
         await self._async_save()
 
         async_dispatcher_send(
@@ -589,7 +669,7 @@ class BoilerManager:
         self._async_notify_state()
         return task
 
-    async def async_delete_task(self, task_id: str) -> bool:
+    async def async_delete_task(self, task_id: str, *, history_user: str | None = None) -> bool:
         """Delete a schedule task."""
         key = str(task_id or "").strip()
         if not key or key not in self._tasks:
@@ -598,6 +678,7 @@ class BoilerManager:
         self._tasks.pop(key)
         self._snoozed_task_until.pop(key, None)
         self._async_remove_task_switch_entity(key)
+        self._append_task_history("delete_task", key, user=history_user)
         await self._async_save()
 
         async_dispatcher_send(
@@ -642,6 +723,8 @@ class BoilerManager:
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
         enabled: bool | None = None,
+        history_user: str | None = None,
+        history_action: str | None = None,
     ) -> BoilerTask:
         """Update task fields."""
         key = str(task_id or "").strip()
@@ -773,6 +856,8 @@ class BoilerManager:
             self._tasks[key] = _task_from_raw(snapshot)
             raise
 
+        action = (history_action or "update_task").strip() or "update_task"
+        self._append_task_history(action, task.name, user=history_user)
         await self._async_save()
 
         async_dispatcher_send(
@@ -786,9 +871,21 @@ class BoilerManager:
         self._async_notify_state()
         return task
 
-    async def async_set_task_enabled(self, task_id: str, enabled: bool) -> None:
+    async def async_set_task_enabled(
+        self,
+        task_id: str,
+        enabled: bool,
+        *,
+        history_user: str | None = None,
+    ) -> None:
         """Enable/disable task from switch entity."""
-        await self.async_update_task(task_id, enabled=enabled)
+        action = "task_enable" if enabled else "task_disable"
+        await self.async_update_task(
+            task_id,
+            enabled=enabled,
+            history_user=history_user,
+            history_action=action,
+        )
 
     def get_task(self, task_id: str) -> BoilerTask | None:
         """Return one task by id."""
@@ -818,6 +915,7 @@ class BoilerManager:
         raw_tasks: list[dict],
         *,
         mode: str = IMPORT_MODE_MERGE,
+        history_user: str | None = None,
     ) -> dict[str, int]:
         """Import tasks from payload with merge/replace mode."""
         normalized_mode = str(mode or IMPORT_MODE_MERGE).strip().lower()
@@ -871,6 +969,11 @@ class BoilerManager:
         for task in imported_tasks:
             self._tasks[task.task_id] = task
 
+        self._append_task_history(
+            "import_tasks",
+            f"mode={normalized_mode}, +{len(imported_tasks)}, -{len(removed_ids)}, total={len(self._tasks)}",
+            user=history_user,
+        )
         await self._async_save()
 
         for task_id in removed_ids:
@@ -895,18 +998,26 @@ class BoilerManager:
             "total": len(self._tasks),
         }
 
-    async def async_turn_on_continuous(self) -> None:
+    async def async_turn_on_continuous(self, *, history_user: str | None = None) -> None:
         """Turn on boiler and keep it running until explicit off."""
         self._manual_continuous = True
+        self._manual_continuous_started_at = dt_util.utcnow()
         self._manual_until = None
         self._manual_duration_seconds = None
         self._schedule_driven = False
         self._cancel_timed_off()
+        self._append_task_history("turn_on_continuous", "manual until off", user=history_user)
         await self._async_save()
         await self._async_turn_on_entity()
         self._async_notify_state()
 
-    async def async_run_timed(self, *, duration: str | None = None, minutes: int | None = None) -> int:
+    async def async_run_timed(
+        self,
+        *,
+        duration: str | None = None,
+        minutes: int | None = None,
+        history_user: str | None = None,
+    ) -> int:
         """Turn on boiler for fixed duration.
 
         Returns seconds scheduled.
@@ -917,6 +1028,7 @@ class BoilerManager:
 
         now = dt_util.now()
         self._manual_continuous = False
+        self._manual_continuous_started_at = None
         self._manual_until = now + timedelta(seconds=seconds)
         self._manual_duration_seconds = seconds
         self._schedule_driven = False
@@ -924,32 +1036,46 @@ class BoilerManager:
         self._cancel_timed_off()
         self._schedule_manual_timeout(seconds)
 
+        if seconds % 3600 == 0 and seconds >= 3600:
+            dur_label = f"{seconds // 3600}h"
+        elif seconds % 60 == 0:
+            dur_label = f"{seconds // 60} min"
+        else:
+            dur_label = f"{seconds}s"
+        self._append_task_history("run_timed", dur_label, user=history_user)
         await self._async_save()
         await self._async_turn_on_timed_entity(seconds)
         self._async_notify_state()
         return seconds
 
-    async def async_turn_off(self) -> None:
+    async def async_turn_off(self, *, history_user: str | None = None) -> None:
         """Turn off boiler and clear manual states."""
         now = dt_util.now()
         self._async_snooze_active_tasks_until_segment_end(now)
         self._manual_continuous = False
+        self._manual_continuous_started_at = None
         self._manual_until = None
         self._manual_duration_seconds = None
         self._schedule_driven = False
         self._cancel_timed_off()
+        self._append_task_history("turn_off", "manual / card off", user=history_user)
         await self._async_save()
         await self._async_apply_schedule_state()
         await self._async_turn_off_entity()
         self._async_notify_state()
 
-    async def async_set_vacation_mode(self, enabled: bool) -> None:
+    async def async_set_vacation_mode(self, enabled: bool, *, history_user: str | None = None) -> None:
         """Enable/disable global vacation mode (skip all scheduled tasks)."""
         next_value = bool(enabled)
         if self._vacation_mode == next_value:
             return
 
         self._vacation_mode = next_value
+        self._append_task_history(
+            "vacation_mode",
+            "enabled" if next_value else "disabled",
+            user=history_user,
+        )
         await self._async_save()
         await self._async_apply_schedule_state()
         self._async_notify_state()
@@ -1370,21 +1496,40 @@ class BoilerManager:
         self._manual_until = _parse_stored_datetime(raw.get(STATE_KEY_MANUAL_UNTIL))
         self._manual_duration_seconds = _parse_positive_int(raw.get(STATE_KEY_MANUAL_DURATION_SECONDS))
         self._vacation_mode = bool(raw.get(STATE_KEY_VACATION_MODE, False))
+        loaded_history = raw.get(STATE_KEY_TASK_HISTORY, [])
+        if isinstance(loaded_history, list):
+            self._task_history = [row for row in loaded_history if isinstance(row, dict)][-3000:]
+        else:
+            self._task_history = []
         if self._manual_continuous:
             # Continuous and timed are mutually exclusive.
             self._manual_until = None
             self._manual_duration_seconds = None
+            self._manual_continuous_started_at = _parse_stored_datetime(
+                raw.get(STATE_KEY_MANUAL_CONTINUOUS_STARTED_AT)
+            )
+            if self._manual_continuous_started_at is None:
+                self._manual_continuous_started_at = dt_util.utcnow()
+                await self._async_save()
+        else:
+            self._manual_continuous_started_at = None
 
     async def _async_save(self) -> None:
         """Persist tasks to storage."""
         payload = {
             "tasks": [task.as_dict() for task in self._tasks.values()],
             STATE_KEY_MANUAL_CONTINUOUS: self._manual_continuous,
+            STATE_KEY_MANUAL_CONTINUOUS_STARTED_AT: (
+                dt_util.as_utc(self._manual_continuous_started_at).isoformat()
+                if self._manual_continuous_started_at
+                else None
+            ),
             STATE_KEY_MANUAL_UNTIL: (
                 dt_util.as_utc(self._manual_until).isoformat() if self._manual_until else None
             ),
             STATE_KEY_MANUAL_DURATION_SECONDS: self._manual_duration_seconds,
             STATE_KEY_VACATION_MODE: self._vacation_mode,
+            STATE_KEY_TASK_HISTORY: self._task_history,
         }
         await self._store.async_save(payload)
 

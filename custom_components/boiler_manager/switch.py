@@ -24,7 +24,13 @@ from .const import (
     signal_state_updated,
     signal_tasks_updated,
 )
-from .manager import BoilerManager, BoilerTask, format_days_for_display, format_timeline_for_display
+from .manager import (
+    BoilerManager,
+    BoilerTask,
+    async_user_label_from_context,
+    format_days_for_display,
+    format_timeline_for_display,
+)
 
 
 async def async_setup_entry(
@@ -154,13 +160,17 @@ class BoilerTaskSwitch(SwitchEntity):
         """Attach task entities under one integration device."""
         return self._manager.device_info
 
-    async def async_turn_on(self, **_kwargs: Any) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable schedule task."""
-        await self._manager.async_set_task_enabled(self._task_id, True)
+        ctx = kwargs.get("context") or getattr(self, "context", None) or getattr(self, "_context", None)
+        caller = await async_user_label_from_context(self.hass, ctx)
+        await self._manager.async_set_task_enabled(self._task_id, True, history_user=caller)
 
-    async def async_turn_off(self, **_kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable schedule task."""
-        await self._manager.async_set_task_enabled(self._task_id, False)
+        ctx = kwargs.get("context") or getattr(self, "context", None) or getattr(self, "_context", None)
+        caller = await async_user_label_from_context(self.hass, ctx)
+        await self._manager.async_set_task_enabled(self._task_id, False, history_user=caller)
 
     async def async_added_to_hass(self) -> None:
         """Subscribe for manager state updates."""
