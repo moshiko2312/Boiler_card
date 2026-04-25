@@ -782,12 +782,16 @@ data:
 
 ## Versioning & Changelog
 
+- Tag `v0.1.7`:
+  - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:
   - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
-- Integration manifest `0.1.6`:
-  - Aligned with `v0.1.6` tag.
+- Integration manifest `0.1.7`:
+  - Aligned with `v0.1.7` tag.
 
 Recent highlights:
+- `0.1.7`
+  - **Docs:** Updated `mobile-05-task-edit-holiday-mode.png` in `docs/screenshots/`; screenshot index note bumped to v0.1.7+.
 - `0.1.6`
   - **Hebcal city:** Card editor dropdown (`hebcal_city`) + `HEBCAL_GEO_CITY_IDS` in integration `const.py`; `refresh_hebcal` accepts optional `hebcal_city` (writes integration options, then refreshes JSON).
   - **Task modal (mobile):** `#schedule-modal` centered like desktop; time / timeline duration inputs use tighter `max-width` and padding only under `max-width: 760px` / `520px` without changing button grids.
