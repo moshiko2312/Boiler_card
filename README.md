@@ -172,7 +172,7 @@ Custom boiler control solution for Home Assistant with:
 ![Holidays and Shabbat tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/08-holidays-shabbat-tab.png)
 
 - Purpose: Jewish calendar windows from the local Hebcal cache, plus global rules for timers and tasks during “active” holiday/Shabbat time.
-- The guide’s **חגים ושבתות** tab lists upcoming windows (Shabbat / holidays) from the local JSON; filters **הכל / חגים / שבתות** narrow the list. The line **עיר: …** reflects the Hebcal city token used for that cache (see **Holidays & Shabbat (Hebcal)** and card **`hebcal_city`**).
+- The guide’s **Holidays & Shabbat** tab lists upcoming windows (Shabbat / holidays) from the local JSON; filters **All / Holidays / Shabbat** narrow the list. The line **City: ...** reflects the Hebcal city token used for that cache (see **Holidays & Shabbat (Hebcal)** and card **`hebcal_city`**).
 - In-tab controls persist to the card YAML via `config-changed` (save the dashboard after changing rules).
 
 ### 8) Mobile UI (reference screenshots)
@@ -185,23 +185,23 @@ Captured on a narrow phone viewport; layout matches the desktop grid (task edito
 
 ![Mobile — guide: manual tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-02-guide-manual-tab.png)
 
-- In-card guide, **מדריך** tab (scrollable overview text).
+- In-card guide, **Guide** tab (scrollable overview text).
 
 ![Mobile — guide: holidays & Shabbat tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-03-guide-holidays-shabbat-tab.png)
 
-- Same guide modal on **חגים ושבתות**: city line, filters, event cards.
+- Same guide modal on **Holidays & Shabbat**: city line, filters, event cards.
 
+![Mobile — task edit: timeline points](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-04-task-edit-timeline.png)
 
-
-- Task editor with **טיים ליין**: time + duration + remove per row.
+- Task editor with **Timeline**: time + duration + remove per row.
 
 ![Mobile — task edit: holidays / Shabbat mode](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-05-task-edit-holiday-mode.png)
 
-- **חגים/שבתות** task type: start/end times, recurrence, event type, offset, phase.
+- **Holidays/Shabbat** task type: start/end times, recurrence, event type, offset, phase.
 
 ![Mobile — task edit: time window](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-06-task-edit-time-window.png)
 
-- **חלון זמן**: start/end time row and recurrence.
+- **Time Window**: start/end time row and recurrence.
 
 ![Mobile — timer modal: history](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-07-timer-modal-history.png)
 
@@ -209,7 +209,7 @@ Captured on a narrow phone viewport; layout matches the desktop grid (task edito
 
 ![Mobile — tasks tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-08-tasks-tab.png)
 
-- **משימות** list: edit / disable / delete on each row.
+- **Tasks** list: edit / disable / delete on each row.
 
 ## Project Structure
 
@@ -331,7 +331,7 @@ Notes:
 ```yaml
 type: custom:boiler-water-card
 language: he
-title: דוד חכם
+title: Smart Boiler
 switcher_mode: true
 boiler_entity: switch.switcher_touch_boiler
 
