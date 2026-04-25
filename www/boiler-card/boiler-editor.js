@@ -702,8 +702,8 @@ class BoilerWaterCardEditor extends HTMLElement {
         }
       </style>
       <div class="bm-editor-root">
-        <section class="bm-editor-card" data-section-key="general" data-collapsed="false">
-          <button class="bm-editor-header" type="button" data-section-toggle="general" aria-expanded="true">
+        <section class="bm-editor-card" data-section-key="general" data-collapsed="true">
+          <button class="bm-editor-header" type="button" data-section-toggle="general" aria-expanded="false">
             <span class="bm-editor-title-wrap">
               <span class="bm-editor-icon" aria-hidden="true">⚙</span>
               <h3 class="bm-editor-title" data-section-general-title>${labels.editor_section_general || "General"}</h3>
@@ -723,8 +723,8 @@ class BoilerWaterCardEditor extends HTMLElement {
             <div data-section-form="general"></div>
           </div>
         </section>
-        <section class="bm-editor-card" data-section-key="integration" data-collapsed="false">
-          <button class="bm-editor-header" type="button" data-section-toggle="integration" aria-expanded="true">
+        <section class="bm-editor-card" data-section-key="integration" data-collapsed="true">
+          <button class="bm-editor-header" type="button" data-section-toggle="integration" aria-expanded="false">
             <span class="bm-editor-title-wrap">
               <span class="bm-editor-icon" aria-hidden="true">✡</span>
               <h3 class="bm-editor-title" data-section-holidays-title>${labels.editor_section_holidays || "Holidays & Shabbat"}</h3>
@@ -736,8 +736,8 @@ class BoilerWaterCardEditor extends HTMLElement {
             <div data-section-form="integration"></div>
           </div>
         </section>
-        <section class="bm-editor-card" data-section-key="mode" data-collapsed="false">
-          <button class="bm-editor-header" type="button" data-section-toggle="mode" aria-expanded="true">
+        <section class="bm-editor-card" data-section-key="mode" data-collapsed="true">
+          <button class="bm-editor-header" type="button" data-section-toggle="mode" aria-expanded="false">
             <span class="bm-editor-title-wrap">
               <span class="bm-editor-icon" aria-hidden="true">⏱</span>
               <h3 class="bm-editor-title" data-editor-mode-title>${modeTitleText}</h3>
@@ -749,8 +749,8 @@ class BoilerWaterCardEditor extends HTMLElement {
             <div data-section-form="mode"></div>
           </div>
         </section>
-        <section class="bm-editor-card" data-section-key="display" data-collapsed="false">
-          <button class="bm-editor-header" type="button" data-section-toggle="display" aria-expanded="true">
+        <section class="bm-editor-card" data-section-key="display" data-collapsed="true">
+          <button class="bm-editor-header" type="button" data-section-toggle="display" aria-expanded="false">
             <span class="bm-editor-title-wrap">
               <span class="bm-editor-icon" aria-hidden="true">🖼</span>
               <h3 class="bm-editor-title" data-section-display-title>${labels.editor_section_display || "Display & Compatibility"}</h3>
