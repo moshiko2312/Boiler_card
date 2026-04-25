@@ -217,6 +217,16 @@ export function buildThemeCss() {
           border-color: rgba(255, 193, 129, 0.9);
           box-shadow: 0 0 0 1px rgba(255, 164, 74, 0.38), 0 0 14px rgba(255, 150, 68, 0.26);
         }
+        :host([data-card-theme="dark-glass"]) .tasks-vacation-btn:focus,
+        :host([data-card-theme="dark-glass"]) .tasks-vacation-btn:focus-visible {
+          outline: none;
+          border-color: rgba(138, 224, 255, 0.92);
+          box-shadow:
+            0 0 0 2px rgba(120, 212, 255, 0.42),
+            0 0 14px rgba(101, 195, 242, 0.32);
+          background: linear-gradient(165deg, rgba(83, 167, 202, 0.44), rgba(54, 131, 161, 0.42));
+          color: #ffffff;
+        }
 
 `;
 }
