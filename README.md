@@ -191,7 +191,7 @@ Captured on a narrow phone viewport; layout matches the desktop grid (task edito
 
 - Same guide modal on **חגים ושבתות**: city line, filters, event cards.
 
-![Mobile — task edit: timeline points](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-04-task-edit-timeline.png)
+
 
 - Task editor with **טיים ליין**: time + duration + remove per row.
 
