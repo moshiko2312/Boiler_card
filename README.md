@@ -168,12 +168,48 @@ Custom boiler control solution for Home Assistant with:
 - Right-side preview:
   - Real-time visual feedback while editing.
 
-### 7) Holidays & Shabbat tab (optional screenshot)
+### 7) Holidays & Shabbat tab
 ![Holidays and Shabbat tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/08-holidays-shabbat-tab.png)
 
-- Add `docs/screenshots/08-holidays-shabbat-tab.png` when you want this image to load; until then the link above may 404.
 - Purpose: Jewish calendar windows from the local Hebcal cache, plus global rules for timers and tasks during “active” holiday/Shabbat time.
+- The guide’s **חגים ושבתות** tab lists upcoming windows (Shabbat / holidays) from the local JSON; filters **הכל / חגים / שבתות** narrow the list. The line **עיר: …** reflects the Hebcal city token used for that cache (see **Holidays & Shabbat (Hebcal)** and card **`hebcal_city`**).
 - In-tab controls persist to the card YAML via `config-changed` (save the dashboard after changing rules).
+
+### 8) Mobile UI (reference screenshots)
+
+Captured on a narrow phone viewport; layout matches the desktop grid (task editor stays multi-column; time fields use compact mobile-only CSS inside `#schedule-modal`).
+
+![Mobile — main card](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-01-main-card.png)
+
+- Main card: quick timers, progress, hamburger menu.
+
+![Mobile — guide: manual tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-02-guide-manual-tab.png)
+
+- In-card guide, **מדריך** tab (scrollable overview text).
+
+![Mobile — guide: holidays & Shabbat tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-03-guide-holidays-shabbat-tab.png)
+
+- Same guide modal on **חגים ושבתות**: city line, filters, event cards.
+
+![Mobile — task edit: timeline points](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-04-task-edit-timeline.png)
+
+- Task editor with **טיים ליין**: time + duration + remove per row.
+
+![Mobile — task edit: holidays / Shabbat mode](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-05-task-edit-holiday-mode.png)
+
+- **חגים/שבתות** task type: start/end times, recurrence, event type, offset, phase.
+
+![Mobile — task edit: time window](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-06-task-edit-time-window.png)
+
+- **חלון זמן**: start/end time row and recurrence.
+
+![Mobile — timer modal: history](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-07-timer-modal-history.png)
+
+- Hamburger → history log (export / clear when configured).
+
+![Mobile — tasks tab](https://github.com/moshiko2312/Boiler_card/raw/main/docs/screenshots/mobile-08-tasks-tab.png)
+
+- **משימות** list: edit / disable / delete on each row.
 
 ## Project Structure
 
