@@ -23,7 +23,7 @@ class BoilerWaterCardEditor extends HTMLElement {
   }
 
   _maybeApplyIntegrationDefaults() {
-    if (this._asTruthy(this._config?.switcher_mode)) {
+    if (this._deviceProfile() === "switcher_touch") {
       return;
     }
 
@@ -49,7 +49,7 @@ class BoilerWaterCardEditor extends HTMLElement {
   }
 
   _maybeApplySwitcherDefaults() {
-    if (!this._hass || !this._asTruthy(this._config?.switcher_mode)) {
+    if (!this._hass || this._deviceProfile() !== "switcher_touch") {
       return;
     }
 
@@ -317,7 +317,9 @@ class BoilerWaterCardEditor extends HTMLElement {
     }
 
     const labels = this._labels();
-    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
+    const profile = this._deviceProfile();
+    const usesExtendedTimerUi = this._usesExtendedTimerUi();
+    const usesSwitcherBoilerPicker = profile === "switcher_touch" || profile === "boiler_smarthome4u";
     this._ensureEditorLayout();
 
     const languageOptions = [
@@ -350,12 +352,17 @@ class BoilerWaterCardEditor extends HTMLElement {
         name: "boiler_entity",
         label: labels.boiler_entity,
         required: true,
-        selector: isSwitcherMode
+        selector: usesSwitcherBoilerPicker
           ? { entity: { domain: "switch" } }
           : { entity: {} },
       },
     ];
     const integrationSchema = [
+      {
+        name: "integration_entry_id",
+        label: labels.integration_entry_id || "Integration entry ID",
+        selector: { text: {} },
+      },
       {
         name: "hebcal_city",
         label: labels.hebcal_city,
@@ -368,7 +375,65 @@ class BoilerWaterCardEditor extends HTMLElement {
         },
       },
     ];
-    const modeSchema = isSwitcherMode
+    const modeSchema = profile === "boiler_smarthome4u"
+      ? [
+        {
+          name: "boost_time_entity",
+          label: labels.boost_time_entity,
+          selector: { entity: { domain: "number" } },
+        },
+        {
+          name: "total_time_entity",
+          label: labels.total_time_entity,
+          selector: { entity: { domain: "number" } },
+        },
+        {
+          name: "work_time_entity",
+          label: labels.work_time_entity,
+          selector: { entity: { domain: "number" } },
+        },
+        {
+          name: "backlight_mode_entity",
+          label: labels.backlight_mode_entity,
+          selector: { entity: { domain: "switch" } },
+        },
+        {
+          name: "child_lock_entity",
+          label: labels.child_lock_entity,
+          selector: { entity: { domain: "switch" } },
+        },
+        {
+          name: "power_on_behavior_entity",
+          label: labels.power_on_behavior_entity,
+          selector: { entity: { domain: "select" } },
+        },
+        {
+          name: "boost_timer_values",
+          label: labels.boost_timer_values,
+          selector: { text: {} },
+        },
+        {
+          name: "off_boost_minutes",
+          label: labels.off_boost_minutes,
+          selector: { number: { min: 1, max: 360, step: 1, mode: "box" } },
+        },
+        {
+          name: "power_sensor",
+          label: labels.power_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "current_sensor",
+          label: labels.current_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+        {
+          name: "voltage_sensor",
+          label: labels.voltage_sensor,
+          selector: { entity: { domain: "sensor" } },
+        },
+      ]
+      : usesExtendedTimerUi
       ? [
         {
           name: "switcher_time_left_sensor",
@@ -427,7 +492,7 @@ class BoilerWaterCardEditor extends HTMLElement {
       {
         name: "card_theme",
         label: labels.card_theme || "Card theme",
-        description: labels.card_theme_desc || "Choose between the current look and a darker glass theme.",
+        description: labels.card_theme_desc || "Dark Glass is the default. You can still switch to other themes anytime.",
         selector: {
           select: {
             mode: "dropdown",
@@ -473,13 +538,16 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   _ensureEditorLayout() {
     const labels = this._labels();
-    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
-    const modeTitleText = isSwitcherMode
-      ? (labels.editor_mode_switcher_title || "Switcher mode settings")
-      : (labels.editor_mode_regular_title || "Regular mode settings");
-    const modeDescText = isSwitcherMode
-      ? (labels.editor_mode_switcher_desc || "Auto-detected Switcher fields and timer profile.")
-      : (labels.editor_mode_regular_desc || "Generic timer values and sensor entities used by the card.");
+    const profile = this._deviceProfile();
+    let modeTitleText = labels.editor_mode_regular_title || "Regular mode settings";
+    let modeDescText = labels.editor_mode_regular_desc || "Generic timer values and sensor entities used by the card.";
+    if (profile === "switcher_touch") {
+      modeTitleText = labels.editor_mode_switcher_title || "Switcher mode settings";
+      modeDescText = labels.editor_mode_switcher_desc || "Auto-detected Switcher fields and timer profile.";
+    } else if (profile === "boiler_smarthome4u") {
+      modeTitleText = labels.editor_mode_smarthome4u_title || "boiler smarthome4u";
+      modeDescText = labels.editor_mode_smarthome4u_desc || "Custom profile. Parameters will be configured separately.";
+    }
     if (this._editorRoot) {
       const modeTitle = this.querySelector("[data-editor-mode-title]");
       const modeDesc = this.querySelector("[data-editor-mode-desc]");
@@ -752,7 +820,7 @@ class BoilerWaterCardEditor extends HTMLElement {
         <section class="bm-editor-card" data-section-key="display" data-collapsed="true">
           <button class="bm-editor-header" type="button" data-section-toggle="display" aria-expanded="false">
             <span class="bm-editor-title-wrap">
-              <span class="bm-editor-icon" aria-hidden="true">🖼</span>
+              <span class="bm-editor-icon" aria-hidden="true">◈</span>
               <h3 class="bm-editor-title" data-section-display-title>${labels.editor_section_display || "Display & Compatibility"}</h3>
             </span>
             <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
@@ -822,13 +890,14 @@ class BoilerWaterCardEditor extends HTMLElement {
     }
     const labels = this._labels();
     label.textContent = labels.switcher_mode || "Device profile";
-    const isSwitcherMode = this._asTruthy(this._config?.switcher_mode);
+    const activeProfile = this._deviceProfile();
     const profiles = [
       {
         id: "standard",
         name: labels.profile_standard_name || "Standard Boiler",
         subtitle: labels.profile_standard_desc || "Generic profile for regular switch/light entities",
         image: "/local/boiler-card/boiler-flow.png",
+        deviceProfile: "standard",
         switcherMode: false,
       },
       {
@@ -836,12 +905,21 @@ class BoilerWaterCardEditor extends HTMLElement {
         name: labels.profile_switcher_name || "Switcher Touch",
         subtitle: labels.profile_switcher_desc || "Switcher-specific sensors, timer behavior and defaults",
         image: "/local/boiler-card/switcher-touch.png",
+        deviceProfile: "switcher_touch",
         switcherMode: true,
+      },
+      {
+        id: "boiler_smarthome4u",
+        name: labels.profile_smarthome4u_name || "boiler smarthome4u",
+        subtitle: labels.profile_smarthome4u_desc || "Custom boiler switch profile",
+        image: "/local/boiler-card/boiler-smarthome4u.png",
+        deviceProfile: "boiler_smarthome4u",
+        switcherMode: false,
       },
     ];
     mount.innerHTML = "";
     profiles.forEach((profile) => {
-      const active = isSwitcherMode === profile.switcherMode;
+      const active = activeProfile === profile.deviceProfile;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "bm-editor-profile-card";
@@ -859,7 +937,15 @@ class BoilerWaterCardEditor extends HTMLElement {
         if (active) {
           return;
         }
-        this._onValueChanged({ detail: { value: { switcher_mode: profile.switcherMode } } });
+        this._onValueChanged({
+          detail: {
+            value: {
+              device_profile: profile.deviceProfile,
+              switcher_mode: profile.switcherMode,
+              boiler_flow_image: profile.image,
+            },
+          },
+        });
       });
       mount.appendChild(button);
     });
@@ -909,15 +995,32 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   _onValueChanged(event) {
     const value = event?.detail?.value || {};
+    const prevProfile = this._deviceProfile();
     const prevHebcalCity = String(this._config?.hebcal_city ?? "").trim();
     const prevLanguage = this._normalizeLanguage(this._config?.language);
     const hasLanguageChange = Object.prototype.hasOwnProperty.call(value, "language");
     const hasSwitcherModeChange = Object.prototype.hasOwnProperty.call(value, "switcher_mode");
+    const hasDeviceProfileChange = Object.prototype.hasOwnProperty.call(value, "device_profile");
     const prevSwitcherMode = this._asTruthy(this._config?.switcher_mode);
     const nextLanguage = hasLanguageChange
       ? this._normalizeLanguage(value.language)
       : prevLanguage;
     let nextConfig = { ...this._config, ...value };
+    if (hasDeviceProfileChange) {
+      const dp = String(nextConfig.device_profile || "").trim().toLowerCase();
+      nextConfig.switcher_mode = dp === "switcher_touch";
+      const nextProfile = this._normalizeProfile(dp);
+      const currentImage = String(this._config?.boiler_flow_image || "").trim();
+      const incomingImage = String(value.boiler_flow_image || "").trim();
+      const prevDefaultImage = this._profileDefaultImage(prevProfile);
+      const nextDefaultImage = this._profileDefaultImage(nextProfile);
+      if (!incomingImage && (!currentImage || currentImage === prevDefaultImage)) {
+        nextConfig.boiler_flow_image = nextDefaultImage;
+      }
+    } else if (hasSwitcherModeChange) {
+      const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
+      nextConfig.device_profile = nextSwitcherMode ? "switcher_touch" : "standard";
+    }
     const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
 
     if (hasLanguageChange && nextLanguage !== prevLanguage) {
@@ -974,9 +1077,45 @@ class BoilerWaterCardEditor extends HTMLElement {
     }
 
     // Keep editor stable so dropdown/entity selectors stay interactive.
-    if ((hasLanguageChange && nextLanguage !== prevLanguage) || (hasSwitcherModeChange && nextSwitcherMode !== prevSwitcherMode)) {
+    const profileChanged = hasDeviceProfileChange
+      || (hasSwitcherModeChange && nextSwitcherMode !== prevSwitcherMode);
+    if ((hasLanguageChange && nextLanguage !== prevLanguage) || profileChanged) {
       this._render();
     }
+  }
+
+  _deviceProfile() {
+    const raw = String(this._config?.device_profile || "").trim().toLowerCase();
+    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+      return raw;
+    }
+    if (this._asTruthy(this._config?.switcher_mode)) {
+      return "switcher_touch";
+    }
+    return "standard";
+  }
+
+  _normalizeProfile(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+      return raw;
+    }
+    return "standard";
+  }
+
+  _profileDefaultImage(profile) {
+    const normalized = this._normalizeProfile(profile);
+    if (normalized === "switcher_touch") {
+      return "/local/boiler-card/switcher-touch.png";
+    }
+    if (normalized === "boiler_smarthome4u") {
+      return "/local/boiler-card/boiler-smarthome4u.png";
+    }
+    return "/local/boiler-card/boiler-flow.png";
+  }
+
+  _usesExtendedTimerUi() {
+    return this._deviceProfile() === "switcher_touch";
   }
 
   _asTruthy(value) {
@@ -1026,10 +1165,18 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "חיישן 2 - תמיד מוצג",
         switcher_icon_sensor: "חיישן טמפרטורה לאייקון ולהתקדמות",
         switcher_timer_values: "ערכי טיימר בדקות (לדוגמה: 15,30,45,60)",
+        boost_time_entity: "⏱️ ישות Boost Time (number)",
+        total_time_entity: "🕒 ישות Total Time (number)",
+        work_time_entity: "⌛ ישות Work Time (number)",
+        backlight_mode_entity: "💡 ישות מצב תאורה אחורית (switch)",
+        child_lock_entity: "🔒 ישות נעילת ילדים (switch)",
+        power_on_behavior_entity: "⚡ ישות התנהגות לאחר הפסקת חשמל (select)",
+        boost_timer_values: "כפתורי טיימר בדקות (לדוגמה: 15,30,60,90)",
+        off_boost_minutes: "ערך Boost לכיבוי (בדקות)",
         timer_values: "ערכי טיימר בדקות (גנרי, לדוגמה: 20,40,90)",
         card_theme: "ערכת נושא לכרטיס",
-        card_theme_desc: "קלאסי שומר על המראה הקיים. זכוכית כהה מוסיף רקע עמוק וכהה יותר.",
-        card_theme_classic: "קלאסי (נוכחי)",
+        card_theme_desc: "זכוכית כהה היא ברירת המחדל. תמיד אפשר לעבור לערכות נושא אחרות.",
+        card_theme_classic: "קלאסי",
         card_theme_dark_glass: "זכוכית כהה",
         card_theme_amber_glow: "זוהר כתום",
         lang_option_he: "עברית",
@@ -1050,8 +1197,13 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_standard_desc: "פרופיל כללי לישויות רגילות מסוג מתג/תאורה",
         profile_switcher_name: "סוויצ'ר טאץ'",
         profile_switcher_desc: "חיישני סוויצ'ר ייעודיים, התנהגות טיימר וברירות מחדל מותאמות",
+        profile_smarthome4u_name: "בוילר של סמארט הום 4 יו",
+        profile_smarthome4u_desc: "פרופיל ייעודי למתג boiler smarthome4u. פרמטרים יוגדרו בנפרד.",
+        editor_mode_smarthome4u_title: "בוילר של סמארט הום 4 יו",
+        editor_mode_smarthome4u_desc: "פרופיל מותאם אישית. הפרמטרים יוגדרו לפי הדרישות שלך.",
         boiler_flow_image: "תמונת זרימת מים (נתיב או כתובת)",
-        hide_boiler_flow_image: "הסתר תמונת זרימת המים בכרטיס",
+        hide_boiler_flow_image: "הסתר תמונה בכרטיס",
+        integration_entry_id: "מזהה אינטגרציה (integration_entry_id)",
         hebcal_city: "עיר (חגים ושבת — לוח שנה)",
         hebcal_city_desc:
           "נשמר באפשרויות האינטגרציה ומעדכן את קובץ הלוח המקומי. נדרש מזהה אינטגרציה (integration_entry_id) בכרטיס. \"כמו באינטגרציה\" מסיר את העיר מהאפשרויות ומשתמש בערך מהגדרת האינטגרציה.",
@@ -1074,10 +1226,18 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Switcher Sensor 2 (Always)",
         switcher_icon_sensor: "Switcher Icon Temperature Sensor",
         switcher_timer_values: "Switcher Timer Values in minutes (e.g. 15,30,45,60)",
+        boost_time_entity: "⏱️ Boost Time Entity (number)",
+        total_time_entity: "🕒 Total Time Entity (number)",
+        work_time_entity: "⌛ Work Time Entity (number)",
+        backlight_mode_entity: "💡 Backlight mode entity (switch)",
+        child_lock_entity: "🔒 Child lock entity (switch)",
+        power_on_behavior_entity: "⚡ Power-on behavior entity (select)",
+        boost_timer_values: "Timer button values in minutes (e.g. 15,30,60,90)",
+        off_boost_minutes: "Boost value to set on OFF (minutes)",
         timer_values: "Timer Values in minutes (generic, e.g. 20,40,90)",
         card_theme: "Card Theme",
-        card_theme_desc: "Classic keeps the existing look. Dark Glass applies a deeper dark background.",
-        card_theme_classic: "Classic (Current)",
+        card_theme_desc: "Dark Glass is the default. You can still switch to other themes anytime.",
+        card_theme_classic: "Classic",
         card_theme_dark_glass: "Dark Glass",
         card_theme_amber_glow: "Amber Glow",
         lang_option_he: "Hebrew",
@@ -1098,8 +1258,13 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_standard_desc: "Generic profile for regular switch/light entities",
         profile_switcher_name: "Switcher Touch",
         profile_switcher_desc: "Switcher-specific sensors, timer behavior and defaults",
+        profile_smarthome4u_name: "boiler smarthome4u",
+        profile_smarthome4u_desc: "Dedicated profile for boiler smarthome4u. Parameters will be defined separately.",
+        editor_mode_smarthome4u_title: "boiler smarthome4u",
+        editor_mode_smarthome4u_desc: "Custom profile. Parameters will be defined per your exact device logic.",
         boiler_flow_image: "Water Flow Image (path / URL)",
         hide_boiler_flow_image: "Hide water flow image on card",
+        integration_entry_id: "Integration entry ID (integration_entry_id)",
         hebcal_city: "City (holidays & Shabbat — Hebcal)",
         hebcal_city_desc:
           "Stored in Boiler Manager integration options and refreshes the local JSON cache. Requires integration_entry_id on the card. \"Match integration\" removes the city override and uses the value from the integration config.",
@@ -1122,10 +1287,18 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Switcher датчик 2 (всегда)",
         switcher_icon_sensor: "Switcher датчик температуры иконки",
         switcher_timer_values: "Значения таймера Switcher в минутах (например 15,30,45,60)",
+        boost_time_entity: "⏱️ Сущность Boost Time (number)",
+        total_time_entity: "🕒 Сущность Total Time (number)",
+        work_time_entity: "⌛ Сущность Work Time (number)",
+        backlight_mode_entity: "💡 Сущность подсветки (switch)",
+        child_lock_entity: "🔒 Сущность блокировки от детей (switch)",
+        power_on_behavior_entity: "⚡ Сущность поведения после питания (select)",
+        boost_timer_values: "Кнопки таймера в минутах (например 15,30,60,90)",
+        off_boost_minutes: "Значение Boost при выключении (минуты)",
         timer_values: "Значения таймера в минутах (общие, например 20,40,90)",
         card_theme: "Тема карточки",
-        card_theme_desc: "Классическая тема сохраняет текущий стиль. Темное стекло включает более глубокий темный фон.",
-        card_theme_classic: "Классическая (текущая)",
+        card_theme_desc: "Темное стекло — тема по умолчанию. При желании можно переключиться на другие темы.",
+        card_theme_classic: "Классическая",
         card_theme_dark_glass: "Темное стекло",
         card_theme_amber_glow: "Янтарное свечение",
         lang_option_he: "Иврит",
@@ -1146,8 +1319,13 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_standard_desc: "Общий профиль для обычных сущностей switch/light",
         profile_switcher_name: "Switcher Touch",
         profile_switcher_desc: "Поля датчиков Switcher, поведение таймера и специальные значения по умолчанию",
+        profile_smarthome4u_name: "Бойлер Smart Home 4U",
+        profile_smarthome4u_desc: "Специальный профиль для boiler smarthome4u. Параметры будут заданы отдельно.",
+        editor_mode_smarthome4u_title: "Бойлер Smart Home 4U",
+        editor_mode_smarthome4u_desc: "Пользовательский профиль. Параметры будут настроены по вашей точной логике.",
         boiler_flow_image: "Изображение потока (путь / URL)",
         hide_boiler_flow_image: "Скрыть изображение потока на карточке",
+        integration_entry_id: "ID интеграции (integration_entry_id)",
         hebcal_city: "Город (праздники и Шаббат — Hebcal)",
         hebcal_city_desc:
           "Сохраняется в настройках интеграции Boiler Manager и обновляет локальный JSON. Нужен integration_entry_id в карточке. «Как в интеграции» снимает переопределение города.",
@@ -1170,10 +1348,18 @@ class BoilerWaterCardEditor extends HTMLElement {
         switcher_sensor_2: "Capteur Switcher 2 (toujours)",
         switcher_icon_sensor: "Capteur température icône Switcher",
         switcher_timer_values: "Valeurs minuterie Switcher en minutes (ex: 15,30,45,60)",
+        boost_time_entity: "⏱️ Entite Boost Time (number)",
+        total_time_entity: "🕒 Entite Total Time (number)",
+        work_time_entity: "⌛ Entite Work Time (number)",
+        backlight_mode_entity: "💡 Entite mode retroeclairage (switch)",
+        child_lock_entity: "🔒 Entite verrouillage enfant (switch)",
+        power_on_behavior_entity: "⚡ Entite comportement au retour du courant (select)",
+        boost_timer_values: "Valeurs des boutons minuterie en minutes (ex: 15,30,60,90)",
+        off_boost_minutes: "Valeur Boost appliquee a l'arret (minutes)",
         timer_values: "Valeurs minuterie en minutes (générique, ex: 20,40,90)",
         card_theme: "Theme de la carte",
-        card_theme_desc: "Le theme classique conserve le style actuel. Le verre sombre applique un fond plus profond.",
-        card_theme_classic: "Classique (actuel)",
+        card_theme_desc: "Le verre sombre est le theme par defaut. Vous pouvez toujours changer vers d'autres themes.",
+        card_theme_classic: "Classique",
         card_theme_dark_glass: "Verre sombre",
         card_theme_amber_glow: "Lueur ambree",
         lang_option_he: "Hebreu",
@@ -1194,8 +1380,13 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_standard_desc: "Profil generique pour les entites switch/light standard",
         profile_switcher_name: "Switcher Touch",
         profile_switcher_desc: "Capteurs Switcher dedies, comportement minuterie et valeurs par defaut",
+        profile_smarthome4u_name: "Boiler Smart Home 4U",
+        profile_smarthome4u_desc: "Profil dedie pour boiler smarthome4u. Les parametres seront definis separement.",
+        editor_mode_smarthome4u_title: "Boiler Smart Home 4U",
+        editor_mode_smarthome4u_desc: "Profil personnalise. Les parametres seront definis selon votre logique exacte.",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
         hide_boiler_flow_image: "Masquer l'image du flux sur la carte",
+        integration_entry_id: "ID d'integration (integration_entry_id)",
         hebcal_city: "Ville (fêtes et Chabbat — Hebcal)",
         hebcal_city_desc:
           "Enregistré dans les options d'intégration Boiler Manager et rafraîchit le fichier JSON local. Nécessite integration_entry_id sur la carte. «Comme l'intégration» retire la ville des options.",

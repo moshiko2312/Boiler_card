@@ -109,6 +109,7 @@ class BoilerWaterCard extends HTMLElement {
     this._guideHebcalPayload = null;
     this._guideHebcalFilter = "all";
     this._hebcalCacheInFlight = null;
+    this._lastHebcalAutoRefreshAt = 0;
     this._handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         this._closeTimerModal();
@@ -116,6 +117,8 @@ class BoilerWaterCard extends HTMLElement {
         this._closeConfirmModal(false);
         this._closeImportSelectionModal(false);
         this._closeGuideModal();
+        this._closeSmarthomeBoostModal();
+        this._closeSmarthomeSettingsModal();
       }
     };
   }
@@ -176,6 +179,7 @@ class BoilerWaterCard extends HTMLElement {
     this._historyListRenderKey = "";
     const cardTheme = normalizeCardTheme(this._config?.card_theme);
     this.setAttribute("data-card-theme", cardTheme);
+    this.setAttribute("data-device-profile", this._deviceProfile());
     this.shadowRoot.innerHTML = buildBoilerShellHtml({
       cardTheme,
       themeCss: buildThemeCss(),
@@ -184,6 +188,7 @@ class BoilerWaterCard extends HTMLElement {
     this._elements = {
       title: this.shadowRoot.getElementById("title"),
       subtitle: this.shadowRoot.getElementById("subtitle"),
+      childLockIndicator: this.shadowRoot.getElementById("child-lock-indicator"),
       boilerVisual: this.shadowRoot.getElementById("boiler-visual"),
       boilerMainImage: this.shadowRoot.getElementById("boiler-main-image"),
       boilerStage: this.shadowRoot.getElementById("boiler-stage"),
@@ -197,6 +202,9 @@ class BoilerWaterCard extends HTMLElement {
       countdownValue: this.shadowRoot.getElementById("countdown-value"),
       sensorsRow: this.shadowRoot.getElementById("sensors-row"),
       quickTimers: this.shadowRoot.getElementById("quick-timers"),
+      smarthomeTopActions: this.shadowRoot.getElementById("smarthome-top-actions"),
+      smarthomeBoostBtn: this.shadowRoot.getElementById("smarthome-boost-btn"),
+      smarthomeSettingsBtn: this.shadowRoot.getElementById("smarthome-settings-btn"),
       quickTimerBtns: [],
       quickOffBtn: null,
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
@@ -367,6 +375,7 @@ class BoilerWaterCard extends HTMLElement {
       guideTabManualBtn: this.shadowRoot.getElementById("guide-tab-manual-btn"),
       guideTabHebcalBtn: this.shadowRoot.getElementById("guide-tab-hebcal-btn"),
       guidePanelManual: this.shadowRoot.getElementById("guide-panel-manual"),
+      guideProfileGrid: this.shadowRoot.getElementById("guide-profile-grid"),
       guidePanelManualText: this.shadowRoot.getElementById("guide-panel-manual-text"),
       guidePanelHebcal: this.shadowRoot.getElementById("guide-panel-hebcal"),
       guideHebcalCity: this.shadowRoot.getElementById("guide-hebcal-city"),
@@ -375,6 +384,33 @@ class BoilerWaterCard extends HTMLElement {
       guideHebcalFilterShabbat: this.shadowRoot.getElementById("guide-hebcal-filter-shabbat"),
       guideHebcalList: this.shadowRoot.getElementById("guide-hebcal-list"),
       guideHebcalStatus: this.shadowRoot.getElementById("guide-hebcal-status"),
+      smarthomeBoostModal: this.shadowRoot.getElementById("smarthome-boost-modal"),
+      smarthomeBoostModalBackdrop: this.shadowRoot.getElementById("smarthome-boost-modal-backdrop"),
+      smarthomeBoostModalPanel: this.shadowRoot.getElementById("smarthome-boost-modal-panel"),
+      smarthomeBoostModalTitle: this.shadowRoot.getElementById("smarthome-boost-modal-title"),
+      smarthomeBoostModalLabel: this.shadowRoot.getElementById("smarthome-boost-modal-label"),
+      smarthomeBoostModalInput: this.shadowRoot.getElementById("smarthome-boost-modal-input"),
+      smarthomeBoostDownBtn: this.shadowRoot.getElementById("smarthome-boost-down-btn"),
+      smarthomeBoostUpBtn: this.shadowRoot.getElementById("smarthome-boost-up-btn"),
+      smarthomeBoostModalCloseBtn: this.shadowRoot.getElementById("smarthome-boost-modal-close-btn"),
+      smarthomeBoostModalCancelBtn: this.shadowRoot.getElementById("smarthome-boost-modal-cancel-btn"),
+      smarthomeBoostModalSaveBtn: this.shadowRoot.getElementById("smarthome-boost-modal-save-btn"),
+      smarthomeSettingsModal: this.shadowRoot.getElementById("smarthome-settings-modal"),
+      smarthomeSettingsModalBackdrop: this.shadowRoot.getElementById("smarthome-settings-modal-backdrop"),
+      smarthomeSettingsModalPanel: this.shadowRoot.getElementById("smarthome-settings-modal-panel"),
+      smarthomeSettingsModalTitle: this.shadowRoot.getElementById("smarthome-settings-modal-title"),
+      smarthomeSettingsModalCloseBtn: this.shadowRoot.getElementById("smarthome-settings-modal-close-btn"),
+      smarthomeSettingsModalCancelBtn: this.shadowRoot.getElementById("smarthome-settings-modal-cancel-btn"),
+      smarthomeSettingsModalSaveBtn: this.shadowRoot.getElementById("smarthome-settings-modal-save-btn"),
+      smarthomeBacklightLabel: this.shadowRoot.getElementById("smarthome-backlight-label"),
+      smarthomeBacklightToggleBtn: this.shadowRoot.getElementById("smarthome-backlight-toggle-btn"),
+      smarthomeBacklightSelect: this.shadowRoot.getElementById("smarthome-backlight-select"),
+      smarthomeChildLockLabel: this.shadowRoot.getElementById("smarthome-child-lock-label"),
+      smarthomeChildLockToggleBtn: this.shadowRoot.getElementById("smarthome-child-lock-toggle-btn"),
+      smarthomeChildLockSelect: this.shadowRoot.getElementById("smarthome-child-lock-select"),
+      smarthomePowerOnLabel: this.shadowRoot.getElementById("smarthome-power-on-label"),
+      smarthomePowerOnOptions: this.shadowRoot.getElementById("smarthome-power-on-options"),
+      smarthomePowerOnSelect: this.shadowRoot.getElementById("smarthome-power-on-select"),
     };
 
     this._elements.timerMenuBtn.addEventListener("click", () => this._openTimerModal());
@@ -382,6 +418,20 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.timerHistoryBtn?.addEventListener("click", () => this._setMenuMode("history"));
     this._elements.timerGuideBtn?.addEventListener("click", () => this._openGuideModal());
     this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
+    this._elements.smarthomeBoostBtn?.addEventListener("click", () => this._openSmarthomeBoostModal());
+    this._elements.smarthomeSettingsBtn?.addEventListener("click", () => this._openSmarthomeSettingsModal());
+    this._elements.smarthomeBoostModalBackdrop?.addEventListener("click", () => this._closeSmarthomeBoostModal());
+    this._elements.smarthomeBoostModalCloseBtn?.addEventListener("click", () => this._closeSmarthomeBoostModal());
+    this._elements.smarthomeBoostModalCancelBtn?.addEventListener("click", () => this._closeSmarthomeBoostModal());
+    this._elements.smarthomeBoostModalSaveBtn?.addEventListener("click", () => this._saveSmarthomeBoostModal());
+    this._elements.smarthomeBoostDownBtn?.addEventListener("click", () => this._stepSmarthomeBoostModal(-1));
+    this._elements.smarthomeBoostUpBtn?.addEventListener("click", () => this._stepSmarthomeBoostModal(1));
+    this._elements.smarthomeSettingsModalBackdrop?.addEventListener("click", () => this._closeSmarthomeSettingsModal());
+    this._elements.smarthomeSettingsModalCloseBtn?.addEventListener("click", () => this._closeSmarthomeSettingsModal());
+    this._elements.smarthomeSettingsModalCancelBtn?.addEventListener("click", () => this._closeSmarthomeSettingsModal());
+    this._elements.smarthomeSettingsModalSaveBtn?.addEventListener("click", () => this._saveSmarthomeSettingsModal());
+    this._elements.smarthomeBacklightToggleBtn?.addEventListener("click", () => this._toggleSmarthomeBinaryInput("backlight"));
+    this._elements.smarthomeChildLockToggleBtn?.addEventListener("click", () => this._toggleSmarthomeBinaryInput("child_lock"));
     this._elements.timerPagePrevBtn.addEventListener("click", () => this._changeTimerPage(-1));
     this._elements.timerPageNextBtn.addEventListener("click", () => this._changeTimerPage(1));
     this._elements.modalModeTimerBtn?.addEventListener("click", () => this._setMenuMode("timer"));
@@ -629,6 +679,7 @@ class BoilerWaterCard extends HTMLElement {
         this._elements.guideModalTitle.textContent = this._t("guide_title");
       }
       if (this._guideModalTab === "manual" && this._elements.guidePanelManualText) {
+        this._renderGuideProfileCards();
         this._elements.guidePanelManualText.textContent = this._t("guide_content");
       }
       if (this._guideModalTab === "hebcal" && this._guideHebcalPayload) {
@@ -650,6 +701,11 @@ class BoilerWaterCard extends HTMLElement {
     }
     if (this._elements.historyExportLabel) {
       this._elements.historyExportLabel.textContent = this._t("history_export_log");
+    }
+    if (this._elements.historyExportBtn) {
+      const exportLabel = this._t("history_export_log");
+      this._elements.historyExportBtn.setAttribute("aria-label", exportLabel);
+      this._elements.historyExportBtn.setAttribute("title", exportLabel);
     }
     const scheduleModalOpen = !!(this._elements.scheduleModal && !this._elements.scheduleModal.hidden);
     if (!scheduleModalOpen) {
@@ -822,7 +878,7 @@ class BoilerWaterCard extends HTMLElement {
       this._setSchedulePanel(this._schedulePanel);
     }
     this._setMenuMode(this._menuMode);
-    const flowImage = cfg.boiler_flow_image || "/local/boiler-card/boiler-flow.png";
+    const flowImage = cfg.boiler_flow_image || this._profileDefaultFlowImage();
     if (this._elements.boilerMainImage?.getAttribute("src") !== flowImage) {
       this._elements.boilerMainImage.setAttribute("src", flowImage);
     }
@@ -840,6 +896,8 @@ class BoilerWaterCard extends HTMLElement {
     this._syncUpcomingTaskNotice();
     this._syncError(boiler);
     this._syncControls(boiler, managerMode);
+    this._syncChildLockIndicator();
+    this._syncSmarthome4uControls();
     this._syncScheduleList();
     this._syncHistoryList(managerMode);
   }
@@ -900,6 +958,8 @@ class BoilerWaterCard extends HTMLElement {
     const timedOptions = (Array.isArray(options) ? options : [])
       .map((option) => String(option || "").trim())
       .filter((option) => !!option && !this._isNoTimerOption(option));
+    const totalButtons = timedOptions.length + 1; // + off button
+    container.classList.toggle("has-overflow", totalButtons > 4);
     const renderKey = JSON.stringify({
       lang: this._lang(),
       options: timedOptions,
@@ -1021,7 +1081,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    if (this._isSwitcherMode()) {
+    if (this._usesExtendedTimerUi()) {
       this._elements.subtitle.textContent = this._switcherStatusLine(boiler);
       return;
     }
@@ -1054,7 +1114,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
 
-    if (this._isSwitcherMode()) {
+    if (this._usesExtendedTimerUi()) {
       const isOn = this._isEntityOn(boiler);
       const timeLeftValue = this._switcherSensorDisplayValue(this._config.switcher_time_left_sensor, {
         withUnit: false,
@@ -1178,6 +1238,38 @@ class BoilerWaterCard extends HTMLElement {
         .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
     }
 
+    if (this._isSmarthome4uProfile()) {
+      const defs = [
+        {
+          key: "power_sensor",
+          fallbackLabel: this._t("sensor_power"),
+        },
+        {
+          key: "current_sensor",
+          fallbackLabel: this._t("sensor_current"),
+        },
+        {
+          key: "voltage_sensor",
+          fallbackLabel: this._t("sensor_voltage"),
+        },
+        {
+          key: "total_time_entity",
+          fallbackLabel: this._t("sensor_total_time"),
+        },
+        {
+          key: "work_time_entity",
+          fallbackLabel: this._t("sensor_work_time"),
+        },
+      ];
+
+      return defs
+        .map(({ key, fallbackLabel }) => {
+          const entityId = String(this._config?.[key] || "").trim();
+          return { label: fallbackLabel, entityId };
+        })
+        .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
+    }
+
     const defs = [
       {
         key: "power_sensor",
@@ -1255,6 +1347,12 @@ class BoilerWaterCard extends HTMLElement {
     if (!boiler) {
       missing.push(this._config.boiler_entity);
     }
+    if (this._isSmarthome4uProfile()) {
+      const boostEntity = String(this._config?.boost_time_entity || "").trim();
+      if (!boostEntity || !boostEntity.startsWith("number.")) {
+        missing.push(boostEntity || "boost_time_entity");
+      }
+    }
     if (!hasBuiltIn) {
       if (!this._isServiceAvailable(runTimedService)) {
         missing.push(runTimedService || this._config.service_run_timed);
@@ -1302,6 +1400,250 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.timerMenuBtn.disabled) {
       this._closeTimerModal();
     }
+  }
+
+  _syncSmarthome4uControls() {
+    const isProfile = this._isSmarthome4uProfile();
+    if (this._elements.smarthomeTopActions) {
+      this._elements.smarthomeTopActions.hidden = !isProfile;
+    }
+    if (!isProfile || !this._hass) {
+      if (this._elements.smarthomeBoostBtn) this._elements.smarthomeBoostBtn.disabled = true;
+      if (this._elements.smarthomeSettingsBtn) this._elements.smarthomeSettingsBtn.disabled = true;
+      this._closeSmarthomeBoostModal();
+      this._closeSmarthomeSettingsModal();
+      return;
+    }
+    if (this._elements.smarthomeBoostBtn) this._elements.smarthomeBoostBtn.disabled = false;
+    if (this._elements.smarthomeSettingsBtn) this._elements.smarthomeSettingsBtn.disabled = false;
+
+    if (this._elements.smarthomeBoostBtn) {
+      this._elements.smarthomeBoostBtn.title = this._t("boost_time_edit");
+      this._elements.smarthomeBoostBtn.setAttribute("aria-label", this._t("boost_time_edit"));
+    }
+    if (this._elements.smarthomeSettingsBtn) {
+      this._elements.smarthomeSettingsBtn.title = this._t("smarthome_settings_open");
+      this._elements.smarthomeSettingsBtn.setAttribute("aria-label", this._t("smarthome_settings_open"));
+    }
+    if (this._elements.smarthomeBoostModalPanel) {
+      this._elements.smarthomeBoostModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
+    }
+    if (this._elements.smarthomeSettingsModalPanel) {
+      this._elements.smarthomeSettingsModalPanel.setAttribute("dir", this._lang() === "he" ? "rtl" : "ltr");
+    }
+    if (this._elements.smarthomeBoostModalTitle) {
+      this._elements.smarthomeBoostModalTitle.textContent = this._t("boost_time_label");
+    }
+    if (this._elements.smarthomeBoostModalLabel) {
+      this._elements.smarthomeBoostModalLabel.textContent = this._t("minutes_label");
+    }
+    if (this._elements.smarthomeBoostModalCancelBtn) {
+      this._elements.smarthomeBoostModalCancelBtn.textContent = this._t("task_cancel");
+    }
+    if (this._elements.smarthomeBoostModalSaveBtn) {
+      this._elements.smarthomeBoostModalSaveBtn.textContent = this._t("task_save");
+    }
+    if (this._elements.smarthomeSettingsModalTitle) {
+      this._elements.smarthomeSettingsModalTitle.textContent = this._t("smarthome_settings_title");
+    }
+    if (this._elements.smarthomeBacklightLabel) {
+      this._elements.smarthomeBacklightLabel.textContent = this._t("backlight_mode_label");
+    }
+    if (this._elements.smarthomeChildLockLabel) {
+      this._elements.smarthomeChildLockLabel.textContent = this._t("child_lock_label");
+    }
+    if (this._elements.smarthomePowerOnLabel) {
+      this._elements.smarthomePowerOnLabel.textContent = this._t("power_on_behavior_label");
+    }
+    if (this._elements.smarthomeSettingsModalCancelBtn) {
+      this._elements.smarthomeSettingsModalCancelBtn.textContent = this._t("task_cancel");
+    }
+    if (this._elements.smarthomeSettingsModalSaveBtn) {
+      this._elements.smarthomeSettingsModalSaveBtn.textContent = this._t("task_save");
+    }
+  }
+
+  _syncChildLockIndicator() {
+    const indicator = this._elements.childLockIndicator;
+    if (!indicator) {
+      return;
+    }
+    if (!this._isSmarthome4uProfile() || !this._hass) {
+      indicator.hidden = true;
+      return;
+    }
+    const childLockId = String(this._config?.child_lock_entity || "").trim();
+    const childLockState = this._hass.states?.[childLockId];
+    const isLocked = this._asTruthy(childLockState?.state);
+    indicator.hidden = !isLocked;
+    indicator.title = this._t("child_lock_label");
+    indicator.setAttribute("aria-label", this._t("child_lock_label"));
+  }
+
+  _openSmarthomeBoostModal() {
+    if (!this._isSmarthome4uProfile() || !this._elements.smarthomeBoostModal) {
+      return;
+    }
+    const boostEntity = this._hass?.states?.[String(this._config?.boost_time_entity || "").trim()];
+    const raw = Number.parseInt(String(boostEntity?.state || this._smarthome4uOffBoostMinutes()), 10);
+    if (this._elements.smarthomeBoostModalInput) {
+      this._elements.smarthomeBoostModalInput.value = String(Number.isInteger(raw) && raw > 0 ? raw : this._smarthome4uOffBoostMinutes());
+    }
+    this._elements.smarthomeBoostModal.hidden = false;
+    this._attachEscapeListener();
+  }
+
+  _stepSmarthomeBoostModal(delta) {
+    const current = Number.parseInt(String(this._elements.smarthomeBoostModalInput?.value || "0"), 10);
+    const next = Number.isInteger(current) ? Math.max(1, current + delta) : this._smarthome4uOffBoostMinutes();
+    if (this._elements.smarthomeBoostModalInput) {
+      this._elements.smarthomeBoostModalInput.value = String(next);
+    }
+  }
+
+  _closeSmarthomeBoostModal() {
+    if (this._elements.smarthomeBoostModal) {
+      this._elements.smarthomeBoostModal.hidden = true;
+    }
+  }
+
+  _saveSmarthomeBoostModal() {
+    const raw = Number.parseInt(String(this._elements.smarthomeBoostModalInput?.value || ""), 10);
+    if (!Number.isInteger(raw) || raw <= 0) {
+      return;
+    }
+    this._setSmarthome4uBoostMinutes(raw);
+    this._closeSmarthomeBoostModal();
+  }
+
+  _openSmarthomeSettingsModal() {
+    if (!this._isSmarthome4uProfile() || !this._elements.smarthomeSettingsModal || !this._hass) {
+      return;
+    }
+    const backlightEntity = this._hass.states?.[String(this._config?.backlight_mode_entity || "").trim()];
+    const backlightOn = this._asTruthy(backlightEntity?.state);
+    if (this._elements.smarthomeBacklightSelect) {
+      this._elements.smarthomeBacklightSelect.value = backlightOn ? "on" : "off";
+    }
+    this._syncSmarthomeBinaryToggleButton("backlight");
+
+    const childLockEntity = this._hass.states?.[String(this._config?.child_lock_entity || "").trim()];
+    const childLockOn = this._asTruthy(childLockEntity?.state);
+    if (this._elements.smarthomeChildLockSelect) {
+      this._elements.smarthomeChildLockSelect.value = childLockOn ? "on" : "off";
+    }
+    this._syncSmarthomeBinaryToggleButton("child_lock");
+
+    const powerEntityId = String(this._config?.power_on_behavior_entity || "").trim();
+    const powerEntity = this._hass.states?.[powerEntityId];
+    const options = Array.isArray(powerEntity?.attributes?.options)
+      ? powerEntity.attributes.options.map((item) => String(item || "").trim()).filter((item) => item.length > 0)
+      : ["off", "previous", "on"];
+    const currentValue = String(powerEntity?.state || options[0] || "").trim();
+    if (this._elements.smarthomePowerOnSelect) {
+      this._elements.smarthomePowerOnSelect.value = options.includes(currentValue) ? currentValue : (options[0] || "");
+    }
+    this._renderSmarthomePowerOnOptions(options);
+
+    this._elements.smarthomeSettingsModal.hidden = false;
+    this._attachEscapeListener();
+  }
+
+  _toggleSmarthomeBinaryInput(kind) {
+    const input = kind === "backlight"
+      ? this._elements.smarthomeBacklightSelect
+      : this._elements.smarthomeChildLockSelect;
+    if (!input) {
+      return;
+    }
+    input.value = String(input.value || "").toLowerCase() === "on" ? "off" : "on";
+    this._syncSmarthomeBinaryToggleButton(kind);
+  }
+
+  _syncSmarthomeBinaryToggleButton(kind) {
+    const isBacklight = kind === "backlight";
+    const input = isBacklight
+      ? this._elements.smarthomeBacklightSelect
+      : this._elements.smarthomeChildLockSelect;
+    const button = isBacklight
+      ? this._elements.smarthomeBacklightToggleBtn
+      : this._elements.smarthomeChildLockToggleBtn;
+    if (!input || !button) {
+      return;
+    }
+    const on = String(input.value || "").toLowerCase() === "on";
+    button.dataset.active = on ? "true" : "false";
+    if (kind === "backlight") {
+      button.textContent = "💡";
+      button.style.filter = on ? "none" : "grayscale(1) opacity(0.6)";
+    } else {
+      button.textContent = on ? "🔒" : "🔓";
+      button.style.filter = "none";
+    }
+  }
+
+  _renderSmarthomePowerOnOptions(options) {
+    if (!this._elements.smarthomePowerOnOptions) {
+      return;
+    }
+    const current = String(this._elements.smarthomePowerOnSelect?.value || "").trim();
+    this._elements.smarthomePowerOnOptions.innerHTML = "";
+    options.forEach((option) => {
+      const normalized = String(option || "").trim();
+      if (!normalized) {
+        return;
+      }
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "settings-icon-chip";
+      button.dataset.active = current === normalized ? "true" : "false";
+      button.dataset.powerState = normalized;
+      const icon = normalized === "on" ? "⏻" : normalized === "previous" ? "↺" : "⭘";
+      button.innerHTML = `<span>${icon}</span>`;
+      button.title = normalized;
+      button.setAttribute("aria-label", normalized);
+      button.addEventListener("click", () => {
+        if (this._elements.smarthomePowerOnSelect) {
+          this._elements.smarthomePowerOnSelect.value = normalized;
+        }
+        this._renderSmarthomePowerOnOptions(options);
+      });
+      this._elements.smarthomePowerOnOptions.appendChild(button);
+    });
+  }
+
+  _closeSmarthomeSettingsModal() {
+    if (this._elements.smarthomeSettingsModal) {
+      this._elements.smarthomeSettingsModal.hidden = true;
+    }
+  }
+
+  _saveSmarthomeSettingsModal() {
+    if (!this._hass) {
+      return;
+    }
+    const backlightEntity = String(this._config?.backlight_mode_entity || "").trim();
+    if (backlightEntity && this._isConfiguredSensorEntity(backlightEntity)) {
+      const desired = String(this._elements.smarthomeBacklightSelect?.value || "off").toLowerCase();
+      const action = desired === "on" ? "homeassistant.turn_on" : "homeassistant.turn_off";
+      this._callEntityAction(action, backlightEntity, null);
+    }
+    const childLockEntity = String(this._config?.child_lock_entity || "").trim();
+    if (childLockEntity && this._isConfiguredSensorEntity(childLockEntity)) {
+      const desired = String(this._elements.smarthomeChildLockSelect?.value || "off").toLowerCase();
+      const action = desired === "on" ? "homeassistant.turn_on" : "homeassistant.turn_off";
+      this._callEntityAction(action, childLockEntity, null);
+    }
+
+    const powerEntityId = String(this._config?.power_on_behavior_entity || "").trim();
+    const powerOption = String(this._elements.smarthomePowerOnSelect?.value || "").trim();
+    if (powerEntityId && powerOption && this._isServiceAvailable("select.select_option")) {
+      this._hass.callService("select", "select_option", {
+        entity_id: powerEntityId,
+        option: powerOption,
+      });
+    }
+    this._closeSmarthomeSettingsModal();
   }
 
   _refreshLiveCountdown() {
@@ -1373,6 +1715,7 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _heatingProfile(boiler, timer, durationEntity, managerMode = null) {
+    const turnOffPending = this._offPendingUntil > Date.now();
     if (this._isVacationModeEnabled(managerMode)) {
       return {
         progress: 0,
@@ -1397,7 +1740,7 @@ class BoilerWaterCard extends HTMLElement {
       return this._temperatureDrivenProfile(liveTemp);
     }
 
-    if (!isOn) {
+    if (turnOffPending || !isOn) {
       return {
         progress: 0,
         label: this._t("stage_off"),
@@ -1614,7 +1957,15 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _durationOptions(durationEntity) {
-    if (this._isSwitcherMode()) {
+    if (this._isSmarthome4uProfile()) {
+      const configured = this._smarthome4uTimerOptionsFromConfig();
+      if (configured.length > 0) {
+        return configured;
+      }
+      return ["15m", "30m", "60m", "90m"];
+    }
+
+    if (this._usesExtendedTimerUi()) {
       const configured = this._switcherTimerOptionsFromConfig();
       if (configured.length > 0) {
         return configured;
@@ -1715,6 +2066,25 @@ class BoilerWaterCard extends HTMLElement {
       this._config.service_on_continuous,
       "service_on_continuous"
     );
+
+    if (this._isSmarthome4uProfile()) {
+      const selectedMinutes = this._isNoTimerOption(option)
+        ? this._smarthome4uOffBoostMinutes()
+        : this._optionToMinutes(option);
+      if (!Number.isInteger(selectedMinutes) || selectedMinutes <= 0) {
+        return;
+      }
+
+      this._forceOnConfiguredEntity();
+      if (canUseBuiltIn) {
+        this._callConfiguredService(
+          onContinuousService,
+          this._controlServiceBaseData(onContinuousService)
+        );
+      }
+      this._setSmarthome4uBoostMinutes(selectedMinutes);
+      return;
+    }
 
     if (this._isNoTimerOption(option)) {
       if (canUseBuiltIn) {
@@ -2341,6 +2711,20 @@ class BoilerWaterCard extends HTMLElement {
     return String(defs?.integration_entry_id || "").trim();
   }
 
+  _integrationDefaultsFromStates() {
+    const managerMode = this._boilerManagerModeEntity();
+    if (!managerMode) {
+      return null;
+    }
+    const attrs = managerMode?.attributes || {};
+    const boilerEntity = String(attrs?.boiler_entity || "").trim();
+    const entryId = String(attrs?.entry_id || "").trim();
+    return {
+      ...(boilerEntity ? { boiler_entity: boilerEntity } : {}),
+      ...(entryId ? { integration_entry_id: entryId } : {}),
+    };
+  }
+
   _hebcalCacheUrl() {
     const entryId = this._resolveIntegrationEntryId();
     if (!entryId) {
@@ -2351,6 +2735,27 @@ class BoilerWaterCard extends HTMLElement {
       return new URL(path, window.location.origin).toString();
     } catch {
       return path;
+    }
+  }
+
+  async _triggerHebcalAutoRefreshIfNeeded() {
+    if (!this._hass || !this._isServiceAvailable("boiler_manager.refresh_hebcal")) {
+      return false;
+    }
+    const entryId = this._resolveIntegrationEntryId();
+    if (!entryId) {
+      return false;
+    }
+    const now = Date.now();
+    if (now - this._lastHebcalAutoRefreshAt < 30000) {
+      return false;
+    }
+    this._lastHebcalAutoRefreshAt = now;
+    try {
+      await this._hass.callService("boiler_manager", "refresh_hebcal", { entry_id: entryId });
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -2433,12 +2838,25 @@ class BoilerWaterCard extends HTMLElement {
       return null;
     }
     this._hebcalCacheInFlight = (async () => {
-      try {
+      const fetchPayload = async () => {
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) {
-          throw new Error("hebcal_fetch_failed");
+          return null;
         }
         const payload = await res.json();
+        return payload && typeof payload === "object" ? payload : null;
+      };
+      try {
+        let payload = await fetchPayload();
+        if (!payload) {
+          const refreshed = await this._triggerHebcalAutoRefreshIfNeeded();
+          if (refreshed) {
+            payload = await fetchPayload();
+          }
+        }
+        if (!payload) {
+          throw new Error("hebcal_fetch_failed");
+        }
         this._guideHebcalPayload = payload;
         return payload;
       } catch {
@@ -2508,17 +2926,21 @@ class BoilerWaterCard extends HTMLElement {
     listEl.innerHTML = "";
     const now = Date.now();
     const windows = Array.isArray(payload?.windows) ? payload.windows : [];
-    const upcoming = windows
+    const sortedWindows = [...windows]
+      .filter((w) => Number.isFinite(Date.parse(w?.starts_at)))
+      .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+    const upcoming = sortedWindows
       .filter((w) => {
         const end = Date.parse(w?.ends_at);
         return Number.isFinite(end) && end > now;
-      })
-      .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
+      });
+    const usingPastFallback = upcoming.length === 0 && sortedWindows.length > 0;
+    const sourceRows = upcoming.length > 0 ? upcoming : sortedWindows;
     const filter = this._guideHebcalFilter || "all";
     const rows =
       filter === "all"
-        ? upcoming
-        : upcoming.filter((w) => {
+        ? sourceRows
+        : sourceRows.filter((w) => {
             const k = String(w?.kind || "").toLowerCase() === "holiday" ? "holiday" : "shabbat";
             return filter === "holiday" ? k === "holiday" : k === "shabbat";
           });
@@ -2546,8 +2968,13 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     if (statusEl) {
-      statusEl.hidden = true;
-      statusEl.textContent = "";
+      if (usingPastFallback) {
+        statusEl.textContent = this._t("guide_hebcal_using_history");
+        statusEl.hidden = false;
+      } else {
+        statusEl.hidden = true;
+        statusEl.textContent = "";
+      }
     }
 
     rows.forEach((w) => {
@@ -2666,6 +3093,9 @@ class BoilerWaterCard extends HTMLElement {
     }
     manualBtn?.classList.toggle("active", next === "manual");
     hebcalBtn?.classList.toggle("active", next === "hebcal");
+    if (next === "manual") {
+      this._renderGuideProfileCards();
+    }
     if (next === "hebcal") {
       this._loadGuideHebcalPanel();
     }
@@ -2676,6 +3106,7 @@ class BoilerWaterCard extends HTMLElement {
       return;
     }
     this._elements.guideModal.hidden = false;
+    this._renderGuideProfileCards();
     if (this._elements.guidePanelManualText) {
       this._elements.guidePanelManualText.textContent = this._t("guide_content");
     }
@@ -2694,6 +3125,39 @@ class BoilerWaterCard extends HTMLElement {
     if (!this._isAnyModalOpen()) {
       window.removeEventListener("keydown", this._handleEscapeKey);
     }
+  }
+
+  _renderGuideProfileCards() {
+    const mount = this._elements.guideProfileGrid;
+    if (!mount) {
+      return;
+    }
+    const cards = [
+      {
+        image: "/local/boiler-card/boiler-flow.png",
+        title: this._t("guide_profile_standard_title"),
+        desc: this._t("guide_profile_standard_desc"),
+      },
+      {
+        image: "/local/boiler-card/switcher-touch.png",
+        title: this._t("guide_profile_switcher_title"),
+        desc: this._t("guide_profile_switcher_desc"),
+      },
+      {
+        image: "/local/boiler-card/boiler-smarthome4u.png",
+        title: this._t("guide_profile_smarthome_title"),
+        desc: this._t("guide_profile_smarthome_desc"),
+      },
+    ];
+    mount.innerHTML = cards.map((item) => `
+      <div class="guide-profile-card">
+        <span class="guide-profile-thumb" aria-hidden="true"><img src="${item.image}" alt=""></span>
+        <span>
+          <p class="guide-profile-title">${item.title}</p>
+          <p class="guide-profile-desc">${item.desc}</p>
+        </span>
+      </div>
+    `).join("");
   }
 
   _closeConfirmModal(result = false) {
@@ -5565,6 +6029,10 @@ class BoilerWaterCard extends HTMLElement {
     // Then call integration off flow for cleanup.
     this._callConfiguredService(offService, servicePayload);
 
+    if (this._isSmarthome4uProfile()) {
+      this._setSmarthome4uBoostMinutes(this._smarthome4uOffBoostMinutes());
+    }
+
     if (this._config.timer_entity) {
       this._hass?.callService("timer", "cancel", {
         entity_id: this._config.timer_entity,
@@ -5612,6 +6080,22 @@ class BoilerWaterCard extends HTMLElement {
         });
       }
     }
+  }
+
+  _forceOnConfiguredEntity() {
+    if (!this._hass) {
+      return;
+    }
+    const entityId = String(this._config.boiler_entity || "").trim();
+    if (!entityId || !entityId.includes(".")) {
+      return;
+    }
+
+    const [entityDomain] = entityId.split(".", 1);
+    if (entityDomain) {
+      this._callEntityAction(`${entityDomain}.turn_on`, entityId, null);
+    }
+    this._callEntityAction("homeassistant.turn_on", entityId, null);
   }
 
   _callConfiguredService(serviceRef, data = null) {
@@ -6005,8 +6489,39 @@ class BoilerWaterCard extends HTMLElement {
     return this._asTruthy(managerMode?.attributes?.vacation_mode);
   }
 
+  _deviceProfile() {
+    const raw = String(this._config?.device_profile || "").trim().toLowerCase();
+    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+      return raw;
+    }
+    if (this._asTruthy(this._config?.switcher_mode)) {
+      return "switcher_touch";
+    }
+    return "standard";
+  }
+
+  _profileDefaultFlowImage() {
+    const profile = this._deviceProfile();
+    if (profile === "switcher_touch") {
+      return "/local/boiler-card/switcher-touch.png";
+    }
+    if (profile === "boiler_smarthome4u") {
+      return "/local/boiler-card/boiler-smarthome4u.png";
+    }
+    return "/local/boiler-card/boiler-flow.png";
+  }
+
+  _usesExtendedTimerUi() {
+    return this._deviceProfile() === "switcher_touch";
+  }
+
+  _isSmarthome4uProfile() {
+    return this._deviceProfile() === "boiler_smarthome4u";
+  }
+
+  /** Switcher Touch only: alternate control services and sensor row layout. */
   _isSwitcherMode() {
-    return this._asTruthy(this._config?.switcher_mode);
+    return this._deviceProfile() === "switcher_touch";
   }
 
   _temperatureSensorEntityId() {
@@ -6066,13 +6581,46 @@ class BoilerWaterCard extends HTMLElement {
     return this._timerOptionsFromConfigValues(this._config?.switcher_timer_values, 150);
   }
 
+  _smarthome4uTimerOptionsFromConfig() {
+    const source = this._config?.boost_timer_values || DEFAULT_CONFIG.boost_timer_values;
+    return this._timerOptionsFromConfigValues(source, 240, false);
+  }
+
   _regularTimerOptionsFromConfig() {
     const raw = String(this._config?.timer_values || "").trim();
     const source = raw || DEFAULT_CONFIG.timer_values;
     return this._timerOptionsFromConfigValues(source, 1440);
   }
 
-  _timerOptionsFromConfigValues(raw, maxMinutes = 240) {
+  _smarthome4uOffBoostMinutes() {
+    const raw = Number.parseInt(String(this._config?.off_boost_minutes ?? DEFAULT_CONFIG.off_boost_minutes), 10);
+    if (!Number.isInteger(raw) || raw <= 0) {
+      return 90;
+    }
+    return raw;
+  }
+
+  _setSmarthome4uBoostMinutes(minutes) {
+    if (!this._hass) {
+      return;
+    }
+    const entityId = String(this._config?.boost_time_entity || "").trim();
+    if (!this._isConfiguredSensorEntity(entityId) || !entityId.startsWith("number.")) {
+      return;
+    }
+    const safeMinutes = Number.parseInt(String(minutes), 10);
+    if (!Number.isInteger(safeMinutes) || safeMinutes <= 0) {
+      return;
+    }
+    if (this._isServiceAvailable("number.set_value")) {
+      this._hass.callService("number", "set_value", {
+        entity_id: entityId,
+        value: safeMinutes,
+      });
+    }
+  }
+
+  _timerOptionsFromConfigValues(raw, maxMinutes = 240, includeNoTimer = true) {
     const values = Array.isArray(raw)
       ? raw
       : String(raw || "")
@@ -6091,7 +6639,9 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const options = minutes.map((value) => `${value}m`);
-    options.push("No Timer");
+    if (includeNoTimer) {
+      options.push("No Timer");
+    }
     return options;
   }
 

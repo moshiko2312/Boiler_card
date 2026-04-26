@@ -18,6 +18,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         ha-card {
+          position: relative;
           border-radius: 18px;
           overflow: hidden;
           background: var(--boiler-bg-a);
@@ -36,6 +37,67 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
         .row {
           display: block;
+        }
+
+        .child-lock-indicator {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 210, 120, 0.7);
+          background: linear-gradient(180deg, rgba(255, 198, 88, 0.35), rgba(196, 120, 22, 0.32));
+          color: #fff7e0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.92rem;
+          line-height: 1;
+          box-shadow: 0 2px 8px rgba(25, 15, 0, 0.35);
+          z-index: 6;
+        }
+
+        .child-lock-indicator[hidden] {
+          display: none !important;
+        }
+
+        .smarthome-top-actions {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          width: calc(100% - 20px);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          z-index: 7;
+        }
+
+        .smarthome-top-actions[hidden] {
+          display: none !important;
+        }
+
+        .smarthome-icon-btn {
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          border: 1px solid rgba(132, 157, 189, 0.6);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+          color: var(--boiler-text);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.9rem;
+          line-height: 1;
+          cursor: pointer;
+          box-shadow: 0 2px 7px rgba(20, 30, 48, 0.28);
+        }
+
+        :host([data-device-profile="boiler_smarthome4u"]) .smarthome-icon-btn {
+          width: 36px;
+          height: 36px;
+          font-size: 1.02rem;
         }
 
         .title {
@@ -91,8 +153,15 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           height: 100%;
           object-fit: cover;
           display: block;
-          filter: saturate(1.05) contrast(1.03);
+          filter: saturate(1.03) contrast(1.02) brightness(0.96);
           transition: filter 420ms ease;
+        }
+
+        :host([data-device-profile="switcher_touch"]) .boiler-main-image {
+          object-fit: contain;
+          padding: 3px;
+          box-sizing: border-box;
+          background: rgba(236, 243, 252, 0.14);
         }
 
         .boiler-visual.hide-boiler-flow-image {
@@ -312,6 +381,200 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           gap: 6px;
         }
 
+        .quick-timers.has-overflow {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .smarthome-modal-body {
+          display: grid;
+          gap: 10px;
+          padding: 4px 2px 2px;
+        }
+
+        .smarthome-modal-row {
+          display: grid;
+          gap: 6px;
+        }
+
+        .smarthome-modal-row label {
+          font-size: 0.84rem;
+          font-weight: 700;
+          color: var(--boiler-muted);
+        }
+
+        .smarthome-modal-row input,
+        .smarthome-modal-row select {
+          width: 100%;
+          border-radius: 10px;
+          border: 1px solid rgba(130, 150, 178, 0.45);
+          background: rgba(255, 255, 255, 0.74);
+          color: var(--boiler-text);
+          padding: 10px 11px;
+          font-size: 0.92rem;
+          box-sizing: border-box;
+        }
+
+        .smarthome-modal-actions {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 4px;
+        }
+
+        .smarthome-modal-btn {
+          border: 1px solid rgba(120, 145, 178, 0.45);
+          border-radius: 10px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+          color: var(--boiler-text);
+          font-size: 0.84rem;
+          font-weight: 700;
+          padding: 8px 11px;
+          cursor: pointer;
+        }
+
+        #smarthome-boost-modal .timer-modal-head,
+        #smarthome-settings-modal .timer-modal-head {
+          border: 1px solid rgba(120, 145, 178, 0.45);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+          box-shadow: none;
+        }
+
+        #smarthome-boost-modal .timer-modal-head,
+        #smarthome-settings-modal .timer-modal-head {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        #smarthome-boost-modal .timer-modal-title,
+        #smarthome-settings-modal .timer-modal-title {
+          text-align: center;
+          width: auto;
+          min-height: 0;
+          padding: 0;
+        }
+
+        .boost-digital {
+          display: grid;
+          grid-template-columns: 42px minmax(0, 1fr) 42px;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .boost-step-btn {
+          min-height: 44px;
+          border-radius: 10px;
+          border: 1px solid rgba(122, 146, 179, 0.5);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.16));
+          color: var(--boiler-text);
+          font-size: 1.1rem;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .settings-icon-grid {
+          display: grid;
+          gap: 6px;
+        }
+
+        .settings-icon-row {
+          display: grid;
+          grid-template-columns: 44px minmax(0, 1fr);
+          gap: 8px;
+          align-items: center;
+        }
+
+        .settings-icon-chip {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          border: 1px solid rgba(124, 147, 176, 0.56);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.12));
+          color: var(--boiler-text);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.05rem;
+          cursor: pointer;
+        }
+
+        .settings-icon-chip[data-active="true"] {
+          border-color: rgba(102, 192, 255, 0.9);
+          box-shadow: 0 0 0 2px rgba(90, 178, 236, 0.22) inset;
+        }
+
+        .settings-icon-chip[data-power-state] {
+          color: rgba(208, 220, 236, 0.72);
+        }
+
+        .settings-icon-chip[data-active="true"][data-power-state="on"] {
+          color: rgba(96, 208, 140, 0.95);
+        }
+
+        .settings-icon-chip[data-active="true"][data-power-state="previous"] {
+          color: rgba(237, 187, 92, 0.95);
+        }
+
+        .settings-icon-chip[data-active="true"][data-power-state="off"] {
+          color: rgba(232, 113, 113, 0.95);
+        }
+
+        .settings-power-options {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 4px;
+        }
+
+        .settings-power-options .settings-icon-chip {
+          width: 42px;
+          height: 42px;
+          margin-inline: auto;
+          position: relative;
+        }
+
+        #smarthome-power-on-label {
+          text-align: center;
+        }
+
+        #smarthome-settings-modal-panel {
+          width: min(340px, calc(100vw - 24px));
+          max-height: min(68dvh, 390px);
+          padding: 12px;
+        }
+
+        #smarthome-settings-modal .smarthome-modal-body {
+          gap: 8px;
+        }
+
+        #smarthome-settings-modal .smarthome-modal-actions {
+          margin-top: 2px;
+        }
+
+        #smarthome-boost-modal-panel {
+          width: min(360px, calc(100vw - 26px));
+          max-height: min(64dvh, 360px);
+          padding: 12px;
+        }
+
+        #smarthome-boost-modal .smarthome-modal-body {
+          gap: 8px;
+        }
+
+        #smarthome-boost-modal .smarthome-modal-row {
+          max-width: 290px;
+          margin: 0 auto;
+        }
+
+        #smarthome-boost-modal-label {
+          text-align: center;
+        }
+
+        #smarthome-boost-modal-input {
+          text-align: center;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+        }
+
         .sensors-row {
           display: grid;
           grid-template-columns: repeat(var(--sensor-columns, 3), minmax(0, 1fr));
@@ -408,6 +671,13 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         .quick-timer-btn.off-action {
           background: linear-gradient(165deg, rgba(210, 223, 239, 0.24), rgba(180, 197, 220, 0.14));
           color: var(--primary-text-color, #1f2e44);
+        }
+
+        .quick-timers.has-overflow .quick-timer-btn.off-action {
+          grid-column: 1 / -1;
+          min-height: 40px;
+          font-size: 0.9rem;
+          font-weight: 900;
         }
 
         .quick-timer-btn.off-action.selected {
@@ -670,14 +940,28 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          width: 40px;
+          height: 40px;
+          padding: 0;
+          gap: 0;
+          border: 1px solid rgba(180, 196, 217, 0.72);
+          border-radius: 12px;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
+          color: #8b2f2f;
+          box-shadow:
+            0 2px 6px rgba(16, 30, 50, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.62);
         }
 
         .history-export-btn svg {
-          width: 18px;
-          height: 18px;
+          width: 22px;
+          height: 22px;
           flex-shrink: 0;
           fill: currentColor;
+        }
+
+        .history-export-btn #history-export-label {
+          display: none;
         }
 
         .history-head .tasks-title {
@@ -1226,12 +1510,17 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           bottom: 0;
           z-index: 4;
           background: linear-gradient(
-            180deg,
-            rgba(68, 80, 101, 0.96),
-            rgba(59, 70, 90, 0.98)
+            165deg,
+            rgba(20, 34, 56, 0.6),
+            rgba(13, 25, 44, 0.72)
           );
-          border-top: 1px solid rgba(166, 191, 219, 0.34);
-          box-shadow: 0 -6px 18px rgba(18, 28, 44, 0.24);
+          border: 1px solid rgba(160, 188, 218, 0.26);
+          border-radius: 14px;
+          backdrop-filter: blur(12px) saturate(128%);
+          -webkit-backdrop-filter: blur(12px) saturate(128%);
+          box-shadow:
+            0 -8px 24px rgba(10, 20, 36, 0.32),
+            inset 0 1px 0 rgba(226, 242, 255, 0.14);
           padding-top: 10px;
           padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
           padding-inline: 8px;
@@ -1322,14 +1611,14 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         .timer-modal-panel {
           position: relative;
           width: min(560px, calc(100vw - 28px));
-          max-height: min(80dvh, 620px);
+          max-height: min(78dvh, 590px);
           overflow: auto;
           overflow-x: hidden;
           border-radius: 18px;
           border: 1px solid rgba(80, 108, 140, 0.25);
           background: var(--ha-card-background, var(--card-background-color, #ffffff));
           box-shadow: 0 26px 60px rgba(14, 27, 51, 0.35);
-          padding: 14px;
+          padding: 12px;
           animation: card-enter 180ms ease;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
@@ -1356,8 +1645,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         #timer-modal {
-          align-items: flex-start;
-          padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px;
+          align-items: center;
+          justify-content: center;
+          padding: 10px;
         }
 
         .timer-modal-head {
@@ -1368,8 +1658,8 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             "toggle"
             "actions";
           align-items: center;
-          gap: 10px;
-          margin: 0 0 10px;
+          gap: 5px;
+          margin: 0 0 4px;
           position: sticky;
           top: 0;
           z-index: 6;
@@ -1378,8 +1668,8 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             rgba(63, 74, 93, 0.98),
             rgba(55, 66, 85, 0.96)
           );
-          border-radius: 12px;
-          padding: 8px 8px 10px;
+          border-radius: 10px;
+          padding: 2px 6px 2px;
           box-shadow: 0 2px 10px rgba(14, 27, 51, 0.24);
         }
 
@@ -1390,11 +1680,15 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           color: var(--boiler-text);
           display: flex;
           align-items: center;
-          min-height: 46px;
+          min-height: 26px;
           min-width: 0;
           width: 100%;
-          text-align: left;
-          padding-left: 58px;
+          justify-content: center;
+          text-align: center;
+          padding-left: 0;
+          padding-right: 0;
+          max-width: calc(100% - 132px);
+          margin-inline: auto;
         }
 
         .timer-modal-actions {
@@ -1482,8 +1776,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           grid-template-areas:
             "title"
             "toggle";
-          row-gap: 6px;
-          margin-bottom: 8px;
+          row-gap: 4px;
+          margin-bottom: 4px;
+          padding-top: 30px;
         }
 
         .timer-modal-panel.menu-mode-timer #modal-timer-view {
@@ -1501,8 +1796,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           grid-template-areas:
             "title"
             "toggle";
-          row-gap: 6px;
-          margin-bottom: 8px;
+          row-gap: 4px;
+          margin-bottom: 4px;
+          padding-top: 30px;
         }
 
         .timer-modal-panel.menu-mode-timer .timer-modal-actions,
@@ -1558,9 +1854,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         .timer-page-btn {
-          width: 44px;
-          height: 44px;
-          font-size: 1.35rem;
+          width: 38px;
+          height: 38px;
+          font-size: 1.2rem;
         }
 
         .timer-page-indicator {
@@ -1572,9 +1868,29 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         .timer-close-btn {
-          width: 46px;
-          height: 46px;
-          font-size: 1.2rem;
+          width: 38px;
+          height: 38px;
+          font-size: 1rem;
+        }
+
+        #timer-close-btn,
+        #schedule-close-btn,
+        #smarthome-boost-modal-close-btn,
+        #smarthome-settings-modal-close-btn {
+          position: absolute;
+          left: 6px;
+          top: 5px;
+          z-index: 9;
+        }
+
+        #guide-modal-close-btn {
+          position: absolute;
+          left: 6px;
+          top: 2px;
+          z-index: 9;
+          width: 34px;
+          height: 34px;
+          font-size: 0.95rem;
         }
 
         .timer-page-btn:hover,
@@ -1670,9 +1986,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         .timer-modal-panel[dir="rtl"] .timer-modal-title {
-          text-align: right;
-          padding-left: 0;
-          padding-right: 0;
+          text-align: center;
         }
 
         /* Keep Add/Edit Task modal header simple and isolated from timer-header grid layout */
@@ -1686,11 +2000,14 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         #schedule-modal .timer-modal-title {
-          display: block;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           min-height: 0;
-          width: auto;
+          width: 100%;
+          flex: 1 1 auto;
           padding: 0;
-          text-align: start;
+          text-align: center;
         }
 
         #schedule-modal #schedule-close-btn {
@@ -1706,7 +2023,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         #timer-close-btn {
           position: absolute;
           left: 8px;
-          top: 8px;
+          top: 6px;
           transform: none;
           z-index: 9;
         }
@@ -1714,7 +2031,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         #timer-guide-btn {
           position: absolute;
           left: 60px;
-          top: 8px;
+          top: 6px;
           transform: none;
           z-index: 9;
           font-size: 1rem;
@@ -1723,10 +2040,37 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         #timer-history-btn {
           position: absolute;
           left: 112px;
-          top: 8px;
+          top: 6px;
           transform: none;
           z-index: 9;
           font-size: 1rem;
+        }
+
+        #timer-close-btn,
+        #timer-guide-btn,
+        #timer-history-btn {
+          width: 36px;
+          height: 36px;
+          font-size: 0.92rem;
+        }
+
+        #timer-close-btn {
+          font-size: 0.92rem;
+          font-weight: 700;
+        }
+
+        .timer-icon-svg {
+          width: 18px;
+          height: 18px;
+          display: block;
+          fill: currentColor;
+        }
+
+        .timer-icon-glyph {
+          display: block;
+          font-size: 1rem;
+          line-height: 1;
+          font-weight: 700;
         }
 
         #timer-history-btn.active {
@@ -1756,9 +2100,10 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
         .confirm-modal-title {
           margin: 0 0 8px;
-          font-size: 1rem;
+          font-size: 1.06rem;
           font-weight: 800;
           color: #ffffff;
+          text-align: center;
         }
 
         .confirm-modal-message {
@@ -1773,7 +2118,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           margin-top: 16px;
           display: flex;
           align-items: center;
-          justify-content: flex-end;
+          justify-content: center;
           gap: 10px;
           flex-wrap: wrap;
         }
@@ -1859,6 +2204,57 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
         .guide-modal-body {
           min-height: 0;
+        }
+
+        .guide-profile-grid {
+          display: grid;
+          gap: 8px;
+          margin: 0 0 10px;
+        }
+
+        .guide-profile-card {
+          display: grid;
+          grid-template-columns: 46px minmax(0, 1fr);
+          gap: 8px;
+          align-items: center;
+          padding: 8px;
+          border-radius: 10px;
+          border: 1px solid rgba(166, 189, 216, 0.38);
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .guide-profile-thumb {
+          width: 46px;
+          height: 46px;
+          border-radius: 999px;
+          overflow: hidden;
+          border: 1px solid rgba(188, 208, 234, 0.45);
+          background: rgba(10, 26, 43, 0.3);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .guide-profile-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .guide-profile-title {
+          margin: 0;
+          font-size: 0.9rem;
+          font-weight: 800;
+          line-height: 1.2;
+          color: #f5f9ff;
+        }
+
+        .guide-profile-desc {
+          margin: 2px 0 0;
+          font-size: 0.78rem;
+          line-height: 1.3;
+          color: #d4e1f3;
         }
 
         .guide-hebcal-city {
@@ -2051,6 +2447,71 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         @media (max-width: 760px) {
+          .title {
+            font-size: clamp(1rem, 2.8vw, 1.14rem);
+          }
+
+          .subtitle {
+            font-size: 0.9rem;
+          }
+
+          .menu-mode-btn {
+            min-height: 46px;
+            font-size: 0.96rem;
+          }
+
+          .quick-timer-btn {
+            min-height: 42px;
+            font-size: 0.86rem;
+          }
+
+          .timer-option-btn {
+            min-height: 48px;
+            font-size: 0.96rem;
+          }
+
+          .tasks-title {
+            font-size: 0.95rem;
+          }
+
+          .tasks-mode-btn,
+          .tasks-import-btn,
+          .tasks-export-btn,
+          .tasks-add-btn,
+          .tasks-vacation-btn {
+            font-size: 0.9rem;
+          }
+
+          .schedule-label {
+            font-size: 0.86rem;
+          }
+
+          .schedule-action-btn {
+            font-size: 0.98rem;
+          }
+
+          .confirm-action-btn {
+            font-size: 0.96rem;
+          }
+
+          .guide-tab-btn {
+            min-height: 42px;
+            font-size: 0.9rem;
+          }
+
+          .child-lock-indicator {
+            top: 8px;
+            right: 8px;
+            width: 26px;
+            height: 26px;
+            font-size: 0.84rem;
+          }
+
+          .smarthome-top-actions {
+            top: 8px;
+            left: 8px;
+          }
+
           .boiler-visual {
             grid-template-columns: minmax(92px, 26vw) minmax(0, 1fr);
             gap: 10px;
@@ -2083,6 +2544,17 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             gap: 6px;
           }
 
+          .quick-timers.has-overflow {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
+          .smarthome-modal-row input,
+          .smarthome-modal-row select,
+          .smarthome-modal-btn {
+            min-height: 44px;
+            font-size: 16px;
+          }
+
           .sensors-row {
             grid-template-columns: repeat(var(--sensor-columns, 3), minmax(0, 1fr));
           }
@@ -2093,13 +2565,38 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           }
 
           #timer-modal {
-            align-items: flex-start;
-            padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
           }
 
           #schedule-modal {
             align-items: center;
             justify-content: center;
+            padding: 10px;
+          }
+
+          #smarthome-boost-modal {
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+          }
+
+          #smarthome-boost-modal-panel {
+            width: min(330px, calc(100vw - 22px));
+            max-height: min(66dvh, 350px);
+            padding: 10px;
+          }
+
+          #smarthome-settings-modal {
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+          }
+
+          #smarthome-settings-modal-panel {
+            width: min(320px, calc(100vw - 20px));
+            max-height: min(70dvh, 380px);
             padding: 10px;
           }
 
@@ -2119,7 +2616,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
           #timer-modal .timer-modal-panel {
             width: min(560px, calc(100vw - 14px));
-            max-height: min(82dvh, 700px);
+            max-height: min(78dvh, 640px);
             border-radius: 18px;
             animation: card-enter 180ms ease;
           }
@@ -2141,7 +2638,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             position: sticky;
             top: 0;
             z-index: 8;
-            padding: 8px 8px 10px;
+            padding: 5px 8px 6px;
             grid-template-columns: minmax(0, 1fr);
             grid-template-areas:
               "title"
@@ -2153,7 +2650,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           .timer-modal-title {
             width: 100%;
             text-align: left;
-            padding-left: 58px;
+            padding-left: 42px;
           }
 
           .menu-mode-toggle {
@@ -2191,8 +2688,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           .timer-modal-panel.menu-mode-tasks .timer-modal-head,
           .timer-modal-panel.menu-mode-import-export .timer-modal-head,
           .timer-modal-panel.menu-mode-history .timer-modal-head {
-            row-gap: 6px;
-            margin-bottom: 6px;
+            row-gap: 4px;
+            margin-bottom: 4px;
+            padding-top: 36px;
           }
 
           .timer-grid {
@@ -2340,6 +2838,65 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         @media (max-width: 520px) {
+          .child-lock-indicator {
+            top: 7px;
+            right: 7px;
+            width: 24px;
+            height: 24px;
+            font-size: 0.8rem;
+          }
+
+          :host([data-device-profile="boiler_smarthome4u"]) .child-lock-indicator {
+            right: 58px;
+          }
+
+          .smarthome-top-actions {
+            top: 7px;
+            left: 7px;
+            right: 7px;
+            width: calc(100% - 14px);
+          }
+
+          .smarthome-icon-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 0.86rem;
+          }
+
+          :host([data-device-profile="boiler_smarthome4u"]) .smarthome-icon-btn {
+            width: 34px;
+            height: 34px;
+            font-size: 0.98rem;
+          }
+
+          #smarthome-boost-modal-panel {
+            width: min(310px, calc(100vw - 18px));
+            max-height: min(70dvh, 340px);
+            padding: 10px 8px;
+          }
+
+          :host([data-device-profile="boiler_smarthome4u"]) #smarthome-boost-modal-panel {
+            width: min(350px, calc(100vw - 14px));
+            max-height: min(76dvh, 430px);
+            padding: 12px 10px;
+          }
+
+          #smarthome-settings-modal-panel {
+            width: min(300px, calc(100vw - 16px));
+            max-height: min(74dvh, 360px);
+            padding: 10px 8px;
+          }
+
+          :host([data-device-profile="boiler_smarthome4u"]) #smarthome-settings-modal-panel {
+            width: min(342px, calc(100vw - 14px));
+            max-height: min(78dvh, 450px);
+            padding: 12px 10px;
+          }
+
+          #smarthome-boost-modal .smarthome-modal-row {
+            max-width: 270px;
+          }
+
           .wrap {
             padding: 9px;
             gap: 7px;
@@ -2496,9 +3053,32 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             font-size: 1.2rem;
           }
 
+          #timer-close-btn,
+          #timer-guide-btn,
+          #timer-history-btn {
+            font-size: 1rem;
+          }
+
+          #timer-close-btn {
+            font-size: 0.9rem;
+          }
+
           .quick-timers {
             grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
             gap: 5px;
+          }
+
+          .quick-timers.has-overflow {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
+          .settings-icon-chip {
+            width: 42px;
+            height: 42px;
+          }
+
+          .settings-power-options {
+            gap: 2px;
           }
 
           .sensors-row {
@@ -2596,6 +3176,11 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
       </style>
 
       <ha-card class="theme-${cardTheme}">
+        <span class="child-lock-indicator" id="child-lock-indicator" hidden title="Child lock">🔒</span>
+        <div class="smarthome-top-actions" id="smarthome-top-actions" hidden>
+          <button type="button" class="smarthome-icon-btn" id="smarthome-boost-btn" aria-label="Boost time">⏱</button>
+          <button type="button" class="smarthome-icon-btn" id="smarthome-settings-btn" aria-label="Settings">⚙</button>
+        </div>
         <div class="wrap">
           <div class="row">
             <h2 class="title" id="title"></h2>
@@ -2648,9 +3233,15 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                 <span class="timer-page-indicator" id="timer-page-indicator">1 / 1</span>
                 <button type="button" class="timer-page-btn" id="timer-page-next-btn" aria-label="Next page">›</button>
               </div>
-              <button type="button" class="timer-close-btn" id="timer-history-btn" aria-label="History">👁</button>
-              <button type="button" class="timer-close-btn" id="timer-guide-btn" aria-label="Guide">ℹ</button>
-              <button type="button" class="timer-close-btn" id="timer-close-btn">✕</button>
+              <button type="button" class="timer-close-btn" id="timer-history-btn" aria-label="History">
+                <svg class="timer-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.24 0 9.53 3.48 11 7-1.47 3.52-5.76 7-11 7S2.47 15.52 1 12c1.47-3.52 5.76-7 11-7zm0 2c-4.11 0-7.62 2.51-9.17 5 1.55 2.49 5.06 5 9.17 5s7.62-2.51 9.17-5C19.62 9.51 16.11 7 12 7zm0 2.5A2.5 2.5 0 1 1 9.5 12 2.5 2.5 0 0 1 12 9.5z"/></svg>
+              </button>
+              <button type="button" class="timer-close-btn" id="timer-guide-btn" aria-label="Guide">
+                <span class="timer-icon-glyph" aria-hidden="true">ℹ</span>
+              </button>
+              <button type="button" class="timer-close-btn" id="timer-close-btn" aria-label="Close">
+                <svg class="timer-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.29 6.29-6.3z"/></svg>
+              </button>
             </div>
           </div>
           <div class="menu-view" id="modal-timer-view">
@@ -2906,6 +3497,61 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         </div>
       </div>
 
+      <div class="timer-modal" id="smarthome-boost-modal" hidden>
+        <div class="timer-modal-backdrop" id="smarthome-boost-modal-backdrop"></div>
+        <div class="timer-modal-panel" id="smarthome-boost-modal-panel" role="dialog" aria-modal="true" aria-label="Boost time">
+          <div class="timer-modal-head">
+            <h3 class="timer-modal-title" id="smarthome-boost-modal-title">Boost time</h3>
+          </div>
+          <div class="smarthome-modal-body">
+            <div class="smarthome-modal-row">
+              <label for="smarthome-boost-modal-input" id="smarthome-boost-modal-label">Minutes</label>
+              <div class="boost-digital">
+                <button type="button" class="boost-step-btn" id="smarthome-boost-down-btn" aria-label="Decrease">▼</button>
+                <input id="smarthome-boost-modal-input" type="number" min="1" step="1" />
+                <button type="button" class="boost-step-btn" id="smarthome-boost-up-btn" aria-label="Increase">▲</button>
+              </div>
+            </div>
+            <div class="smarthome-modal-actions">
+              <button type="button" class="smarthome-modal-btn" id="smarthome-boost-modal-cancel-btn">Cancel</button>
+              <button type="button" class="smarthome-modal-btn" id="smarthome-boost-modal-save-btn">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timer-modal" id="smarthome-settings-modal" hidden>
+        <div class="timer-modal-backdrop" id="smarthome-settings-modal-backdrop"></div>
+        <div class="timer-modal-panel" id="smarthome-settings-modal-panel" role="dialog" aria-modal="true" aria-label="Switch settings">
+          <div class="timer-modal-head">
+            <h3 class="timer-modal-title" id="smarthome-settings-modal-title">Switch settings</h3>
+          </div>
+          <div class="smarthome-modal-body">
+            <div class="settings-icon-grid">
+              <div class="settings-icon-row">
+                <button type="button" class="settings-icon-chip" id="smarthome-backlight-toggle-btn" aria-label="Backlight mode">💡</button>
+                <label id="smarthome-backlight-label">Backlight mode</label>
+                <input id="smarthome-backlight-select" type="hidden" value="off" />
+              </div>
+              <div class="settings-icon-row">
+                <button type="button" class="settings-icon-chip" id="smarthome-child-lock-toggle-btn" aria-label="Child lock">🔒</button>
+                <label id="smarthome-child-lock-label">Child lock</label>
+                <input id="smarthome-child-lock-select" type="hidden" value="off" />
+              </div>
+              <div class="smarthome-modal-row">
+                <label id="smarthome-power-on-label">Power-on behavior</label>
+                <div class="settings-power-options" id="smarthome-power-on-options"></div>
+                <input id="smarthome-power-on-select" type="hidden" value="off" />
+              </div>
+            </div>
+            <div class="smarthome-modal-actions">
+              <button type="button" class="smarthome-modal-btn" id="smarthome-settings-modal-cancel-btn">Cancel</button>
+              <button type="button" class="smarthome-modal-btn" id="smarthome-settings-modal-save-btn">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="timer-modal" id="confirm-modal" hidden>
         <div class="timer-modal-backdrop" id="confirm-modal-backdrop"></div>
         <div class="confirm-modal-panel" id="confirm-modal-panel" role="dialog" aria-modal="true" aria-label="Confirm">
@@ -2948,6 +3594,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           </div>
           <div class="guide-modal-body">
             <div id="guide-panel-manual" class="guide-tab-panel">
+              <div class="guide-profile-grid" id="guide-profile-grid"></div>
               <p class="confirm-modal-message" id="guide-panel-manual-text"></p>
             </div>
             <div id="guide-panel-hebcal" class="guide-tab-panel" hidden>

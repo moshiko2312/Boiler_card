@@ -355,6 +355,21 @@ switcher_icon_sensor: sensor.switcher_touch_boiler_temperature
 switcher_timer_values: "15,30,45,60,90,120"
 ```
 
+### 4.2) Optional: boiler smarthome4u
+
+Use `device_profile: boiler_smarthome4u` for the dedicated **boiler smarthome4u** profile.
+Its exact parameters and logic are intentionally kept separate and should be configured
+according to the final device-specific requirements.
+
+```yaml
+type: custom:boiler-water-card
+device_profile: boiler_smarthome4u
+switcher_mode: false
+boiler_entity: switch.tanur_orim_uri
+```
+
+Backward compatibility: existing cards with `switcher_mode: true` and no `device_profile` are still treated as **Switcher Touch**. Explicit `device_profile: switcher_touch` is optional but keeps the profile clear in YAML.
+
 ## Card Usage Guide
 
 ### Quick Daily Flow
@@ -782,6 +797,11 @@ data:
 
 ## Versioning & Changelog
 
+- Unreleased (post `v0.1.7`):
+  - **Smart Home 4U profile:** dedicated UI/UX refinements (compact modals, centered headers, icon placement, responsive sizing, quick-timer overflow behavior).
+  - **Guide/Holidays reliability:** card-side Hebcal self-heal + integration-side guarantee to create/keep a local `hebcal-<entry_id>.json` cache file.
+  - **Editor:** explicit `integration_entry_id` field shown in card editor for clearer Hebcal cache binding in all profiles.
+  - **Visual consistency:** top toolbar icon alignment and cross-language modal header centering improvements.
 - Tag `v0.1.7`:
   - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:

@@ -162,6 +162,46 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+async def async_ensure_hebcal_cache_file(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    *,
+    city: str | None = None,
+) -> bool:
+    """Ensure a local Hebcal cache JSON exists for this entry.
+
+    Creates a minimal placeholder file when missing, so the card always has a
+    predictable local JSON path even before first successful remote refresh.
+    """
+    target = hebcal_cache_path(hass, entry.entry_id)
+    if target.exists():
+        return True
+
+    resolved_city = (city or "").strip() or str(
+        entry.options.get(CONF_HEBCAL_CITY)
+        or entry.data.get(CONF_HEBCAL_CITY)
+        or DEFAULT_HEBCAL_CITY,
+    ).strip() or DEFAULT_HEBCAL_CITY
+    url = HEBCAL_URL_TEMPLATE.format(city=resolved_city)
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "fetched_at": dt_util.utcnow().isoformat(),
+        "timezone": "Asia/Jerusalem",
+        "source_url": url,
+        "city": resolved_city,
+        "entry_id": entry.entry_id,
+        "windows": [],
+        "items_count": 0,
+    }
+    try:
+        await hass.async_add_executor_job(_atomic_write_json, target, payload)
+    except OSError as err:
+        _LOGGER.error("Failed to create initial Hebcal cache %s: %s", target, err)
+        return False
+    _LOGGER.info("Created initial Hebcal cache for entry %s", entry.entry_id)
+    return True
+
+
 async def async_refresh_hebcal_cache(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -172,6 +212,9 @@ async def async_refresh_hebcal_cache(
 
     On HTTP/parse errors, leaves any existing cache file unchanged.
     """
+    ensured = await async_ensure_hebcal_cache_file(hass, entry, city=city)
+    if not ensured:
+        return False
     target = hebcal_cache_path(hass, entry.entry_id)
     resolved_city = (city or "").strip() or str(
         entry.options.get(CONF_HEBCAL_CITY)

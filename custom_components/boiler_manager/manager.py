@@ -421,6 +421,7 @@ class BoilerManager:
         await self._async_restore_manual_state()
         await self._async_apply_schedule_state()
         self._async_notify_state()
+        await hebcal_cache.async_ensure_hebcal_cache_file(self.hass, self.entry, city=self.hebcal_city)
 
         if self.hebcal_enabled:
             await hebcal_cache.async_refresh_hebcal_cache(self.hass, self.entry, city=self.hebcal_city)
