@@ -729,7 +729,10 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           background: linear-gradient(165deg, #3f4a5d, #374255);
           display: grid;
           gap: 8px;
+          width: 100%;
+          max-width: 100%;
           min-width: 0;
+          box-sizing: border-box;
           overflow-x: hidden;
         }
 
@@ -1811,6 +1814,18 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: none;
         }
 
+        .menu-view,
+        #modal-timer-view,
+        #modal-tasks-view,
+        #modal-import-export-view,
+        #modal-history-view {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow-x: hidden;
+          box-sizing: border-box;
+        }
+
         .timer-page-controls {
           display: inline-flex;
           align-items: center;
@@ -2548,6 +2563,15 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             min-height: 0;
             max-height: min(78dvh, 450px);
             border-radius: 18px;
+            zoom: 1.08 !important;
+          }
+
+          :host([data-device-profile="boiler_smarthome4u"]) .boiler-icon {
+            width: clamp(
+              calc(84px / var(--boiler-ui-scale)),
+              calc(24vw / var(--boiler-ui-scale)),
+              calc(132px / var(--boiler-ui-scale))
+            );
           }
 
           .title {
@@ -2982,6 +3006,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             width: min(350px, calc(100vw - 14px));
             max-height: min(76dvh, 430px);
             padding: 12px 10px;
+            zoom: 1.08;
           }
 
           #smarthome-settings-modal-panel {
@@ -2994,6 +3019,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             width: min(342px, calc(100vw - 14px));
             max-height: min(78dvh, 450px);
             padding: 12px 10px;
+            zoom: 1.08;
           }
 
           #smarthome-boost-modal .smarthome-modal-row {
