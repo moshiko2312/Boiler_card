@@ -819,6 +819,25 @@ data:
   - `active_now`
 - `active_now` represents the task being active by schedule window/timeline timing
 
+## Card Themes
+
+Current card theme presets in the editor (`card_theme`):
+
+- `classic` - default Home Assistant-like appearance.
+- `dark_glass` - dark glass style with balanced contrast.
+- `amber_glow` - warm amber-accent dark style.
+- `smart_room_blue` - deep blue modern style.
+- `midnight_black` - extra-dark high-contrast style.
+- `gallery_neon` - neon blue/purple dark style.
+- `slate_ice` - cool slate dark style.
+- `neo_contrast` - dark contrast-forward style.
+- `clear_frost` - light translucent glass style with black text and aqua accents for readability.
+
+Notes:
+
+- `clear_frost` is recommended when you want a bright UI without white-on-white readability issues.
+- Theme presets removed from the editor after UX review: `frost_light`, `sunset_blush`, `minimal_glass`, `soft_daylight`.
+
 ## Timing Accuracy
 
 - Scheduler runs every second (`SCHEDULER_INTERVAL = 1s`)
