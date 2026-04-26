@@ -220,6 +220,27 @@ Captured on a narrow phone viewport; layout matches the desktop grid (task edito
 - `lovelace/boiler-card-example.yaml` — example card config
 - `home-assistant/packages/boiler_hot_water.yaml` — optional legacy package flow
 
+### Frontend Sync Workflow (single source of truth)
+
+- **Do not edit files under `www/boiler-card` manually.**
+- **Edit only `custom_components/boiler_manager/frontend`, then run the frontend sync script.**
+
+- Edit frontend files only under:
+  - `custom_components/boiler_manager/frontend/`
+- Sync mirror files into:
+  - `www/boiler-card/`
+- Use the helper script from repo root:
+
+```bash
+python3 scripts/sync_frontend.py
+```
+
+- Optional drift check (no writes, non-zero exit when out of sync):
+
+```bash
+python3 scripts/sync_frontend.py --check
+```
+
 ## Installation
 
 ### HACS (Recommended)

@@ -989,7 +989,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           border: 1px solid rgba(180, 196, 217, 0.72);
           border-radius: 12px;
           background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
-          color: #8b2f2f;
+          color: #15334f;
           box-shadow:
             0 2px 6px rgba(16, 30, 50, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.62);

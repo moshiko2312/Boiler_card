@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>דוח אחריות קבצים - Boiler Card</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111b31;
+      --panel-2: #16233f;
+      --text: #e7eefc;
+      --muted: #adc0e8;
+      --accent: #7dd3fc;
+      --border: #2d3f68;
+      --ok: #86efac;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Heebo", "Rubik", Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1222, var(--bg));
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      width: min(1100px, calc(100vw - 28px));
+      margin: 20px auto 32px;
+      display: grid;
+      gap: 14px;
+    }
+    .hero, .section {
+      background: linear-gradient(165deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    h1, h2 {
+      margin: 0 0 8px;
+      line-height: 1.25;
+    }
+    h1 { font-size: clamp(1.2rem, 2.2vw, 1.6rem); }
+    h2 { font-size: clamp(1rem, 1.8vw, 1.25rem); color: var(--accent); }
+    p.meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(16, 26, 48, 0.5);
+    }
+    th, td {
+      border-bottom: 1px solid rgba(70, 94, 143, 0.45);
+      padding: 10px;
+      text-align: right;
+      vertical-align: top;
+    }
+    th {
+      background: rgba(40, 61, 102, 0.55);
+      color: #dce9ff;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    td:first-child {
+      width: 42%;
+      color: #d3e2ff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.86rem;
+      word-break: break-word;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .note {
+      border-right: 4px solid var(--ok);
+      padding: 8px 10px;
+      background: rgba(32, 51, 34, 0.35);
+      border-radius: 8px;
+      color: #d8ffe5;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>דוח אחריות קבצים - Boiler Card + Boiler Manager</h1>
+      <p class="meta">מסמך זה מתאר מה כל קובץ משמעותי במערכת אחראי לעשות.</p>
+    </section>
+
+    <section class="section">
+      <h2>מסמך ראשי</h2>
+      <table>
+        <thead><tr><th>קובץ</th><th>אחריות</th></tr></thead>
+        <tbody>
+          <tr><td>README.md</td><td>תיעוד הפרויקט הראשי: יכולות, התקנה, ארכיטקטורה, שירותים, דוגמאות וקישורים.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>אינטגרציית Home Assistant (`custom_components/boiler_manager/`)</h2>
+      <table>
+        <thead><tr><th>קובץ</th><th>אחריות</th></tr></thead>
+        <tbody>
+          <tr><td>__init__.py</td><td>אתחול האינטגרציה, רישום שירותים, סנכרון קבצי פרונטאנד וניהול resource של Lovelace.</td></tr>
+          <tr><td>config_flow.py</td><td>מסכי ההתקנה והאפשרויות (Config/Options Flow).</td></tr>
+          <tr><td>const.py</td><td>קבועים משותפים: שמות שירותים, מצבים, טוקנים וסכמות.</td></tr>
+          <tr><td>hebcal_cache.py</td><td>שליפה/נירמול נתוני Hebcal וכתיבה לקובץ JSON מקומי לכל entry.</td></tr>
+          <tr><td>manager.py</td><td>מנוע הלוגיקה הראשי: טיימרים, משימות, timeline, חוקים, vacation mode, היסטוריה ושליטה בישות.</td></tr>
+          <tr><td>manifest.json</td><td>מטא-דאטה של האינטגרציה (domain, version, dependencies, links).</td></tr>
+          <tr><td>sensor.py</td><td>חיישני מצב/מונה ושיקוף חיישנים מהגדרות.</td></tr>
+          <tr><td>switch.py</td><td>ישותי Switch דינמיים למשימות.</td></tr>
+          <tr><td>services.yaml</td><td>תיעוד סכמות השירותים של האינטגרציה.</td></tr>
+          <tr><td>strings.json</td><td>מפת מחרוזות בסיסית למסכי אינטגרציה.</td></tr>
+          <tr><td>translations/en.json</td><td>תרגום אנגלית למסכי האינטגרציה.</td></tr>
+          <tr><td>translations/he.json</td><td>תרגום עברית למסכי האינטגרציה.</td></tr>
+          <tr><td>translations/fr.json</td><td>תרגום צרפתית למסכי האינטגרציה.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>פרונטאנד מקור (`custom_components/boiler_manager/frontend/`)</h2>
+      <table>
+        <thead><tr><th>קובץ</th><th>אחריות</th></tr></thead>
+        <tbody>
+          <tr><td>README.md</td><td>מפת המודולים והנחיות סנכרון.</td></tr>
+          <tr><td>boiler-card.js</td><td>לוגיקת הכרטיס הראשית: render, state sync, אינטראקציות, שירותים, מודאלים.</td></tr>
+          <tr><td>boiler-shell.js</td><td>מעטפת HTML/CSS של הכרטיס וכל המודאלים.</td></tr>
+          <tr><td>boiler-editor.js</td><td>עורך הכרטיס: סכמות שדות, defaults, פרופילים ושינויי קונפיג.</td></tr>
+          <tr><td>boiler-config.js</td><td>ברירות מחדל וקבועי קונפיג בצד הפרונטאנד.</td></tr>
+          <tr><td>boiler-i18n.js</td><td>מילון תרגומים לכל הטקסטים בכרטיס ובעורך.</td></tr>
+          <tr><td>boiler-themes.js</td><td>ערכות נושא ונירמול theme.</td></tr>
+          <tr><td>boiler-time-utils.js</td><td>פונקציות עזר לעיבוד זמן ומשך.</td></tr>
+          <tr><td>boiler-timer-paging.js</td><td>עימוד גריד הטיימרים במודאל.</td></tr>
+          <tr><td>boiler-task-export.js</td><td>נירמול/בנייה של payload ליצוא משימות.</td></tr>
+          <tr><td>boiler-task-display.js</td><td>פורמוט תצוגת משימות והיסטוריה.</td></tr>
+          <tr><td>boiler-import-display.js</td><td>תצוגת משימות במסך ייבוא.</td></tr>
+          <tr><td>boiler-history-utils.js</td><td>נירמול לוג היסטוריה ויצוא לוג.</td></tr>
+          <tr><td>boiler-heat-utils.js</td><td>חישובי progress/heat וצבעים.</td></tr>
+          <tr><td>boiler-holiday-rules.js</td><td>לוגיקת חגים/שבת ונירמול rules.</td></tr>
+          <tr><td>boiler-service-utils.js</td><td>בדיקת זמינות שירותים וקריאות בטוחות.</td></tr>
+          <tr><td>boiler-control-services.js</td><td>התאמת שירותי שליטה לפי profile/mode.</td></tr>
+          <tr><td>boiler-entity-search.js</td><td>חיפוש/סינון ישויות לעורך תנאים.</td></tr>
+          <tr><td>boiler-entity-state-utils.js</td><td>נירמול `on/off` לפי קונפיג.</td></tr>
+          <tr><td>boiler-schedule-days.js</td><td>עיבוד ימים ולוקליזציה בלוח תזמון.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>קבצי Mirror לפריסה (`www/boiler-card/`)</h2>
+      <table>
+        <thead><tr><th>קובץ</th><th>אחריות</th></tr></thead>
+        <tbody>
+          <tr><td>כל קבצי boiler-*.js</td><td>מראה (Mirror) של `frontend/` להגשה דרך `/local/boiler-card/`; חייבים להישאר מסונכרנים עם המקור.</td></tr>
+          <tr><td>README.md</td><td>הסבר על תפקיד תיקיית ה־mirror והסנכרון.</td></tr>
+        </tbody>
+      </table>
+      <p class="note"><strong>חשוב:</strong> המקור לפיתוח הוא `custom_components/boiler_manager/frontend/`. תיקיית `www/boiler-card/` היא שכבת mirror לפריסה.</p>
+    </section>
+
+    <section class="section">
+      <h2>תיעוד ודוגמאות</h2>
+      <table>
+        <thead><tr><th>קובץ</th><th>אחריות</th></tr></thead>
+        <tbody>
+          <tr><td>docs/screenshots/README.md</td><td>סטנדרט שמות/ארגון לצילומי מסך בתיעוד.</td></tr>
+          <tr><td>lovelace/boiler-card-example.yaml</td><td>דוגמת כרטיס מלאה ל־Lovelace עם שירותי האינטגרציה.</td></tr>
+          <tr><td>home-assistant/packages/boiler_hot_water.yaml</td><td>זרימת Legacy ישנה (helpers/scripts/automations), אופציונלית בלבד.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
