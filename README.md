@@ -241,6 +241,25 @@ python3 scripts/sync_frontend.py
 python3 scripts/sync_frontend.py --check
 ```
 
+### HACS Release Packaging (automated)
+
+- On every tag push matching `v*`, GitHub Actions runs:
+  1. `python3 scripts/sync_frontend.py --check`
+  2. `python3 scripts/package_hacs.py --clean`
+  3. Uploads `dist/boiler_manager_hacs.zip` to the GitHub Release.
+
+- Package includes only:
+  - `custom_components/boiler_manager/`
+  - `hacs.json`
+  - `README.md`
+
+- Local dry run:
+
+```bash
+python3 scripts/sync_frontend.py --check
+python3 scripts/package_hacs.py --clean
+```
+
 ## Installation
 
 ### HACS (Recommended)
