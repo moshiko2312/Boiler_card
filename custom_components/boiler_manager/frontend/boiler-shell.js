@@ -2074,10 +2074,10 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         #timer-history-btn.active {
-          border-color: rgba(165, 232, 255, 0.95);
-          background: linear-gradient(165deg, rgba(102, 190, 224, 0.92), rgba(49, 146, 186, 0.86));
-          color: #ffffff;
-          text-shadow: 0 1px 2px rgba(12, 56, 78, 0.45);
+          border-color: rgba(180, 196, 217, 0.72);
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
+          color: #8b2f2f;
+          text-shadow: none;
         }
 
         .confirm-modal-panel {
