@@ -180,6 +180,7 @@ class BoilerWaterCard extends HTMLElement {
     const cardTheme = normalizeCardTheme(this._config?.card_theme);
     this.setAttribute("data-card-theme", cardTheme);
     this.setAttribute("data-device-profile", this._deviceProfile());
+    this.setAttribute("data-mobile-popup-fullscreen", this._isMobilePopupFullscreenEnabled() ? "true" : "false");
     this.shadowRoot.innerHTML = buildBoilerShellHtml({
       cardTheme,
       themeCss: buildThemeCss(),
@@ -534,6 +535,7 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const cfg = this._config;
+    this._applyUiScaleSettings();
     const boiler = this._hass.states[cfg.boiler_entity];
     const duration = this._hass.states[cfg.duration_entity];
     const timer = this._hass.states[cfg.timer_entity];
@@ -6498,6 +6500,30 @@ class BoilerWaterCard extends HTMLElement {
       return "switcher_touch";
     }
     return "standard";
+  }
+
+  _normalizeUiScalePercent(value) {
+    const parsed = Number.parseInt(String(value ?? this._config?.ui_scale_percent ?? 100), 10);
+    if (!Number.isFinite(parsed)) {
+      return 100;
+    }
+    return Math.min(130, Math.max(90, parsed));
+  }
+
+  _isMobilePopupFullscreenEnabled() {
+    const raw = this._config?.mobile_popup_fullscreen;
+    if (raw === undefined || raw === null || raw === "") {
+      return true;
+    }
+    return this._asTruthy(raw);
+  }
+
+  _applyUiScaleSettings() {
+    const scalePercent = this._normalizeUiScalePercent(this._config?.ui_scale_percent);
+    const scale = scalePercent / 100;
+    this.style.setProperty("--boiler-ui-scale", scale.toFixed(2));
+    this.style.setProperty("--boiler-popup-scale", scale.toFixed(2));
+    this.setAttribute("data-mobile-popup-fullscreen", this._isMobilePopupFullscreenEnabled() ? "true" : "false");
   }
 
   _profileDefaultFlowImage() {

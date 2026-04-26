@@ -52,6 +52,8 @@ export const DEFAULT_CONFIG = {
   switcher_timer_values: "15,30,45,60",
   timer_values: "15,30,60",
   card_theme: "dark_glass",
+  ui_scale_percent: 100,
+  mobile_popup_fullscreen: true,
   boiler_flow_image: "/local/boiler-card/boiler-flow.png",
   hide_boiler_flow_image: false,
   duration_entity: "",

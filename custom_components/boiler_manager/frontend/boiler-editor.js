@@ -501,6 +501,17 @@ class BoilerWaterCardEditor extends HTMLElement {
         },
       },
       {
+        name: "ui_scale_percent",
+        label: labels.ui_scale_percent || "Card size scale (%)",
+        description: labels.ui_scale_percent_desc || "Increase card and popup size for better readability (recommended 110% on mobile).",
+        selector: { number: { min: 90, max: 130, step: 5, mode: "slider" } },
+      },
+      {
+        name: "mobile_popup_fullscreen",
+        label: labels.mobile_popup_fullscreen || "Open popups in fullscreen on mobile",
+        selector: { boolean: {} },
+      },
+      {
         name: "boiler_flow_image",
         label: labels.boiler_flow_image,
         selector: { text: {} },
@@ -1022,6 +1033,8 @@ class BoilerWaterCardEditor extends HTMLElement {
       nextConfig.device_profile = nextSwitcherMode ? "switcher_touch" : "standard";
     }
     const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
+    nextConfig.ui_scale_percent = this._normalizeUiScalePercent(nextConfig?.ui_scale_percent);
+    nextConfig.mobile_popup_fullscreen = this._asTruthy(nextConfig?.mobile_popup_fullscreen);
 
     if (hasLanguageChange && nextLanguage !== prevLanguage) {
       const titleFromCurrentConfig = typeof this._config?.title === "string"
@@ -1103,6 +1116,14 @@ class BoilerWaterCardEditor extends HTMLElement {
     return "standard";
   }
 
+  _normalizeUiScalePercent(value) {
+    const parsed = Number.parseInt(String(value ?? DEFAULT_CONFIG.ui_scale_percent ?? 100), 10);
+    if (!Number.isFinite(parsed)) {
+      return 100;
+    }
+    return Math.min(130, Math.max(90, parsed));
+  }
+
   _profileDefaultImage(profile) {
     const normalized = this._normalizeProfile(profile);
     if (normalized === "switcher_touch") {
@@ -1179,6 +1200,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         card_theme_classic: "קלאסי",
         card_theme_dark_glass: "זכוכית כהה",
         card_theme_amber_glow: "זוהר כתום",
+        ui_scale_percent: "הגדלת כרטיס ותפריטים (%)",
+        ui_scale_percent_desc: "מגדיל את הכרטיס והפופאפים לקריאות טובה יותר (מומלץ 110% במובייל).",
+        mobile_popup_fullscreen: "פתח פופאפים במסך מלא במובייל",
         lang_option_he: "עברית",
         lang_option_en: "אנגלית",
         lang_option_ru: "רוסית",
@@ -1240,6 +1264,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         card_theme_classic: "Classic",
         card_theme_dark_glass: "Dark Glass",
         card_theme_amber_glow: "Amber Glow",
+        ui_scale_percent: "Card and menu scale (%)",
+        ui_scale_percent_desc: "Scales up the card and popups for readability (110% is recommended on mobile).",
+        mobile_popup_fullscreen: "Open popups in fullscreen on mobile",
         lang_option_he: "Hebrew",
         lang_option_en: "English",
         lang_option_ru: "Russian",
@@ -1301,6 +1328,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         card_theme_classic: "Классическая",
         card_theme_dark_glass: "Темное стекло",
         card_theme_amber_glow: "Янтарное свечение",
+        ui_scale_percent: "Масштаб карты и меню (%)",
+        ui_scale_percent_desc: "Увеличивает карту и всплывающие окна для лучшей читаемости (на мобильном рекомендуется 110%).",
+        mobile_popup_fullscreen: "Открывать окна на весь экран в мобильном",
         lang_option_he: "Иврит",
         lang_option_en: "Английский",
         lang_option_ru: "Русский",
@@ -1362,6 +1392,9 @@ class BoilerWaterCardEditor extends HTMLElement {
         card_theme_classic: "Classique",
         card_theme_dark_glass: "Verre sombre",
         card_theme_amber_glow: "Lueur ambree",
+        ui_scale_percent: "Echelle carte et menus (%)",
+        ui_scale_percent_desc: "Agrandit la carte et les popups pour une meilleure lisibilite (110% recommande sur mobile).",
+        mobile_popup_fullscreen: "Ouvrir les popups en plein ecran sur mobile",
         lang_option_he: "Hebreu",
         lang_option_en: "Anglais",
         lang_option_ru: "Russe",

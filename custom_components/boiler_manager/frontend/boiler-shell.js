@@ -11,6 +11,8 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           --boiler-ok: #198754;
           --boiler-off: #64748b;
           --boiler-danger: var(--error-color, #c63d2f);
+          --boiler-ui-scale: 1;
+          --boiler-popup-scale: 1;
           display: block;
           width: 100%;
           box-sizing: border-box;
@@ -25,6 +27,8 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           border: 1px solid var(--ha-card-border-color, var(--divider-color, rgba(120, 140, 170, 0.25)));
           box-shadow: var(--ha-card-box-shadow, 0 12px 26px rgba(20, 40, 80, 0.1));
           animation: card-enter 260ms ease;
+          zoom: var(--boiler-ui-scale);
+          min-height: calc(190px * var(--boiler-ui-scale));
         }
 
         ${themeCss}
@@ -97,7 +101,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         :host([data-device-profile="boiler_smarthome4u"]) .smarthome-icon-btn {
           width: 36px;
           height: 36px;
-          font-size: 1.02rem;
+          font-size: 1.48rem;
         }
 
         .title {
@@ -904,6 +908,41 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           flex-shrink: 0;
         }
 
+        .history-head-actions .history-clear-btn,
+        .history-head-actions .history-export-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          border: 1px solid rgba(180, 196, 217, 0.72);
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
+          color: #15334f;
+          box-shadow:
+            0 2px 6px rgba(16, 30, 50, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.62);
+        }
+
+        /* Hard lock: keep History action buttons visually identical across all breakpoints/themes */
+        #history-clear-btn,
+        #history-export-btn {
+          width: 40px !important;
+          height: 40px !important;
+          padding: 0 !important;
+          border-radius: 12px !important;
+          border: 1px solid rgba(180, 196, 217, 0.72) !important;
+          background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92)) !important;
+          color: #15334f !important;
+          box-shadow:
+            0 2px 6px rgba(16, 30, 50, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.62) !important;
+        }
+
+        #history-clear-btn svg,
+        #history-export-btn svg {
+          width: 22px !important;
+          height: 22px !important;
+          fill: currentColor !important;
+        }
+
         .history-clear-btn {
           display: inline-flex;
           align-items: center;
@@ -914,7 +953,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           border-radius: 12px;
           border: 1px solid rgba(180, 196, 217, 0.72);
           background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
-          color: #8b2f2f;
+          color: #15334f;
           cursor: pointer;
           box-shadow:
             0 2px 6px rgba(16, 30, 50, 0.14),
@@ -947,7 +986,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           border: 1px solid rgba(180, 196, 217, 0.72);
           border-radius: 12px;
           background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
-          color: #8b2f2f;
+          color: #15334f;
           box-shadow:
             0 2px 6px rgba(16, 30, 50, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.62);
@@ -964,6 +1003,11 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: none;
         }
 
+        .history-export-btn[disabled] {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
         .history-head .tasks-title {
           margin: 0;
           flex: 1;
@@ -974,9 +1018,9 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: grid;
           gap: 6px;
           min-width: 0;
-          max-height: min(58dvh, 460px);
-          overflow: auto;
-          padding-inline-end: 2px;
+          max-height: none;
+          overflow: visible;
+          padding-inline-end: 0;
         }
 
         .history-item {
@@ -1610,8 +1654,14 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
         .timer-modal-panel {
           position: relative;
-          width: min(560px, calc(100vw - 28px));
-          max-height: min(78dvh, 590px);
+          width: min(
+            calc(560px / var(--boiler-popup-scale)),
+            calc((100vw - 28px) / var(--boiler-popup-scale))
+          );
+          max-height: min(
+            calc(78dvh / var(--boiler-popup-scale)),
+            calc(590px / var(--boiler-popup-scale))
+          );
           overflow: auto;
           overflow-x: hidden;
           border-radius: 18px;
@@ -1626,11 +1676,18 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           pointer-events: auto;
           touch-action: pan-y;
           box-sizing: border-box;
+          zoom: var(--boiler-popup-scale);
         }
 
         #schedule-modal-panel {
-          width: min(500px, calc(100vw - 34px));
-          max-height: min(88dvh, 700px);
+          width: min(
+            calc(500px / var(--boiler-popup-scale)),
+            calc((100vw - 34px) / var(--boiler-popup-scale))
+          );
+          max-height: min(
+            calc(88dvh / var(--boiler-popup-scale)),
+            calc(700px / var(--boiler-popup-scale))
+          );
           overflow: hidden;
           display: grid;
           grid-template-rows: auto minmax(0, 1fr);
@@ -2076,7 +2133,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         #timer-history-btn.active {
           border-color: rgba(180, 196, 217, 0.72);
           background: linear-gradient(165deg, rgba(248, 252, 255, 0.95), rgba(227, 237, 247, 0.92));
-          color: #8b2f2f;
+          color: #15334f;
           text-shadow: none;
         }
 
@@ -2084,8 +2141,14 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           position: relative;
           z-index: 1;
           pointer-events: auto;
-          width: min(460px, calc(100vw - 24px));
-          max-height: min(78dvh, 420px);
+          width: min(
+            calc(460px / var(--boiler-popup-scale)),
+            calc((100vw - 24px) / var(--boiler-popup-scale))
+          );
+          max-height: min(
+            calc(78dvh / var(--boiler-popup-scale)),
+            calc(420px / var(--boiler-popup-scale))
+          );
           overflow: auto;
           border-radius: 18px;
           border: 1px solid rgba(80, 108, 140, 0.3);
@@ -2096,6 +2159,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           color: #eef5ff;
           padding: 16px;
           animation: card-enter 180ms ease;
+          zoom: var(--boiler-popup-scale);
         }
 
         .confirm-modal-title {
@@ -2447,6 +2511,45 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         }
 
         @media (max-width: 760px) {
+          :host([data-mobile-popup-fullscreen="true"]) #timer-modal,
+          :host([data-mobile-popup-fullscreen="true"]) #schedule-modal,
+          :host([data-mobile-popup-fullscreen="true"]) #smarthome-boost-modal,
+          :host([data-mobile-popup-fullscreen="true"]) #smarthome-settings-modal,
+          :host([data-mobile-popup-fullscreen="true"]) #confirm-modal,
+          :host([data-mobile-popup-fullscreen="true"]) #guide-modal {
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+          }
+
+          :host([data-mobile-popup-fullscreen="true"]) #timer-modal .timer-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #schedule-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #smarthome-boost-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #smarthome-settings-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #confirm-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #import-select-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"]) #guide-modal-panel {
+            width: calc(100vw - 8px);
+            max-width: calc(100vw - 8px);
+            height: calc(100svh - 8px);
+            min-height: calc(100svh - 8px);
+            max-height: calc(100svh - 8px);
+            border-radius: 14px;
+            overflow: auto;
+            box-sizing: border-box;
+            zoom: 1 !important;
+          }
+
+          :host([data-mobile-popup-fullscreen="true"][data-device-profile="boiler_smarthome4u"]) #smarthome-boost-modal-panel,
+          :host([data-mobile-popup-fullscreen="true"][data-device-profile="boiler_smarthome4u"]) #smarthome-settings-modal-panel {
+            width: min(350px, calc(100vw - 14px));
+            max-width: min(350px, calc(100vw - 14px));
+            height: auto;
+            min-height: 0;
+            max-height: min(78dvh, 450px);
+            border-radius: 18px;
+          }
+
           .title {
             font-size: clamp(1rem, 2.8vw, 1.14rem);
           }
@@ -2866,7 +2969,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           :host([data-device-profile="boiler_smarthome4u"]) .smarthome-icon-btn {
             width: 34px;
             height: 34px;
-            font-size: 0.98rem;
+            font-size: 1.34rem;
           }
 
           #smarthome-boost-modal-panel {
@@ -3280,7 +3383,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14V4zM6 7v14a2 2 0 002 2h8a2 2 0 002-2V7H6zm3 2h2v10H9V9zm4 0h2v10h-2V9zm4 0h2v10h-2V9z"/></svg>
                   </button>
                   <button type="button" class="tasks-export-btn history-export-btn" id="history-export-btn">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8l-4-5zM8 5h4v4H8V5zm0 6h8v8H8v-8z"/></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 011 1v8.59l2.3-2.3a1 1 0 111.4 1.42l-4 3.96a1 1 0 01-1.4 0l-4-3.96a1 1 0 111.4-1.42L11 12.59V4a1 1 0 011-1zm-7 13a1 1 0 011 1v1h12v-1a1 1 0 112 0v1a2 2 0 01-2 2H6a2 2 0 01-2-2v-1a1 1 0 011-1z"/></svg>
                     <span id="history-export-label">Export log</span>
                   </button>
                 </div>
