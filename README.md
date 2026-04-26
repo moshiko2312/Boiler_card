@@ -797,17 +797,17 @@ data:
 
 ## Versioning & Changelog
 
-- Unreleased (post `v0.1.7`):
-  - **Smart Home 4U profile:** dedicated UI/UX refinements (compact modals, centered headers, icon placement, responsive sizing, quick-timer overflow behavior).
-  - **Guide/Holidays reliability:** card-side Hebcal self-heal + integration-side guarantee to create/keep a local `hebcal-<entry_id>.json` cache file.
-  - **Editor:** explicit `integration_entry_id` field shown in card editor for clearer Hebcal cache binding in all profiles.
-  - **Visual consistency:** top toolbar icon alignment and cross-language modal header centering improvements.
+- Tag `v1.0.8`:
+  - Smart Home 4U profile refinements: compact modals, centered headers, symmetric top actions, larger mobile controls, and overflow-aware quick timer layout.
+  - Holidays/Shabbat reliability hardening: frontend self-heal flow + integration-side local Hebcal cache-file guarantee (`hebcal-<entry_id>.json`).
+  - Card editor improvements: explicit `integration_entry_id` support and updated profile image/default-flow handling.
+  - Visual polish: unified history/action icon styling and cross-language modal title alignment.
 - Tag `v0.1.7`:
   - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:
   - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
-- Integration manifest `0.1.7`:
-  - Aligned with `v0.1.7` tag.
+- Integration manifest `1.0.8`:
+  - Aligned with `v1.0.8` tag.
 
 Recent highlights:
 - `0.1.7`

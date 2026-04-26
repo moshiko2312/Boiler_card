@@ -13,7 +13,7 @@ Put the UI screenshots here. The root **`README.md`** links to these files via G
 7. `07-card-editor.png`
 8. `08-holidays-shabbat-tab.png` — Holidays & Shabbat guide tab (Hebcal list, filters, city line)
 
-## Mobile reference (`mobile-*`, v0.1.7+)
+## Mobile reference (`mobile-*`, v1.0.8+)
 
 - `mobile-01-main-card.png` — main card, quick timers
 - `mobile-02-guide-manual-tab.png` — guide modal, manual tab
