@@ -837,6 +837,10 @@ data:
 
 ## Versioning & Changelog
 
+- Tag `v1.1.1`:
+  - Expanded theme catalog and editor options with multiple new visual styles.
+  - Refined `clear_frost` theme for readability: black text, aqua-accent timer/menu controls, and consistent modal/list contrast.
+  - Removed less-successful light presets per UX feedback and replaced them with clearer alternatives.
 - Tag `v1.0.9`:
   - Added display accessibility controls in card editor: `ui_scale_percent` (90-130) and `mobile_popup_fullscreen` for larger, more readable UI.
   - Improved popup viewport fit on desktop/mobile by scale-aware modal sizing and fullscreen-safe bounds.
@@ -853,8 +857,8 @@ data:
   - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:
   - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
-- Integration manifest `1.0.9`:
-  - Aligned with `v1.0.9` tag.
+- Integration manifest `1.1.1`:
+  - Aligned with `v1.1.1` tag.
 
 Recent highlights:
 - `0.1.7`
