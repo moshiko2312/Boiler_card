@@ -34,6 +34,8 @@ This folder contains the Lovelace frontend source for `boiler-water-card`.
   Control-service resolution and base payload helpers for switcher/manager modes.
 - `boiler-entity-state-utils.js`  
   Config-driven entity on/off state normalization helpers.
+- `boiler-dolphin-utils.js`  
+  Dolphin profile helpers (e.g. resolving `dolphin.*_electric_current` from the boiler climate entity id).
 - `boiler-editor.js`  
   Card editor registration and editor UI/logic (`boiler-water-card-editor`).
 - `boiler-i18n.js`  
@@ -42,8 +44,16 @@ This folder contains the Lovelace frontend source for `boiler-water-card`.
   Card theme normalization and shared theme CSS blocks.
 - `boiler-config.js`  
   Frontend constants such as default card config and Hebcal city metadata.
-- `boiler-flow.png`, `switcher-touch.png`, `boiler-smarthome4u.png`  
+- `boiler-flow.png`, `switcher-touch.png`, `boiler-smarthome4u.png`, `boiler-dolphin.png`  
   UI image assets used in editor/profile visuals.
+
+## Tests
+
+Repository root:
+
+```bash
+node --test tests/dolphin-utils.test.mjs
+```
 
 ## Sync behavior
 

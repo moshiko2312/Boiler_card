@@ -25,3 +25,7 @@ Put the UI screenshots here. The root **`README.md`** links to these files via G
 - `mobile-08-tasks-tab.png` — tasks list tab
 
 Source copies for the `mobile-*` set may live under the Cursor project `assets/` folder during capture; committed files belong **only** under this directory for stable README links.
+
+## Dolphin profile (optional captures)
+
+If you document the **Dolphin** device profile (`device_profile: dolphin`), add screenshots here when ready (e.g. editor profile picker with Dolphin card, main card with Dolphin quick-action row) and link them from the root `README.md` if you want them in the main walkthrough.

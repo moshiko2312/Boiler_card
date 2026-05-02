@@ -320,6 +320,7 @@ class BoilerWaterCardEditor extends HTMLElement {
     const profile = this._deviceProfile();
     const usesExtendedTimerUi = this._usesExtendedTimerUi();
     const usesSwitcherBoilerPicker = profile === "switcher_touch" || profile === "boiler_smarthome4u";
+    const usesClimateBoilerPicker = profile === "dolphin";
     this._ensureEditorLayout();
 
     const languageOptions = [
@@ -360,6 +361,8 @@ class BoilerWaterCardEditor extends HTMLElement {
         required: true,
         selector: usesSwitcherBoilerPicker
           ? { entity: { domain: "switch" } }
+          : usesClimateBoilerPicker
+          ? { entity: { domain: "climate" } }
           : { entity: {} },
       },
     ];
@@ -379,6 +382,93 @@ class BoilerWaterCardEditor extends HTMLElement {
             options: cityOptions,
           },
         },
+      },
+    ];
+    const regularModeSchema = [
+      {
+        name: "timer_values",
+        label: labels.timer_values,
+        selector: { text: {} },
+      },
+      {
+        name: "temperature_sensor",
+        label: labels.temperature_sensor,
+        ...(profile === "dolphin"
+          ? {
+            description: labels.dolphin_temperature_sensor_desc,
+            selector: { entity: {} },
+          }
+          : {
+            selector: { entity: { domain: "sensor" } },
+          }),
+      },
+      {
+        name: "power_sensor",
+        label: labels.power_sensor,
+        selector: { entity: { domain: "sensor" } },
+      },
+      {
+        name: "current_sensor",
+        label: labels.current_sensor,
+        ...(profile === "dolphin"
+          ? { description: labels.dolphin_current_sensor_auto_desc }
+          : {}),
+        selector: { entity: { domain: "sensor" } },
+      },
+      {
+        name: "voltage_sensor",
+        label: labels.voltage_sensor,
+        selector: { entity: { domain: "sensor" } },
+      },
+    ];
+    const dolphinExtraModeSchema = [
+      {
+        name: "dolphin_sabbath_entity",
+        label: labels.dolphin_sabbath_entity,
+        description: labels.dolphin_sabbath_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_fixed_temperature_entity",
+        label: labels.dolphin_fixed_temperature_entity,
+        description: labels.dolphin_fixed_temperature_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_entity",
+        label: labels.dolphin_shower_entity,
+        description: labels.dolphin_shower_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_2_entity",
+        label: labels.dolphin_shower_2_entity,
+        description: labels.dolphin_shower_2_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_3_entity",
+        label: labels.dolphin_shower_3_entity,
+        description: labels.dolphin_shower_3_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_4_entity",
+        label: labels.dolphin_shower_4_entity,
+        description: labels.dolphin_shower_4_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_5_entity",
+        label: labels.dolphin_shower_5_entity,
+        description: labels.dolphin_shower_5_entity_desc,
+        selector: { entity: {} },
+      },
+      {
+        name: "dolphin_shower_6_entity",
+        label: labels.dolphin_shower_6_entity,
+        description: labels.dolphin_shower_6_entity_desc,
+        selector: { entity: {} },
       },
     ];
     const modeSchema = profile === "boiler_smarthome4u"
@@ -467,33 +557,9 @@ class BoilerWaterCardEditor extends HTMLElement {
           selector: { text: {} },
         },
       ]
-      : [
-        {
-          name: "timer_values",
-          label: labels.timer_values,
-          selector: { text: {} },
-        },
-        {
-          name: "temperature_sensor",
-          label: labels.temperature_sensor,
-          selector: { entity: { domain: "sensor" } },
-        },
-        {
-          name: "power_sensor",
-          label: labels.power_sensor,
-          selector: { entity: { domain: "sensor" } },
-        },
-        {
-          name: "current_sensor",
-          label: labels.current_sensor,
-          selector: { entity: { domain: "sensor" } },
-        },
-        {
-          name: "voltage_sensor",
-          label: labels.voltage_sensor,
-          selector: { entity: { domain: "sensor" } },
-        },
-      ];
+      : profile === "dolphin"
+      ? [...regularModeSchema, ...dolphinExtraModeSchema]
+      : regularModeSchema;
     const displaySchema = [
       {
         name: "card_theme",
@@ -564,6 +630,9 @@ class BoilerWaterCardEditor extends HTMLElement {
     } else if (profile === "boiler_smarthome4u") {
       modeTitleText = labels.editor_mode_smarthome4u_title || "boiler smarthome4u";
       modeDescText = labels.editor_mode_smarthome4u_desc || "Custom profile. Parameters will be configured separately.";
+    } else if (profile === "dolphin") {
+      modeTitleText = labels.editor_mode_dolphin_title || "Dolphin";
+      modeDescText = labels.editor_mode_dolphin_desc || "Timers, sensors, and optional Dolphin switches (Sabbath, fixed temp, shower).";
     }
     if (this._editorRoot) {
       const modeTitle = this.querySelector("[data-editor-mode-title]");
@@ -933,6 +1002,14 @@ class BoilerWaterCardEditor extends HTMLElement {
         deviceProfile: "boiler_smarthome4u",
         switcherMode: false,
       },
+      {
+        id: "dolphin",
+        name: labels.profile_dolphin_name || "Dolphin",
+        subtitle: labels.profile_dolphin_desc || "Home Assistant Dolphin integration (climate entity)",
+        image: "/local/boiler-card/boiler-dolphin.png",
+        deviceProfile: "dolphin",
+        switcherMode: false,
+      },
     ];
     mount.innerHTML = "";
     profiles.forEach((profile) => {
@@ -1036,7 +1113,11 @@ class BoilerWaterCardEditor extends HTMLElement {
       }
     } else if (hasSwitcherModeChange) {
       const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
-      nextConfig.device_profile = nextSwitcherMode ? "switcher_touch" : "standard";
+      if (nextSwitcherMode) {
+        nextConfig.device_profile = "switcher_touch";
+      } else if (prevProfile === "switcher_touch") {
+        nextConfig.device_profile = "standard";
+      }
     }
     const nextSwitcherMode = this._asTruthy(nextConfig?.switcher_mode);
     nextConfig.ui_scale_percent = this._normalizeUiScalePercent(nextConfig?.ui_scale_percent);
@@ -1105,7 +1186,12 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   _deviceProfile() {
     const raw = String(this._config?.device_profile || "").trim().toLowerCase();
-    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+    if (
+      raw === "switcher_touch"
+      || raw === "boiler_smarthome4u"
+      || raw === "standard"
+      || raw === "dolphin"
+    ) {
       return raw;
     }
     if (this._asTruthy(this._config?.switcher_mode)) {
@@ -1116,7 +1202,12 @@ class BoilerWaterCardEditor extends HTMLElement {
 
   _normalizeProfile(value) {
     const raw = String(value || "").trim().toLowerCase();
-    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+    if (
+      raw === "switcher_touch"
+      || raw === "boiler_smarthome4u"
+      || raw === "standard"
+      || raw === "dolphin"
+    ) {
       return raw;
     }
     return "standard";
@@ -1137,6 +1228,9 @@ class BoilerWaterCardEditor extends HTMLElement {
     }
     if (normalized === "boiler_smarthome4u") {
       return "/local/boiler-card/boiler-smarthome4u.png";
+    }
+    if (normalized === "dolphin") {
+      return "/local/boiler-card/boiler-dolphin.png";
     }
     return "/local/boiler-card/boiler-flow.png";
   }
@@ -1235,6 +1329,28 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_switcher_desc: "חיישני סוויצ'ר ייעודיים, התנהגות טיימר וברירות מחדל מותאמות",
         profile_smarthome4u_name: "בוילר של סמארט הום 4 יו",
         profile_smarthome4u_desc: "פרופיל ייעודי למתג boiler smarthome4u. פרמטרים יוגדרו בנפרד.",
+        profile_dolphin_name: "דולפין",
+        profile_dolphin_desc: "אינטגרציית Dolphin ב-Home Assistant — בחרו ישות climate כדוד ראשי",
+        editor_mode_dolphin_title: "דולפין",
+        editor_mode_dolphin_desc: "טיימרים, חיישנים ומתגי Dolphin אופציונליים (שבת, טמפ' קבועה, מקלחת).",
+        dolphin_temperature_sensor_desc: "אופציונלי. אם ריק — הכרטיס משתמש ב-current_temperature מישות ה-climate של הדוד.",
+        dolphin_current_sensor_auto_desc: "אופציונלי. אם ריק — ניסיון להתאים אוטומטית ל-dolphin.*_electric_current לפי שם ישות ה-climate.",
+        dolphin_sabbath_entity: "מתג מצב שבת (Dolphin)",
+        dolphin_sabbath_entity_desc: "ישות dolphin.* — Sabbath mode מהאינטגרציה.",
+        dolphin_fixed_temperature_entity: "מתג טמפרטורה קבועה (Dolphin)",
+        dolphin_fixed_temperature_entity_desc: "ישות dolphin.* — Fixed temperature.",
+        dolphin_shower_entity: "מקלחת 1 — מתג Dolphin (drop1)",
+        dolphin_shower_entity_desc: "ישות dolphin.* — הריג׳׳ הראשונה. אופציונלי.",
+        dolphin_shower_2_entity: "מקלחת 2 — מתג Dolphin (drop2)",
+        dolphin_shower_2_entity_desc: "אופציונלי.",
+        dolphin_shower_3_entity: "מקלחת 3 — מתג Dolphin (drop3)",
+        dolphin_shower_3_entity_desc: "אופציונלי.",
+        dolphin_shower_4_entity: "מקלחת 4 — מתג Dolphin (drop4)",
+        dolphin_shower_4_entity_desc: "אופציונלי.",
+        dolphin_shower_5_entity: "מקלחת 5 — מתג Dolphin (drop5)",
+        dolphin_shower_5_entity_desc: "אופציונלי.",
+        dolphin_shower_6_entity: "מקלחת 6 — מתג Dolphin (drop6)",
+        dolphin_shower_6_entity_desc: "אופציונלי.",
         editor_mode_smarthome4u_title: "בוילר של סמארט הום 4 יו",
         editor_mode_smarthome4u_desc: "פרופיל מותאם אישית. הפרמטרים יוגדרו לפי הדרישות שלך.",
         boiler_flow_image: "תמונת זרימת מים (נתיב או כתובת)",
@@ -1305,6 +1421,28 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_switcher_desc: "Switcher-specific sensors, timer behavior and defaults",
         profile_smarthome4u_name: "boiler smarthome4u",
         profile_smarthome4u_desc: "Dedicated profile for boiler smarthome4u. Parameters will be defined separately.",
+        profile_dolphin_name: "Dolphin",
+        profile_dolphin_desc: "Home Assistant Dolphin integration — pick a climate entity as the main boiler",
+        editor_mode_dolphin_title: "Dolphin",
+        editor_mode_dolphin_desc: "Timers, sensors, and optional Dolphin switches (Sabbath, fixed temperature, shower).",
+        dolphin_temperature_sensor_desc: "Optional. If empty, the card uses current_temperature from the boiler climate entity.",
+        dolphin_current_sensor_auto_desc: "Optional. If empty, the card tries to match dolphin.*_electric_current from the climate entity object id.",
+        dolphin_sabbath_entity: "Sabbath mode entity (Dolphin)",
+        dolphin_sabbath_entity_desc: "dolphin.* entity from the Dolphin integration (Sabbath mode).",
+        dolphin_fixed_temperature_entity: "Fixed temperature entity (Dolphin)",
+        dolphin_fixed_temperature_entity_desc: "dolphin.* entity — Fixed temperature mode.",
+        dolphin_shower_entity: "Shower 1 entity (Dolphin drop1)",
+        dolphin_shower_entity_desc: "dolphin.* shower rig 1. Optional.",
+        dolphin_shower_2_entity: "Shower 2 entity (Dolphin drop2)",
+        dolphin_shower_2_entity_desc: "Optional.",
+        dolphin_shower_3_entity: "Shower 3 entity (Dolphin drop3)",
+        dolphin_shower_3_entity_desc: "Optional.",
+        dolphin_shower_4_entity: "Shower 4 entity (Dolphin drop4)",
+        dolphin_shower_4_entity_desc: "Optional.",
+        dolphin_shower_5_entity: "Shower 5 entity (Dolphin drop5)",
+        dolphin_shower_5_entity_desc: "Optional.",
+        dolphin_shower_6_entity: "Shower 6 entity (Dolphin drop6)",
+        dolphin_shower_6_entity_desc: "Optional.",
         editor_mode_smarthome4u_title: "boiler smarthome4u",
         editor_mode_smarthome4u_desc: "Custom profile. Parameters will be defined per your exact device logic.",
         boiler_flow_image: "Water Flow Image (path / URL)",
@@ -1375,6 +1513,28 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_switcher_desc: "Поля датчиков Switcher, поведение таймера и специальные значения по умолчанию",
         profile_smarthome4u_name: "Бойлер Smart Home 4U",
         profile_smarthome4u_desc: "Специальный профиль для boiler smarthome4u. Параметры будут заданы отдельно.",
+        profile_dolphin_name: "Dolphin",
+        profile_dolphin_desc: "Интеграция Dolphin в Home Assistant — укажите сущность climate как основной бойлер",
+        editor_mode_dolphin_title: "Dolphin",
+        editor_mode_dolphin_desc: "Таймеры, датчики и опциональные переключатели Dolphin (Шаббат, фикс. температура, душ).",
+        dolphin_temperature_sensor_desc: "Необязательно. Если пусто — карточка берёт current_temperature из climate бойлера.",
+        dolphin_current_sensor_auto_desc: "Необязательно. Если пусто — карточка пытается сопоставить dolphin.*_electric_current по id climate.",
+        dolphin_sabbath_entity: "Сущность режима Шаббат (Dolphin)",
+        dolphin_sabbath_entity_desc: "Сущность dolphin.* — Sabbath mode интеграции.",
+        dolphin_fixed_temperature_entity: "Сущность фикс. температуры (Dolphin)",
+        dolphin_fixed_temperature_entity_desc: "Сущность dolphin.* — режим фиксированной температуры.",
+        dolphin_shower_entity: "Душ 1 (Dolphin drop1)",
+        dolphin_shower_entity_desc: "Сущность dolphin.*. Необязательно.",
+        dolphin_shower_2_entity: "Душ 2 (Dolphin drop2)",
+        dolphin_shower_2_entity_desc: "Необязательно.",
+        dolphin_shower_3_entity: "Душ 3 (Dolphin drop3)",
+        dolphin_shower_3_entity_desc: "Необязательно.",
+        dolphin_shower_4_entity: "Душ 4 (Dolphin drop4)",
+        dolphin_shower_4_entity_desc: "Необязательно.",
+        dolphin_shower_5_entity: "Душ 5 (Dolphin drop5)",
+        dolphin_shower_5_entity_desc: "Необязательно.",
+        dolphin_shower_6_entity: "Душ 6 (Dolphin drop6)",
+        dolphin_shower_6_entity_desc: "Необязательно.",
         editor_mode_smarthome4u_title: "Бойлер Smart Home 4U",
         editor_mode_smarthome4u_desc: "Пользовательский профиль. Параметры будут настроены по вашей точной логике.",
         boiler_flow_image: "Изображение потока (путь / URL)",
@@ -1445,6 +1605,28 @@ class BoilerWaterCardEditor extends HTMLElement {
         profile_switcher_desc: "Capteurs Switcher dedies, comportement minuterie et valeurs par defaut",
         profile_smarthome4u_name: "Boiler Smart Home 4U",
         profile_smarthome4u_desc: "Profil dedie pour boiler smarthome4u. Les parametres seront definis separement.",
+        profile_dolphin_name: "Dolphin",
+        profile_dolphin_desc: "Integration Dolphin pour Home Assistant — choisissez une entite climate comme chauffe-eau principal",
+        editor_mode_dolphin_title: "Dolphin",
+        editor_mode_dolphin_desc: "Minuteries, capteurs et interrupteurs Dolphin optionnels (Chabbat, temperature fixe, douche).",
+        dolphin_temperature_sensor_desc: "Optionnel. Si vide, la carte utilise current_temperature de l'entite climate du chauffe-eau.",
+        dolphin_current_sensor_auto_desc: "Optionnel. Si vide, la carte tente d'associer dolphin.*_electric_current selon l'id de l'entite climate.",
+        dolphin_sabbath_entity: "Entite mode Chabbat (Dolphin)",
+        dolphin_sabbath_entity_desc: "Entite dolphin.* — Sabbath mode de l'integration.",
+        dolphin_fixed_temperature_entity: "Entite temperature fixe (Dolphin)",
+        dolphin_fixed_temperature_entity_desc: "Entite dolphin.* — mode temperature fixe.",
+        dolphin_shower_entity: "Douche 1 (Dolphin drop1)",
+        dolphin_shower_entity_desc: "Entite dolphin.*. Optionnel.",
+        dolphin_shower_2_entity: "Douche 2 (Dolphin drop2)",
+        dolphin_shower_2_entity_desc: "Optionnel.",
+        dolphin_shower_3_entity: "Douche 3 (Dolphin drop3)",
+        dolphin_shower_3_entity_desc: "Optionnel.",
+        dolphin_shower_4_entity: "Douche 4 (Dolphin drop4)",
+        dolphin_shower_4_entity_desc: "Optionnel.",
+        dolphin_shower_5_entity: "Douche 5 (Dolphin drop5)",
+        dolphin_shower_5_entity_desc: "Optionnel.",
+        dolphin_shower_6_entity: "Douche 6 (Dolphin drop6)",
+        dolphin_shower_6_entity_desc: "Optionnel.",
         editor_mode_smarthome4u_title: "Boiler Smart Home 4U",
         editor_mode_smarthome4u_desc: "Profil personnalise. Les parametres seront definis selon votre logique exacte.",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",

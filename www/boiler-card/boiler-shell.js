@@ -82,6 +82,49 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: none !important;
         }
 
+        .dolphin-top-actions {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 8px;
+          flex-wrap: wrap;
+          z-index: 7;
+        }
+
+        .dolphin-top-actions[hidden] {
+          display: none !important;
+        }
+
+        .dolphin-action-btn[hidden] {
+          display: none !important;
+        }
+
+        .dolphin-action-btn.dolphin-action-active {
+          border-color: rgba(56, 189, 248, 0.85);
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+        }
+
+        .dolphin-shower-group {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          flex-wrap: wrap;
+        }
+
+        .dolphin-shower-group[hidden] {
+          display: none !important;
+        }
+
+        .dolphin-shower-group .dolphin-shower-btn {
+          min-width: 28px;
+          font-size: 0.72rem;
+          font-weight: 600;
+        }
+
         .smarthome-icon-btn {
           width: 30px;
           height: 30px;
@@ -2639,6 +2682,12 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             left: 8px;
           }
 
+          .dolphin-top-actions {
+            top: 8px;
+            left: 8px;
+            right: 8px;
+          }
+
           .boiler-visual {
             grid-template-columns: minmax(92px, 26vw) minmax(0, 1fr);
             gap: 10px;
@@ -2984,6 +3033,12 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
             width: calc(100% - 14px);
           }
 
+          .dolphin-top-actions {
+            top: 7px;
+            left: 7px;
+            right: 7px;
+          }
+
           .smarthome-icon-btn {
             width: 28px;
             height: 28px;
@@ -3309,6 +3364,18 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
         <div class="smarthome-top-actions" id="smarthome-top-actions" hidden>
           <button type="button" class="smarthome-icon-btn" id="smarthome-boost-btn" aria-label="Boost time">⏱</button>
           <button type="button" class="smarthome-icon-btn" id="smarthome-settings-btn" aria-label="Settings">⚙</button>
+        </div>
+        <div class="dolphin-top-actions" id="dolphin-top-actions" hidden>
+          <button type="button" class="smarthome-icon-btn dolphin-action-btn" id="dolphin-sabbath-btn" hidden aria-label="Sabbath">✡</button>
+          <button type="button" class="smarthome-icon-btn dolphin-action-btn" id="dolphin-fixed-temp-btn" hidden aria-label="Fixed temperature">🌡</button>
+          <div class="dolphin-shower-group" id="dolphin-shower-group" hidden>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-1-btn" hidden aria-label="Shower 1">1</button>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-2-btn" hidden aria-label="Shower 2">2</button>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-3-btn" hidden aria-label="Shower 3">3</button>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-4-btn" hidden aria-label="Shower 4">4</button>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-5-btn" hidden aria-label="Shower 5">5</button>
+            <button type="button" class="smarthome-icon-btn dolphin-action-btn dolphin-shower-btn" id="dolphin-shower-6-btn" hidden aria-label="Shower 6">6</button>
+          </div>
         </div>
         <div class="wrap">
           <div class="row">

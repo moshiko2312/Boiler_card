@@ -29,7 +29,7 @@ export const HEBCAL_CITY_META = [
 export const DEFAULT_CONFIG = {
   title: "דוד מים חמים",
   language: "he",
-  /** @type {""|"standard"|"switcher_touch"|"boiler_smarthome4u"} */
+  /** @type {""|"standard"|"switcher_touch"|"boiler_smarthome4u"|"dolphin"} */
   device_profile: "",
   switcher_mode: false,
   boiler_entity: "",
@@ -50,6 +50,16 @@ export const DEFAULT_CONFIG = {
   switcher_sensor_2: "",
   switcher_icon_sensor: "",
   switcher_timer_values: "15,30,45,60",
+  /** Optional Dolphin integration: quick toggles (entity ids under domain `dolphin.*`). */
+  dolphin_sabbath_entity: "",
+  dolphin_fixed_temperature_entity: "",
+  /** Shower preset switches (Dolphin drop1…drop6). */
+  dolphin_shower_entity: "",
+  dolphin_shower_2_entity: "",
+  dolphin_shower_3_entity: "",
+  dolphin_shower_4_entity: "",
+  dolphin_shower_5_entity: "",
+  dolphin_shower_6_entity: "",
   timer_values: "15,30,60",
   card_theme: "dark_glass",
   ui_scale_percent: 100,

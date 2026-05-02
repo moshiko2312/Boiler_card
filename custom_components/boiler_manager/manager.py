@@ -1173,7 +1173,62 @@ class BoilerManager:
             return
 
         domain = entity_id.split(".", 1)[0]
+        if domain == "climate":
+            await self._async_turn_on_climate_entity(entity_id)
+            return
+
         await self._async_call_action(domain, "turn_on", entity_id)
+
+    async def _async_turn_on_climate_entity(self, entity_id: str) -> None:
+        """Heat a climate entity; many water-heater climates omit ``climate.turn_on``."""
+        state = self.hass.states.get(entity_id)
+        modes_raw = (state.attributes.get("hvac_modes") if state else None) or []
+        modes = [str(m).strip().lower() for m in modes_raw if str(m).strip()]
+
+        if not modes or not self.hass.services.has_service("climate", "set_hvac_mode"):
+            await self._async_call_action("climate", "turn_on", entity_id)
+            return
+
+        preferred = (
+            "heat",
+            "auto",
+            "heat_cool",
+            "cool",
+            "dry",
+            "fan_only",
+        )
+        target_mode: str | None = None
+        for candidate in preferred:
+            if candidate in modes:
+                target_mode = candidate
+                break
+        if target_mode is None:
+            for mode in modes:
+                if mode != "off":
+                    target_mode = mode
+                    break
+
+        if target_mode is None:
+            await self._async_call_action("climate", "turn_on", entity_id)
+            return
+
+        canonical = next(
+            (str(m) for m in modes_raw if str(m).strip().lower() == target_mode),
+            target_mode,
+        )
+        try:
+            await self.hass.services.async_call(
+                "climate",
+                "set_hvac_mode",
+                {"entity_id": entity_id, "hvac_mode": canonical},
+                blocking=True,
+            )
+        except HomeAssistantError:
+            _LOGGER.debug(
+                "climate.set_hvac_mode failed for %s, trying climate.turn_on",
+                entity_id,
+            )
+            await self._async_call_action("climate", "turn_on", entity_id)
 
     async def _async_turn_on_timed_entity(self, seconds: int) -> None:
         """Turn on managed entity for a timed session.

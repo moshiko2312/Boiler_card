@@ -52,6 +52,7 @@ import {
   resolveControlService,
 } from "./boiler-control-services.js";
 import { isEntityOn, stateListFromConfig } from "./boiler-entity-state-utils.js";
+import { resolveDolphinElectricCurrentSensorId } from "./boiler-dolphin-utils.js";
 
 const DEFAULT_DURATION_OPTIONS = [
   "15m",
@@ -206,6 +207,18 @@ class BoilerWaterCard extends HTMLElement {
       smarthomeTopActions: this.shadowRoot.getElementById("smarthome-top-actions"),
       smarthomeBoostBtn: this.shadowRoot.getElementById("smarthome-boost-btn"),
       smarthomeSettingsBtn: this.shadowRoot.getElementById("smarthome-settings-btn"),
+      dolphinTopActions: this.shadowRoot.getElementById("dolphin-top-actions"),
+      dolphinShowerGroup: this.shadowRoot.getElementById("dolphin-shower-group"),
+      dolphinSabbathBtn: this.shadowRoot.getElementById("dolphin-sabbath-btn"),
+      dolphinFixedTempBtn: this.shadowRoot.getElementById("dolphin-fixed-temp-btn"),
+      dolphinShowerBtns: [
+        this.shadowRoot.getElementById("dolphin-shower-1-btn"),
+        this.shadowRoot.getElementById("dolphin-shower-2-btn"),
+        this.shadowRoot.getElementById("dolphin-shower-3-btn"),
+        this.shadowRoot.getElementById("dolphin-shower-4-btn"),
+        this.shadowRoot.getElementById("dolphin-shower-5-btn"),
+        this.shadowRoot.getElementById("dolphin-shower-6-btn"),
+      ],
       quickTimerBtns: [],
       quickOffBtn: null,
       tasksTitle: this.shadowRoot.getElementById("tasks-title"),
@@ -421,6 +434,26 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.timerModalBackdrop.addEventListener("click", () => this._closeTimerModal());
     this._elements.smarthomeBoostBtn?.addEventListener("click", () => this._openSmarthomeBoostModal());
     this._elements.smarthomeSettingsBtn?.addEventListener("click", () => this._openSmarthomeSettingsModal());
+    this._elements.dolphinSabbathBtn?.addEventListener("click", () => {
+      this._toggleDolphinSwitch(String(this._config?.dolphin_sabbath_entity || "").trim());
+    });
+    this._elements.dolphinFixedTempBtn?.addEventListener("click", () => {
+      this._toggleDolphinSwitch(String(this._config?.dolphin_fixed_temperature_entity || "").trim());
+    });
+    const dolphinShowerKeys = [
+      "dolphin_shower_entity",
+      "dolphin_shower_2_entity",
+      "dolphin_shower_3_entity",
+      "dolphin_shower_4_entity",
+      "dolphin_shower_5_entity",
+      "dolphin_shower_6_entity",
+    ];
+    (this._elements.dolphinShowerBtns || []).forEach((btn, index) => {
+      btn?.addEventListener("click", () => {
+        const key = dolphinShowerKeys[index];
+        this._toggleDolphinSwitch(String(this._config?.[key] || "").trim());
+      });
+    });
     this._elements.smarthomeBoostModalBackdrop?.addEventListener("click", () => this._closeSmarthomeBoostModal());
     this._elements.smarthomeBoostModalCloseBtn?.addEventListener("click", () => this._closeSmarthomeBoostModal());
     this._elements.smarthomeBoostModalCancelBtn?.addEventListener("click", () => this._closeSmarthomeBoostModal());
@@ -900,6 +933,7 @@ class BoilerWaterCard extends HTMLElement {
     this._syncControls(boiler, managerMode);
     this._syncChildLockIndicator();
     this._syncSmarthome4uControls();
+    this._syncDolphinControls();
     this._syncScheduleList();
     this._syncHistoryList(managerMode);
   }
@@ -1081,6 +1115,14 @@ class BoilerWaterCard extends HTMLElement {
     if (this._isVacationModeEnabled(managerMode)) {
       this._elements.subtitle.textContent = this._t("subtitle_ready");
       return;
+    }
+
+    if (this._isDolphinProfile() && boiler) {
+      const rawState = String(boiler.state || "").trim().toLowerCase();
+      if (rawState === "unavailable") {
+        this._elements.subtitle.textContent = this._t("dolphin_climate_unavailable");
+        return;
+      }
     }
 
     if (this._usesExtendedTimerUi()) {
@@ -1289,7 +1331,17 @@ class BoilerWaterCard extends HTMLElement {
 
     return defs
       .map(({ key, fallbackLabel }) => {
-        const entityId = String(this._config?.[key] || "").trim();
+        let entityId = String(this._config?.[key] || "").trim();
+        if (
+          key === "current_sensor"
+          && !this._isConfiguredSensorEntity(entityId)
+          && this._isDolphinProfile()
+        ) {
+          entityId = resolveDolphinElectricCurrentSensorId(
+            String(this._config?.boiler_entity || "").trim(),
+            this._hass?.states || {},
+          );
+        }
         return { label: fallbackLabel, entityId };
       })
       .filter(({ entityId }) => this._isConfiguredSensorEntity(entityId));
@@ -1463,6 +1515,95 @@ class BoilerWaterCard extends HTMLElement {
     if (this._elements.smarthomeSettingsModalSaveBtn) {
       this._elements.smarthomeSettingsModalSaveBtn.textContent = this._t("task_save");
     }
+  }
+
+  _syncDolphinControls() {
+    const wrap = this._elements.dolphinTopActions;
+    if (!wrap) {
+      return;
+    }
+
+    const isProfile = this._isDolphinProfile();
+    const sabbathId = String(this._config?.dolphin_sabbath_entity || "").trim();
+    const fixedId = String(this._config?.dolphin_fixed_temperature_entity || "").trim();
+    const showerKeys = [
+      "dolphin_shower_entity",
+      "dolphin_shower_2_entity",
+      "dolphin_shower_3_entity",
+      "dolphin_shower_4_entity",
+      "dolphin_shower_5_entity",
+      "dolphin_shower_6_entity",
+    ];
+    const showerLabelKeys = [
+      "dolphin_toggle_shower_1",
+      "dolphin_toggle_shower_2",
+      "dolphin_toggle_shower_3",
+      "dolphin_toggle_shower_4",
+      "dolphin_toggle_shower_5",
+      "dolphin_toggle_shower_6",
+    ];
+    const anyShower = showerKeys.some((key) => this._isConfiguredSensorEntity(String(this._config?.[key] || "").trim()));
+    const anyConfigured = !!(sabbathId || fixedId || anyShower);
+
+    wrap.hidden = !isProfile || !anyConfigured;
+    if (this._elements.dolphinShowerGroup) {
+      this._elements.dolphinShowerGroup.hidden = !isProfile || !anyShower;
+    }
+
+    const bind = (button, entityId, labelKey) => {
+      if (!button) {
+        return;
+      }
+      const has = this._isConfiguredSensorEntity(entityId);
+      button.hidden = !isProfile || !has;
+      if (!has) {
+        return;
+      }
+      const label = this._t(labelKey);
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      const st = this._hass?.states?.[entityId];
+      const unavailable = !st || ["unknown", "unavailable"].includes(String(st.state || "").trim().toLowerCase());
+      button.disabled = !this._hass || unavailable;
+      button.classList.toggle("dolphin-action-active", !!(st && this._isEntityOn(st)));
+    };
+
+    bind(this._elements.dolphinSabbathBtn, sabbathId, "dolphin_toggle_sabbath");
+    bind(this._elements.dolphinFixedTempBtn, fixedId, "dolphin_toggle_fixed_temp");
+    const showerBtns = this._elements.dolphinShowerBtns || [];
+    showerKeys.forEach((key, index) => {
+      bind(showerBtns[index], String(this._config?.[key] || "").trim(), showerLabelKeys[index]);
+    });
+  }
+
+  _toggleDolphinSwitch(entityId) {
+    if (!this._hass || !this._isConfiguredSensorEntity(entityId)) {
+      return;
+    }
+
+    const state = this._hass.states?.[entityId];
+    if (!state) {
+      return;
+    }
+
+    const [domain] = entityId.split(".", 1);
+    const turnOn = !this._isEntityOn(state);
+    const service = turnOn ? "turn_on" : "turn_off";
+
+    const run = () => {
+      if (this._isServiceAvailable(`${domain}.${service}`)) {
+        return this._hass.callService(domain, service, { entity_id: entityId });
+      }
+      if (this._isServiceAvailable(`homeassistant.${service}`)) {
+        return this._hass.callService("homeassistant", service, { entity_id: entityId });
+      }
+      if (this._isServiceAvailable("homeassistant.toggle")) {
+        return this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+      }
+      return Promise.resolve();
+    };
+
+    void run().catch(() => {});
   }
 
   _syncChildLockIndicator() {
@@ -1899,26 +2040,61 @@ class BoilerWaterCard extends HTMLElement {
     }
 
     const sensorEntityId = this._temperatureSensorEntityId();
-    if (!this._isConfiguredSensorEntity(sensorEntityId)) {
+    if (this._isConfiguredSensorEntity(sensorEntityId)) {
+      const sensor = this._hass.states[sensorEntityId];
+      const parsed = this._parseNumericEntityState(sensor);
+      if (!parsed) {
+        return null;
+      }
+
+      const celsiusValue = this._toCelsius(parsed.value, parsed.unit);
+      if (!Number.isFinite(celsiusValue)) {
+        return null;
+      }
+      const progress = this._temperatureProgressFromCelsius(celsiusValue);
+
+      return {
+        progress,
+        celsiusValue,
+        displayLabel: this._formatTemperatureDisplay(parsed.rawState, parsed.unit, celsiusValue),
+      };
+    }
+
+    if (this._isDolphinProfile()) {
+      return this._liveTemperatureFromClimateBoiler();
+    }
+
+    return null;
+  }
+
+  _liveTemperatureFromClimateBoiler() {
+    const boilerId = String(this._config?.boiler_entity || "").trim();
+    if (!boilerId.startsWith("climate.") || !this._hass?.states) {
       return null;
     }
 
-    const sensor = this._hass.states[sensorEntityId];
-    const parsed = this._parseNumericEntityState(sensor);
-    if (!parsed) {
+    const state = this._hass.states[boilerId];
+    const raw = state?.attributes?.current_temperature;
+    if (raw === undefined || raw === null || raw === "") {
       return null;
     }
 
-    const celsiusValue = this._toCelsius(parsed.value, parsed.unit);
+    const num = Number.parseFloat(String(raw).replace(",", "."));
+    if (!Number.isFinite(num)) {
+      return null;
+    }
+
+    const unitRaw = String(state?.attributes?.temperature_unit || "°C").trim();
+    const celsiusValue = this._toCelsius(num, unitRaw);
     if (!Number.isFinite(celsiusValue)) {
       return null;
     }
-    const progress = this._temperatureProgressFromCelsius(celsiusValue);
 
+    const progress = this._temperatureProgressFromCelsius(celsiusValue);
     return {
       progress,
       celsiusValue,
-      displayLabel: this._formatTemperatureDisplay(parsed.rawState, parsed.unit, celsiusValue),
+      displayLabel: this._formatTemperatureDisplay(String(raw), unitRaw, celsiusValue),
     };
   }
 
@@ -3149,6 +3325,11 @@ class BoilerWaterCard extends HTMLElement {
         image: "/local/boiler-card/boiler-smarthome4u.png",
         title: this._t("guide_profile_smarthome_title"),
         desc: this._t("guide_profile_smarthome_desc"),
+      },
+      {
+        image: "/local/boiler-card/boiler-dolphin.png",
+        title: this._t("guide_profile_dolphin_title"),
+        desc: this._t("guide_profile_dolphin_desc"),
       },
     ];
     mount.innerHTML = cards.map((item) => `
@@ -6369,8 +6550,18 @@ class BoilerWaterCard extends HTMLElement {
   }
 
   _isEntityOn(entity) {
+    const boilerId = String(this._config?.boiler_entity || "").trim().toLowerCase();
+    const entityId = String(entity?.entity_id || "").trim().toLowerCase();
+    let stateOnValues = this._config.state_on_values;
+    if (entityId && boilerId === entityId && boilerId.startsWith("climate.")) {
+      const configured = stateListFromConfig(stateOnValues, ["on"]);
+      const stillDefault = configured.length === 1 && configured[0] === "on";
+      if (stillDefault) {
+        stateOnValues = ["heat", "cool", "auto", "heat_cool", "dry", "fan_only"];
+      }
+    }
     return isEntityOn(entity, {
-      stateOnValues: this._config.state_on_values,
+      stateOnValues,
       stateOffValues: this._config.state_off_values,
     });
   }
@@ -6493,7 +6684,12 @@ class BoilerWaterCard extends HTMLElement {
 
   _deviceProfile() {
     const raw = String(this._config?.device_profile || "").trim().toLowerCase();
-    if (raw === "switcher_touch" || raw === "boiler_smarthome4u" || raw === "standard") {
+    if (
+      raw === "switcher_touch"
+      || raw === "boiler_smarthome4u"
+      || raw === "standard"
+      || raw === "dolphin"
+    ) {
       return raw;
     }
     if (this._asTruthy(this._config?.switcher_mode)) {
@@ -6534,6 +6730,9 @@ class BoilerWaterCard extends HTMLElement {
     if (profile === "boiler_smarthome4u") {
       return "/local/boiler-card/boiler-smarthome4u.png";
     }
+    if (profile === "dolphin") {
+      return "/local/boiler-card/boiler-dolphin.png";
+    }
     return "/local/boiler-card/boiler-flow.png";
   }
 
@@ -6543,6 +6742,10 @@ class BoilerWaterCard extends HTMLElement {
 
   _isSmarthome4uProfile() {
     return this._deviceProfile() === "boiler_smarthome4u";
+  }
+
+  _isDolphinProfile() {
+    return this._deviceProfile() === "dolphin";
   }
 
   /** Switcher Touch only: alternate control services and sensor row layout. */

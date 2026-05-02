@@ -15,6 +15,7 @@ Custom boiler control solution for Home Assistant with:
   - Uses `boiler_manager` timed/continuous/off services when available
   - Falls back to native `switcher_kis.turn_on_with_timer` / `homeassistant.turn_on` / `homeassistant.turn_off` when needed
 - Card UI languages: `he` / `en` / `ru` / `fr`
+- Optional **Dolphin** device profile for the [Dolphin](https://github.com/0xAlon/dolphin) integration (`device_profile: dolphin`); details in [CHANGELOG.md](CHANGELOG.md) and section **4.3** below.
 
 ## What You Get
 
@@ -409,6 +410,45 @@ boiler_entity: switch.tanur_orim_uri
 ```
 
 Backward compatibility: existing cards with `switcher_mode: true` and no `device_profile` are still treated as **Switcher Touch**. Explicit `device_profile: switcher_touch` is optional but keeps the profile clear in YAML.
+
+### 4.3) Optional: Dolphin (climate)
+
+Use `device_profile: dolphin` with the [Dolphin](https://github.com/0xAlon/dolphin) custom integration. Set `boiler_entity` to the **climate** entity that controls the heater (not a switch).
+
+**Timers and Boiler Manager:** Quick timers and built-in services (`boiler_manager.run_timed`, `turn_on_continuous`, `turn_off`) still drive the **same** `boiler_entity`. They do not mirror Dolphin’s own app timers unless the device behaves that way through Home Assistant. You need the **Boiler Manager** integration configured with the same `boiler_entity` (or compatible YAML services) for those actions to work.
+
+**Temperature:** If `temperature_sensor` is empty, the card reads `current_temperature` from the climate entity.
+
+**Electric current:** If `current_sensor` is empty, the card tries to pick a single matching `dolphin.*_electric_current` entity (exact match on `climate.<id>` → `dolphin.<id>_electric_current`, or one unambiguous candidate). If several devices exist and names do not line up, set `current_sensor` explicitly.
+
+**Sabbath / unavailable:** When Dolphin marks the climate entity `unavailable` (for example during Sabbath mode in the integration), the card shows a short subtitle instead of the normal heating status.
+
+**Quick toggles:** Optional entity fields add top-row buttons for Sabbath mode, fixed temperature, and up to six shower presets (`drop1`…`drop6`).
+
+```yaml
+type: custom:boiler-water-card
+device_profile: dolphin
+switcher_mode: false
+boiler_entity: climate.dolphin_...
+# Optional: map Dolphin integration entities for quick toggles on the card
+# dolphin_sabbath_entity: dolphin.mydevice_sabbath_mode
+# dolphin_fixed_temperature_entity: dolphin.mydevice_fixed_temperature
+# dolphin_shower_entity: dolphin.mydevice_drop1
+# dolphin_shower_2_entity: dolphin.mydevice_drop2
+# dolphin_shower_3_entity: dolphin.mydevice_drop3
+# dolphin_shower_4_entity: dolphin.mydevice_drop4
+# dolphin_shower_5_entity: dolphin.mydevice_drop5
+# dolphin_shower_6_entity: dolphin.mydevice_drop6
+# Optional: override temperature source; if omitted, the card uses the climate entity's current_temperature
+# temperature_sensor: sensor.some_external_probe
+# current_sensor: dolphin.mydevice_electric_current
+```
+
+**Tests (Dolphin heuristics):** from the repo root, run:
+
+```bash
+node --test tests/dolphin-utils.test.mjs
+```
 
 ## Card Usage Guide
 
