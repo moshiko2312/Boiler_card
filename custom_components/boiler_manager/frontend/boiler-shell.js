@@ -1492,6 +1492,180 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           display: none !important;
         }
 
+        /* Quiet controls: checkboxes and a collapsed dropdown instead of coloured buttons */
+        .schedule-check {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 36px;
+          padding: 0 4px;
+          font-size: 0.86rem;
+          font-weight: 700;
+          color: inherit;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .schedule-check-compact {
+          min-height: 30px;
+          font-size: 0.78rem;
+          color: var(--boiler-muted);
+        }
+
+        .timer-modal-panel input.schedule-check-input {
+          appearance: auto !important;
+          -webkit-appearance: auto !important;
+          width: 18px;
+          height: 18px;
+          min-height: 0;
+          margin: 0;
+          padding: 0;
+          flex: none;
+          border: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          accent-color: #3b82f6;
+          cursor: pointer;
+        }
+
+        .schedule-sun-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+          gap: 6px;
+          min-width: 0;
+          align-items: end;
+        }
+
+        /* "before / after" caption above the offset minutes */
+        .schedule-sun-offset-wrap {
+          display: grid;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .schedule-sun-offset-caption {
+          font-size: 0.66rem;
+          line-height: 1;
+          min-height: 0.7rem;
+          text-align: center;
+          color: var(--boiler-muted);
+          font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .schedule-sun-row[hidden] {
+          display: none;
+        }
+
+        .schedule-dropdown-toggle {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          min-height: 38px;
+          padding: 6px 10px;
+          border: 1px solid rgba(154, 184, 219, 0.7);
+          border-radius: 10px;
+          background: rgba(248, 252, 255, 0.95);
+          color: #1f2e44;
+          font-size: 0.9rem;
+          font-weight: 700;
+          text-align: start;
+          cursor: pointer;
+          box-sizing: border-box;
+        }
+
+        .schedule-dropdown-summary {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .schedule-dropdown-chevron {
+          flex: none;
+          font-size: 1.1rem;
+          line-height: 1;
+          opacity: 0.8;
+        }
+
+        .schedule-dropdown-toggle[aria-expanded="true"] .schedule-dropdown-chevron {
+          transform: rotate(180deg);
+        }
+
+        .schedule-dropdown-panel {
+          display: grid;
+          gap: 2px;
+          margin-top: 6px;
+          padding: 6px 8px;
+          border: 1px solid rgba(154, 184, 219, 0.4);
+          border-radius: 10px;
+          min-width: 0;
+        }
+
+        .schedule-dropdown-panel[hidden] {
+          display: none;
+        }
+
+        .schedule-dropdown-panel .schedule-check-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          min-width: 0;
+        }
+
+        #schedule-targets-field[hidden] {
+          display: none;
+        }
+
+        .timeline-generator {
+          display: grid;
+          gap: 6px;
+          padding: 8px;
+          margin-bottom: 8px;
+          border: 1px dashed rgba(122, 183, 230, 0.7);
+          border-radius: 10px;
+          min-width: 0;
+        }
+
+        .timeline-generator-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .timeline-generator-field {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .timeline-generator-field-label {
+          font-size: 0.72rem;
+          color: var(--boiler-muted);
+          font-weight: 700;
+        }
+
+        .timeline-generator-actions {
+          display: grid;
+          gap: 4px;
+        }
+
+        .timeline-generator-error {
+          margin: 0;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--boiler-danger);
+        }
+
+        .timeline-generator-error[hidden] {
+          display: none;
+        }
+
         .timeline-points {
           display: grid;
           gap: 7px;
@@ -1500,30 +1674,72 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
 
         .timeline-point-row {
           display: grid;
-          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(86px, 96px);
+          grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto auto;
           gap: 6px;
           align-items: center;
           min-width: 0;
         }
 
+        /* In a timeline row the offset only ever holds "-120".."120": keep it narrow so the sun select stays readable */
+        .timeline-point-sun-row {
+          grid-template-columns: minmax(0, 1fr) 58px;
+        }
+
+        /* Sun-based rows need more room for "sunrise/sunset + offset" than a plain clock.
+           The offset caption adds height above its input, so align every control to the
+           bottom edge to keep them on one line. */
+        .timeline-point-row.is-sun,
+        .schedule-control-row.is-sun {
+          align-items: end;
+        }
+
+        .timeline-point-row.is-sun {
+          grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) auto auto;
+        }
+
+        .timeline-point-sun-event {
+          padding-inline: 6px;
+        }
+
+        /* Duration select + "Custom…" minutes input */
+        .timeline-duration-wrap {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .timeline-duration-wrap.is-custom {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .timeline-duration-custom[hidden] {
+          display: none;
+        }
+
+        .timeline-point-sun {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          min-height: 36px;
+          padding: 0 2px;
+          font-size: 1rem;
+          line-height: 1;
+          cursor: pointer;
+          user-select: none;
+        }
+
         .timeline-point-time,
-        .timeline-point-duration,
-        .timeline-point-remove {
+        .timeline-point-sun-offset,
+        .timeline-point-duration {
           width: 100%;
           min-width: 0;
           box-sizing: border-box;
         }
 
+        /* Remove is a neutral ✕ icon button, same look as the field clear buttons */
         .timeline-point-remove {
-          border: 1px solid rgba(220, 161, 161, 0.85);
-          border-radius: 8px;
-          min-height: 36px;
-          padding: 0 10px;
-          font-size: 0.78rem;
-          font-weight: 700;
-          color: #7b2323;
-          background: linear-gradient(165deg, #f7dddd, #f2c7c7);
-          cursor: pointer;
+          flex: none;
         }
 
         .timeline-point-add {
@@ -2904,6 +3120,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           }
 
           #schedule-modal .timeline-points input.schedule-time-input.timeline-point-time,
+          #schedule-modal .timeline-points input.schedule-time-input.timeline-point-sun-offset,
           #schedule-modal .timeline-points select.timeline-point-duration {
             min-height: 34px;
             padding: 2px 6px;
@@ -3121,6 +3338,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           }
 
           #schedule-modal .timeline-points input.schedule-time-input.timeline-point-time,
+          #schedule-modal .timeline-points input.schedule-time-input.timeline-point-sun-offset,
           #schedule-modal .timeline-points select.timeline-point-duration {
             min-height: 32px;
             max-width: min(7.75rem, 36vw);
@@ -3503,6 +3721,14 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                 <button type="button" class="schedule-clear-btn" id="schedule-name-clear-btn" aria-label="Clear">✕</button>
               </div>
             </div>
+            <div class="schedule-field" id="schedule-targets-field" hidden>
+              <span class="schedule-label" id="schedule-targets-label">Targets</span>
+              <button type="button" class="schedule-dropdown-toggle" id="schedule-targets-toggle" aria-expanded="false">
+                <span class="schedule-dropdown-summary" id="schedule-targets-summary"></span>
+                <span class="schedule-dropdown-chevron" aria-hidden="true">⌄</span>
+              </button>
+              <div class="schedule-dropdown-panel" id="schedule-targets" hidden></div>
+            </div>
             <div class="schedule-category-switch" id="schedule-category-switch">
               <button type="button" class="schedule-section-btn active" id="schedule-category-time-btn">Time</button>
               <button type="button" class="schedule-section-btn" id="schedule-category-recurrence-btn">Recurrence</button>
@@ -3528,20 +3754,76 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                   <label class="schedule-label" for="schedule-start-input" id="schedule-start-label">Start</label>
                   <div class="schedule-control-row">
                     <input class="schedule-input schedule-time-input" id="schedule-start-input" type="time" dir="ltr" />
+                    <div class="schedule-sun-row" id="schedule-start-sun-row" hidden>
+                      <select class="schedule-select schedule-sun-event" id="schedule-start-sun-event">
+                        <option value="sunrise">Sunrise</option>
+                        <option value="sunset">Sunset</option>
+                      </select>
+                      <div class="schedule-sun-offset-wrap">
+                        <span class="schedule-sun-offset-caption" id="schedule-start-sun-offset-caption" aria-hidden="true"></span>
+                        <input class="schedule-input schedule-time-input schedule-sun-offset-input" id="schedule-start-sun-offset-input" type="number" inputmode="numeric" min="-120" max="120" step="1" value="0" dir="ltr" />
+                      </div>
+                    </div>
                     <button type="button" class="schedule-clear-btn" id="schedule-start-clear-btn" aria-label="Clear">✕</button>
                   </div>
+                  <label class="schedule-check schedule-check-compact" id="schedule-start-sun-check-label">
+                    <input type="checkbox" class="schedule-check-input" id="schedule-start-sun-enabled" />
+                    <span class="schedule-check-text" id="schedule-start-sun-check-text">Sunrise/sunset</span>
+                  </label>
                 </div>
                 <div class="schedule-field">
                   <label class="schedule-label" for="schedule-end-input" id="schedule-end-label">End</label>
                   <div class="schedule-control-row">
                     <input class="schedule-input schedule-time-input" id="schedule-end-input" type="time" dir="ltr" />
+                    <div class="schedule-sun-row" id="schedule-end-sun-row" hidden>
+                      <select class="schedule-select schedule-sun-event" id="schedule-end-sun-event">
+                        <option value="sunrise">Sunrise</option>
+                        <option value="sunset">Sunset</option>
+                      </select>
+                      <div class="schedule-sun-offset-wrap">
+                        <span class="schedule-sun-offset-caption" id="schedule-end-sun-offset-caption" aria-hidden="true"></span>
+                        <input class="schedule-input schedule-time-input schedule-sun-offset-input" id="schedule-end-sun-offset-input" type="number" inputmode="numeric" min="-120" max="120" step="1" value="0" dir="ltr" />
+                      </div>
+                    </div>
                     <select class="schedule-select" id="schedule-end-timer-select" hidden></select>
                     <button type="button" class="schedule-clear-btn" id="schedule-end-clear-btn" aria-label="Clear">✕</button>
                   </div>
+                  <label class="schedule-check schedule-check-compact" id="schedule-end-sun-check-label">
+                    <input type="checkbox" class="schedule-check-input" id="schedule-end-sun-enabled" />
+                    <span class="schedule-check-text" id="schedule-end-sun-check-text">Sunrise/sunset</span>
+                  </label>
                 </div>
               </div>
             </div>
             <div id="schedule-timeline-fields" class="schedule-timeline-fields" hidden>
+              <div class="timeline-generator" id="timeline-generator">
+                <span class="schedule-label" id="timeline-generator-label">Auto-fill</span>
+                <div class="timeline-generator-grid">
+                  <div class="timeline-generator-field">
+                    <label class="timeline-generator-field-label" for="timeline-generator-from" id="timeline-generator-from-label">From</label>
+                    <input class="schedule-input schedule-time-input" id="timeline-generator-from" type="time" dir="ltr" value="06:00" />
+                  </div>
+                  <div class="timeline-generator-field">
+                    <label class="timeline-generator-field-label" for="timeline-generator-to" id="timeline-generator-to-label">To</label>
+                    <input class="schedule-input schedule-time-input" id="timeline-generator-to" type="time" dir="ltr" value="23:00" />
+                  </div>
+                  <div class="timeline-generator-field">
+                    <label class="timeline-generator-field-label" for="timeline-generator-every" id="timeline-generator-every-label">Every</label>
+                    <select class="schedule-select" id="timeline-generator-every"></select>
+                  </div>
+                  <div class="timeline-generator-field">
+                    <label class="timeline-generator-field-label" for="timeline-generator-duration" id="timeline-generator-duration-label">Run for</label>
+                    <div class="timeline-duration-wrap">
+                      <select class="schedule-select" id="timeline-generator-duration"></select>
+                      <input class="schedule-input schedule-time-input timeline-duration-custom" id="timeline-generator-duration-custom" type="number" inputmode="numeric" min="1" max="1440" step="1" dir="ltr" hidden />
+                    </div>
+                  </div>
+                </div>
+                <div class="timeline-generator-actions">
+                  <button type="button" class="timeline-point-add" id="timeline-generator-btn">Generate points</button>
+                  <p class="timeline-generator-error" id="timeline-generator-error" hidden></p>
+                </div>
+              </div>
               <div class="schedule-field">
                 <span class="schedule-label" id="timeline-points-label">Timeline Points</span>
                 <div class="timeline-points" id="timeline-points"></div>

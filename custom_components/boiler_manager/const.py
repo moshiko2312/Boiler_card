@@ -13,6 +13,8 @@ CONF_POWER_SENSOR = "power_sensor"
 CONF_CURRENT_SENSOR = "current_sensor"
 CONF_HEBCAL_ENABLED = "hebcal_enabled"
 CONF_HEBCAL_CITY = "hebcal_city"
+# Extra entities (besides the main boiler entity) that tasks of this entry may target.
+CONF_ALLOWED_ENTITIES = "allowed_entities"
 
 DEFAULT_NAME = "Boiler Manager"
 DEFAULT_HEBCAL_CITY = "IL-Jerusalem"
@@ -62,6 +64,8 @@ ATTR_ENTRY_ID = "entry_id"
 ATTR_TASK_ID = "task_id"
 ATTR_TASK_NAME = "name"
 ATTR_TASK_TYPE = "task_type"
+# List of entity ids a task controls; empty = the entry's main boiler entity.
+ATTR_TARGET_ENTITIES = "target_entities"
 ATTR_TRIGGER_MODE = "trigger_mode"
 ATTR_HEBCAL_EVENT_KIND = "hebcal_event_kind"
 ATTR_HEBCAL_EVENT_PHASE = "hebcal_event_phase"

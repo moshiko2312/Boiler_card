@@ -141,6 +141,13 @@ create_schedule:
       name: Hebcal Offset Minutes
       description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
       example: -120
+    target_entities:
+      name: Target entities
+      description: Optional list of entities this task switches instead of the entry's boiler entity. Each must be the boiler entity or one of the entry's "Allowed task entities".
+      example: ["switch.boiler", "switch.heater"]
+      selector:
+        entity:
+          multiple: true
     enabled:
       name: Enabled
       description: Enable task on creation.
@@ -226,6 +233,13 @@ create_timeline:
       name: Hebcal Offset Minutes
       description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
       example: -90
+    target_entities:
+      name: Target entities
+      description: Optional list of entities this timeline switches instead of the entry's boiler entity. Each must be the boiler entity or one of the entry's "Allowed task entities".
+      example: ["switch.boiler", "switch.heater"]
+      selector:
+        entity:
+          multiple: true
     enabled:
       name: Enabled
       description: Enable timeline on creation.
@@ -326,6 +340,13 @@ update_schedule:
       name: Hebcal Offset Minutes
       description: Offset relative to event anchor in minutes (negative/positive, up to ±1440).
       example: 30
+    target_entities:
+      name: Target entities
+      description: Replace the task's target list. An empty list resets it to the entry's boiler entity. Each must be the boiler entity or one of the entry's "Allowed task entities".
+      example: ["switch.boiler", "switch.heater"]
+      selector:
+        entity:
+          multiple: true
     enabled:
       name: Enabled
       description: Enable/disable this task.

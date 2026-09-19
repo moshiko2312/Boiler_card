@@ -61,6 +61,8 @@ export const DEFAULT_CONFIG = {
   dolphin_shower_5_entity: "",
   dolphin_shower_6_entity: "",
   timer_values: "15,30,60",
+  /** Hide Holidays & Shabbat (Hebcal) features from the task editor, guide and card editor. */
+  simple_mode: false,
   card_theme: "dark_glass",
   ui_scale_percent: 100,
   mobile_popup_fullscreen: true,

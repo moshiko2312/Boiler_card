@@ -4,6 +4,9 @@ export function buildTaskMetaText(attrs, {
   normalizeConditionOperator,
   conditionOperatorLabel,
   hebcalTaskListCaption,
+  formatTimeValue = (value) => value,
+  formatTimelineLabel = (value) => value,
+  targetsCaption = "",
 }) {
   const localizedDays = formatScheduleDays(attrs?.days);
   const daysLabel = localizedDays ? ` · ${localizedDays}` : "";
@@ -15,12 +18,15 @@ export function buildTaskMetaText(attrs, {
     ? ` · ${t("condition_summary_prefix")} ${conditionEntity} ${conditionOperatorLabel(conditionOperator)} ${conditionValue}`
     : "";
   const hebcalCaption = hebcalTaskListCaption(attrs);
+  const targetsLabel = targetsCaption ? ` · ${targetsCaption}` : "";
 
   if (attrs?.task_type === "timeline") {
-    const timeline = String(attrs?.timeline_label || "").trim();
-    return `${timeline || "--"}${daysLabel}${conditionLabel}${hebcalCaption}`;
+    const timeline = formatTimelineLabel(String(attrs?.timeline_label || "").trim());
+    return `${timeline || "--"}${daysLabel}${targetsLabel}${conditionLabel}${hebcalCaption}`;
   }
-  return `${attrs?.start_time || "--:--"} - ${attrs?.end_time || "--:--"}${daysLabel}${conditionLabel}${hebcalCaption}`;
+  const start = formatTimeValue(String(attrs?.start_time || "").trim()) || "--:--";
+  const end = formatTimeValue(String(attrs?.end_time || "").trim()) || "--:--";
+  return `${start} - ${end}${daysLabel}${targetsLabel}${conditionLabel}${hebcalCaption}`;
 }
 
 export function formatHistoryLocalDateTime(isoOrRaw) {

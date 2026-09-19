@@ -19,6 +19,7 @@ from .const import (
     ATTR_HEBCAL_OFFSET_MINUTES,
     ATTR_TASK_ID,
     ATTR_TASK_TYPE,
+    ATTR_TARGET_ENTITIES,
     ATTR_TRIGGER_MODE,
     DOMAIN,
     signal_state_updated,
@@ -31,6 +32,7 @@ from .manager import (
     format_days_for_display,
     format_timeline_for_display,
 )
+from .targets import effective_targets
 
 
 async def async_setup_entry(
@@ -137,6 +139,7 @@ class BoilerTaskSwitch(SwitchEntity):
             ATTR_HEBCAL_EVENT_PHASE: task.hebcal_event_phase,
             ATTR_HEBCAL_HOLIDAY_MODE: task.hebcal_holiday_mode,
             ATTR_HEBCAL_OFFSET_MINUTES: task.hebcal_offset_minutes,
+            ATTR_TARGET_ENTITIES: effective_targets(task.target_entities, self._manager.boiler_entity),
             "start_time": task.start_time,
             "end_time": task.end_time,
             "days": task.days,

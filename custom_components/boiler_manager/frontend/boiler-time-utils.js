@@ -74,6 +74,44 @@ export function optionByMinutes(minutes, options) {
   return options.find((option) => optionToMinutes(option) === minutes) || null;
 }
 
+/** Sentinel value of the "Custom…" entry in duration selects. */
+export const CUSTOM_DURATION_OPTION = "__custom__";
+export const CUSTOM_DURATION_MAX_MINUTES = 1440;
+
+/** Free-text minutes for a custom duration: integer 1..1440, otherwise null. */
+export function customDurationMinutes(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > CUSTOM_DURATION_MAX_MINUTES) {
+    return null;
+  }
+  return parsed;
+}
+
+export function durationOptionForMinutes(minutes) {
+  return `${Number.parseInt(String(minutes), 10)}m`;
+}
+
+/**
+ * Turn a duration select value (preset option or the custom sentinel) plus the
+ * custom minutes input into {option, minutes}, or null when nothing valid is chosen.
+ */
+export function resolveDurationChoice(selectValue, customValue) {
+  const selected = String(selectValue ?? "").trim();
+  if (selected === CUSTOM_DURATION_OPTION) {
+    const minutes = customDurationMinutes(customValue);
+    return minutes === null ? null : { option: durationOptionForMinutes(minutes), minutes };
+  }
+  const minutes = optionToMinutes(selected);
+  if (!selected || !Number.isInteger(minutes) || minutes <= 0) {
+    return null;
+  }
+  return { option: selected, minutes };
+}
+
 export function optionToHhMmSs(value) {
   const totalMinutes = optionToMinutes(value);
   if (totalMinutes === null) {

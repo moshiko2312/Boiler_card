@@ -36,6 +36,14 @@ This folder contains the Lovelace frontend source for `boiler-water-card`.
   Config-driven entity on/off state normalization helpers.
 - `boiler-dolphin-utils.js`  
   Dolphin profile helpers (e.g. resolving `dolphin.*_electric_current` from the boiler climate entity id).
+- `boiler-sun-time.js`  
+  Schedule time value helpers: parse/format `HH:MM` and `sunrise`/`sunset` ± offset, local minutes-of-day resolution from `sun.sun`, ordering keys and localized labels.
+- `boiler-simple-mode.js`  
+  `simple_mode` config parsing and the rule for when Holidays & Shabbat controls are visible.
+- `boiler-timeline-generator.js`  
+  Timeline auto-fill: expands "from / to / every / run for" into ordinary timeline points, plus interval presets and labels.
+- `boiler-task-targets.js`  
+  Multi-entity task helpers: selectable targets from the Mode sensor, canonical selection, task-list caption and duplicate key.
 - `boiler-editor.js`  
   Card editor registration and editor UI/logic (`boiler-water-card-editor`).
 - `boiler-i18n.js`  
@@ -52,7 +60,7 @@ This folder contains the Lovelace frontend source for `boiler-water-card`.
 Repository root:
 
 ```bash
-node --test tests/dolphin-utils.test.mjs
+node --test tests/*.test.mjs
 ```
 
 ## Sync behavior

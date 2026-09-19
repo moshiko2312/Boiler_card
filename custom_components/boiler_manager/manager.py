@@ -25,6 +25,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import hebcal_cache
+from .targets import (
+    active_targets_map,
+    effective_targets,
+    normalize_target_entities,
+    secondary_transitions,
+    selectable_targets,
+    validate_targets_allowed,
+)
 from .const import (
     ATTR_CONDITION_OPERATOR,
     ATTR_CONDITION_ENTITY,
@@ -48,9 +56,11 @@ from .const import (
     ATTR_TASK_ID,
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
+    ATTR_TARGET_ENTITIES,
     ATTR_TRIGGER_MODE,
     ATTR_TIMELINE_POINTS,
     ATTR_SKIP_IF_STATE,
+    CONF_ALLOWED_ENTITIES,
     CONF_BOILER_ENTITY,
     CONF_CURRENT_SENSOR,
     CONF_HEBCAL_CITY,
@@ -129,6 +139,7 @@ STATE_KEY_MANUAL_UNTIL = "manual_until"
 STATE_KEY_MANUAL_DURATION_SECONDS = "manual_duration_seconds"
 STATE_KEY_VACATION_MODE = "vacation_mode"
 STATE_KEY_TASK_HISTORY = "task_history"
+STATE_KEY_SECONDARY_DRIVEN = "secondary_driven"
 TASK_HISTORY_MAX_BYTES = 2 * 1024 * 1024
 SWITCHER_TIMER_MAX_MINUTES = 150
 SWITCHER_TIMER_DOMAIN = "switcher_kis"
@@ -190,6 +201,8 @@ class BoilerTask:
     hebcal_holiday_mode: str | None = None
     hebcal_offset_minutes: int = 0
     timeline_points: list[BoilerTimelinePoint] = field(default_factory=list)
+    # Entities this task controls; empty list = the entry's main boiler entity.
+    target_entities: list[str] = field(default_factory=list)
     once_started: bool = False
 
     def as_dict(self) -> dict:
@@ -200,6 +213,7 @@ class BoilerTask:
             ATTR_START_TIME: self.start_time,
             ATTR_END_TIME: self.end_time,
             ATTR_TASK_TYPE: self.task_type,
+            ATTR_TARGET_ENTITIES: list(self.target_entities),
             ATTR_TIMELINE_POINTS: [point.as_dict() for point in self.timeline_points],
             ATTR_DAYS: self.days,
             ATTR_MONTHS: self.months,
@@ -243,6 +257,11 @@ class BoilerManager:
         self._vacation_mode = False
         self._schedule_driven = False
         self._active_task_ids: set[str] = set()
+        # True while an active task targets the main boiler entity.
+        self._main_schedule_active = False
+        # Non-main entities this manager turned on because of a task (persisted so
+        # they are released after a restart even if the task ended meanwhile).
+        self._secondary_driven: set[str] = set()
         self._task_history: list[dict] = []
         # Task ids temporarily skipped until the current active segment ends
         # (used for user-initiated OFF so the task resumes only on its next event).
@@ -260,6 +279,28 @@ class BoilerManager:
     def boiler_entity(self) -> str:
         """Main controlled entity."""
         return str(self.entry.options.get(CONF_BOILER_ENTITY) or self.entry.data.get(CONF_BOILER_ENTITY) or "").strip()
+
+    @property
+    def allowed_entities(self) -> list[str]:
+        """Extra entities (integration option) that tasks of this entry may target."""
+        raw = self.entry.options.get(CONF_ALLOWED_ENTITIES)
+        if raw is None:
+            raw = self.entry.data.get(CONF_ALLOWED_ENTITIES)
+        if isinstance(raw, str):
+            raw = [raw]
+        if not isinstance(raw, (list, tuple)):
+            return []
+        result: list[str] = []
+        for item in raw:
+            text = str(item or "").strip()
+            if text and "." in text and text not in result:
+                result.append(text)
+        return result
+
+    @property
+    def selectable_targets(self) -> list[str]:
+        """Main boiler entity followed by the allowed extras."""
+        return selectable_targets(self.boiler_entity, self.allowed_entities)
 
     @property
     def temperature_sensor(self) -> str | None:
@@ -318,7 +359,7 @@ class BoilerManager:
             return MODE_MANUAL_CONTINUOUS
         if self._manual_until and now < self._manual_until:
             return MODE_MANUAL_TIMED
-        if self._active_task_ids:
+        if self._main_schedule_active:
             return MODE_SCHEDULE
         return MODE_OFF
 
@@ -335,6 +376,17 @@ class BoilerManager:
                 if task_id in self._tasks
             ],
             "vacation_mode": self._vacation_mode,
+            "allowed_entities": self.selectable_targets,
+            "active_targets": sorted(
+                active_targets_map(
+                    (
+                        (task_id, self._tasks[task_id].target_entities)
+                        for task_id in self._active_task_ids
+                        if task_id in self._tasks
+                    ),
+                    self.boiler_entity,
+                )
+            ),
         }
         if self._manual_until:
             attrs["manual_until"] = dt_util.as_local(self._manual_until).isoformat()
@@ -484,10 +536,12 @@ class BoilerManager:
         hebcal_event_phase: str | None = None,
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
+        target_entities: list[str] | None = None,
         enabled: bool,
         history_user: str | None = None,
     ) -> BoilerTask:
         """Create a new schedule task."""
+        normalized_targets = self._normalize_targets(target_entities)
         normalized_start = _normalize_schedule_time_string(start_time)
         normalized_end = _normalize_schedule_time_string(end_time)
         normalized_days = _normalize_days(days)
@@ -545,6 +599,7 @@ class BoilerManager:
             hebcal_event_phase=normalized_hebcal_event_phase,
             hebcal_holiday_mode=normalized_hebcal_holiday_mode,
             hebcal_offset_minutes=normalized_hebcal_offset_minutes,
+            target_entities=normalized_targets,
             once_started=False,
         )
 
@@ -586,10 +641,12 @@ class BoilerManager:
         hebcal_event_phase: str | None = None,
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
+        target_entities: list[str] | None = None,
         enabled: bool,
         history_user: str | None = None,
     ) -> BoilerTask:
         """Create a new timeline task (multiple points on same day pattern)."""
+        normalized_targets = self._normalize_targets(target_entities)
         normalized_days = _normalize_days(days)
         normalized_months = _normalize_months(months)
         normalized_recurrence = _normalize_recurrence(recurrence)
@@ -647,6 +704,7 @@ class BoilerManager:
             hebcal_event_phase=normalized_hebcal_event_phase,
             hebcal_holiday_mode=normalized_hebcal_holiday_mode,
             hebcal_offset_minutes=normalized_hebcal_offset_minutes,
+            target_entities=normalized_targets,
             once_started=False,
         )
 
@@ -723,6 +781,7 @@ class BoilerManager:
         hebcal_event_phase: str | None = None,
         hebcal_holiday_mode: str | None = None,
         hebcal_offset_minutes: int | None = None,
+        target_entities: list[str] | None = None,
         enabled: bool | None = None,
         history_user: str | None = None,
         history_action: str | None = None,
@@ -849,6 +908,8 @@ class BoilerManager:
                     next_holiday_mode,
                     next_offset,
                 )
+            if target_entities is not None:
+                task.target_entities = self._normalize_targets(target_entities)
             if enabled is not None:
                 task.enabled = bool(enabled)
 
@@ -892,6 +953,15 @@ class BoilerManager:
         """Return one task by id."""
         return self._tasks.get(task_id)
 
+    def _normalize_targets(self, value: list[str] | None) -> list[str]:
+        """Normalize a task target list and check it against this entry's allowed entities."""
+        try:
+            normalized = normalize_target_entities(value, main_entity=self.boiler_entity)
+            validate_targets_allowed(normalized, self.selectable_targets)
+        except ValueError as err:
+            raise BoilerManagerError(str(err)) from err
+        return normalized
+
     def _ensure_no_duplicate_task(self, candidate: BoilerTask, *, exclude_task_id: str | None = None) -> None:
         """Block duplicate tasks with identical timing/day logic."""
         candidate_key = _task_duplicate_signature(candidate)
@@ -932,6 +1002,7 @@ class BoilerManager:
         for index, raw in enumerate(raw_tasks, start=1):
             try:
                 task = _task_from_import_raw(raw)
+                task.target_entities = self._normalize_targets(task.target_entities)
             except BoilerManagerError as err:
                 raise BoilerManagerError(f"Invalid imported task #{index}: {err}") from err
             imported_tasks.append(task)
@@ -1088,7 +1159,7 @@ class BoilerManager:
         self._cancel_timed_off()
         await self._async_save()
         await self._async_apply_schedule_state()
-        if not self._active_task_ids:
+        if not self._main_schedule_active:
             await self._async_turn_off_entity()
         self._async_notify_state()
 
@@ -1112,6 +1183,13 @@ class BoilerManager:
         previous_active = set(self._active_task_ids)
         active_tasks = self._tasks_active_now(now)
         self._active_task_ids = {task.task_id for task in active_tasks}
+        main_entity = self.boiler_entity
+        targets_now = active_targets_map(
+            ((task.task_id, task.target_entities) for task in active_tasks),
+            main_entity,
+        )
+        main_active = bool(main_entity) and main_entity in targets_now
+        self._main_schedule_active = main_active
         storage_changed = False
 
         for task in active_tasks:
@@ -1139,12 +1217,28 @@ class BoilerManager:
                 )
             storage_changed = True
 
+        # Secondary (non-main) targets: asserted on while a task targets them,
+        # released once no active task does. Manual/vacation logic stays main-only;
+        # vacation mode empties the active set, which releases them too.
+        turn_on, turn_off, driven = secondary_transitions(
+            previous_driven=self._secondary_driven,
+            active_targets=set(targets_now),
+            main_entity=main_entity,
+        )
+        if driven != self._secondary_driven:
+            self._secondary_driven = driven
+            storage_changed = True
+        for entity_id in turn_off:
+            await self._async_turn_off_entity(entity_id)
+        for entity_id in turn_on:
+            await self._async_turn_on_entity(entity_id)
+
         if storage_changed:
             await self._async_save()
 
-        # If a scheduled task becomes active while manual timed mode is running,
-        # schedule should take over immediately.
-        if self._manual_until and self._active_task_ids:
+        # If a scheduled task for the main entity becomes active while manual
+        # timed mode is running, schedule should take over immediately.
+        if self._manual_until and main_active:
             self._manual_until = None
             self._manual_duration_seconds = None
             self._cancel_timed_off()
@@ -1154,7 +1248,7 @@ class BoilerManager:
         if manual_active:
             return
 
-        if self._active_task_ids:
+        if main_active:
             self._schedule_driven = True
             await self._async_turn_on_entity()
             return
@@ -1163,11 +1257,11 @@ class BoilerManager:
             await self._async_turn_off_entity()
             self._schedule_driven = False
         elif previous_active != self._active_task_ids:
-            self._schedule_driven = bool(self._active_task_ids)
+            self._schedule_driven = False
 
-    async def _async_turn_on_entity(self) -> None:
-        """Turn on managed boiler entity."""
-        entity_id = self.boiler_entity
+    async def _async_turn_on_entity(self, entity_id: str | None = None) -> None:
+        """Turn on the managed boiler entity (default) or another task target."""
+        entity_id = str(entity_id or self.boiler_entity or "").strip()
         if not entity_id:
             _LOGGER.warning("No boiler entity configured")
             return
@@ -1270,9 +1364,9 @@ class BoilerManager:
 
         await self._async_turn_on_entity()
 
-    async def _async_turn_off_entity(self) -> None:
-        """Turn off managed boiler entity."""
-        entity_id = self.boiler_entity
+    async def _async_turn_off_entity(self, entity_id: str | None = None) -> None:
+        """Turn off the managed boiler entity (default) or another task target."""
+        entity_id = str(entity_id or self.boiler_entity or "").strip()
         if not entity_id:
             _LOGGER.warning("No boiler entity configured")
             return
@@ -1317,6 +1411,20 @@ class BoilerManager:
             return
 
         self._active_task_ids = active_ids
+
+        main_entity = self.boiler_entity
+        task_targets = effective_targets(task.target_entities, main_entity)
+        secondaries = [entity_id for entity_id in task_targets if entity_id != main_entity]
+        if secondaries:
+            self._secondary_driven.update(secondaries)
+            await self._async_save()
+            for entity_id in secondaries:
+                await self._async_turn_on_entity(entity_id)
+
+        if main_entity not in task_targets:
+            return
+
+        self._main_schedule_active = True
 
         if self._manual_continuous or self._manual_until is not None:
             return
@@ -1552,6 +1660,12 @@ class BoilerManager:
         self._manual_until = _parse_stored_datetime(raw.get(STATE_KEY_MANUAL_UNTIL))
         self._manual_duration_seconds = _parse_positive_int(raw.get(STATE_KEY_MANUAL_DURATION_SECONDS))
         self._vacation_mode = bool(raw.get(STATE_KEY_VACATION_MODE, False))
+        loaded_driven = raw.get(STATE_KEY_SECONDARY_DRIVEN, [])
+        self._secondary_driven = {
+            str(item).strip()
+            for item in (loaded_driven if isinstance(loaded_driven, list) else [])
+            if isinstance(item, str) and str(item).strip()
+        }
         loaded_history = raw.get(STATE_KEY_TASK_HISTORY, [])
         if isinstance(loaded_history, list):
             self._task_history = [row for row in loaded_history if isinstance(row, dict)][-3000:]
@@ -1585,6 +1699,7 @@ class BoilerManager:
             ),
             STATE_KEY_MANUAL_DURATION_SECONDS: self._manual_duration_seconds,
             STATE_KEY_VACATION_MODE: self._vacation_mode,
+            STATE_KEY_SECONDARY_DRIVEN: sorted(self._secondary_driven),
             STATE_KEY_TASK_HISTORY: self._task_history,
         }
         await self._store.async_save(payload)
@@ -1691,6 +1806,7 @@ def _task_from_raw(raw: dict) -> BoilerTask:
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
     once_started = bool(raw.get("once_started", False))
+    target_entities = _normalize_raw_target_entities(raw.get(ATTR_TARGET_ENTITIES))
 
     return BoilerTask(
         task_id=task_id,
@@ -1713,8 +1829,17 @@ def _task_from_raw(raw: dict) -> BoilerTask:
         hebcal_event_phase=hebcal_event_phase,
         hebcal_holiday_mode=hebcal_holiday_mode,
         hebcal_offset_minutes=hebcal_offset_minutes,
+        target_entities=target_entities,
         once_started=once_started,
     )
+
+
+def _normalize_raw_target_entities(value) -> list[str]:
+    """Parse a stored/imported target list (canonicalised against the main entity later)."""
+    try:
+        return normalize_target_entities(value, main_entity="")
+    except ValueError as err:
+        raise BoilerManagerError(str(err)) from err
 
 
 def _task_to_export_dict(task: BoilerTask) -> dict:
@@ -1739,6 +1864,7 @@ def _task_to_export_dict(task: BoilerTask) -> dict:
         ATTR_HEBCAL_EVENT_PHASE: task.hebcal_event_phase,
         ATTR_HEBCAL_HOLIDAY_MODE: task.hebcal_holiday_mode,
         ATTR_HEBCAL_OFFSET_MINUTES: int(task.hebcal_offset_minutes),
+        ATTR_TARGET_ENTITIES: list(task.target_entities),
     }
 
 
@@ -1779,6 +1905,7 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         raw.get(ATTR_HEBCAL_OFFSET_MINUTES),
     )
     enabled = bool(raw.get(ATTR_ENABLED, True))
+    target_entities = _normalize_raw_target_entities(raw.get(ATTR_TARGET_ENTITIES))
 
     if task_type == TASK_TYPE_TIMELINE:
         raw_points = raw.get(ATTR_TIMELINE_POINTS)
@@ -1828,6 +1955,7 @@ def _task_from_import_raw(raw: dict) -> BoilerTask:
         hebcal_event_phase=hebcal_event_phase,
         hebcal_holiday_mode=hebcal_holiday_mode,
         hebcal_offset_minutes=hebcal_offset_minutes,
+        target_entities=target_entities,
         once_started=False,
     )
 
@@ -2377,6 +2505,8 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
     start_date, end_date = _normalize_date_bounds(task.start_date, task.end_date, recurrence)
     range_start = start_date or ""
     range_end = end_date or ""
+    # Empty list is the canonical "main entity only", so it compares equal across tasks.
+    targets_key = ",".join(sorted(task.target_entities))
 
     if task_type == TASK_TYPE_TIMELINE:
         points = sorted(
@@ -2401,6 +2531,7 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
                 hebcal_phase or "",
                 hebcal_holiday_mode or "",
                 str(hebcal_offset),
+                targets_key,
             ]
         )
 
@@ -2421,6 +2552,7 @@ def _task_duplicate_signature(task: BoilerTask) -> str:
             hebcal_phase or "",
             hebcal_holiday_mode or "",
             str(hebcal_offset),
+            targets_key,
         ]
     )
 

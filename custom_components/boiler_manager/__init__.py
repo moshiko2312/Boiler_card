@@ -45,6 +45,7 @@ from .const import (
     ATTR_TASKS,
     ATTR_TASK_NAME,
     ATTR_TASK_TYPE,
+    ATTR_TARGET_ENTITIES,
     ATTR_TRIGGER_MODE,
     ATTR_TIMELINE_POINTS,
     ATTR_SKIP_IF_STATE,
@@ -120,6 +121,7 @@ CREATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HEBCAL_EVENT_PHASE): vol.In(HEBCAL_EVENT_PHASES),
         vol.Optional(ATTR_HEBCAL_HOLIDAY_MODE): vol.In(HEBCAL_HOLIDAY_MODES),
         vol.Optional(ATTR_HEBCAL_OFFSET_MINUTES): vol.Coerce(int),
+        vol.Optional(ATTR_TARGET_ENTITIES): vol.All(cv.ensure_list, [cv.entity_id]),
         vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -152,6 +154,7 @@ CREATE_TIMELINE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HEBCAL_EVENT_PHASE): vol.In(HEBCAL_EVENT_PHASES),
         vol.Optional(ATTR_HEBCAL_HOLIDAY_MODE): vol.In(HEBCAL_HOLIDAY_MODES),
         vol.Optional(ATTR_HEBCAL_OFFSET_MINUTES): vol.Coerce(int),
+        vol.Optional(ATTR_TARGET_ENTITIES): vol.All(cv.ensure_list, [cv.entity_id]),
         vol.Optional(ATTR_ENABLED, default=True): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -179,6 +182,7 @@ UPDATE_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HEBCAL_EVENT_PHASE): vol.In(HEBCAL_EVENT_PHASES),
         vol.Optional(ATTR_HEBCAL_HOLIDAY_MODE): vol.In(HEBCAL_HOLIDAY_MODES),
         vol.Optional(ATTR_HEBCAL_OFFSET_MINUTES): vol.Coerce(int),
+        vol.Optional(ATTR_TARGET_ENTITIES): vol.All(cv.ensure_list, [cv.entity_id]),
         vol.Optional(ATTR_ENABLED): cv.boolean,
     },
     extra=vol.PREVENT_EXTRA,
@@ -310,6 +314,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_event_phase=call.data.get(ATTR_HEBCAL_EVENT_PHASE),
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
+            target_entities=call.data.get(ATTR_TARGET_ENTITIES),
             enabled=call.data.get(ATTR_ENABLED, True),
             history_user=user,
         )
@@ -333,6 +338,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_event_phase=call.data.get(ATTR_HEBCAL_EVENT_PHASE),
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
+            target_entities=call.data.get(ATTR_TARGET_ENTITIES),
             enabled=call.data.get(ATTR_ENABLED, True),
             history_user=user,
         )
@@ -362,6 +368,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                 ATTR_HEBCAL_EVENT_PHASE,
                 ATTR_HEBCAL_HOLIDAY_MODE,
                 ATTR_HEBCAL_OFFSET_MINUTES,
+                ATTR_TARGET_ENTITIES,
                 ATTR_ENABLED,
             )
         ):
@@ -387,6 +394,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             hebcal_event_phase=call.data.get(ATTR_HEBCAL_EVENT_PHASE),
             hebcal_holiday_mode=call.data.get(ATTR_HEBCAL_HOLIDAY_MODE),
             hebcal_offset_minutes=call.data.get(ATTR_HEBCAL_OFFSET_MINUTES),
+            target_entities=call.data.get(ATTR_TARGET_ENTITIES),
             enabled=call.data.get(ATTR_ENABLED),
             history_user=user,
         )

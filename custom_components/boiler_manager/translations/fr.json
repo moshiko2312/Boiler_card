@@ -30,7 +30,8 @@
           "power_sensor": "Capteur de puissance (optionnel)",
           "current_sensor": "Capteur de courant (optionnel)",
           "hebcal_enabled": "Télécharger le cache Hebcal (quotidien)",
-          "hebcal_city": "Ville Hebcal (ex. IL-Jerusalem)"
+          "hebcal_city": "Ville Hebcal (ex. IL-Jerusalem)",
+          "allowed_entities": "Entités autorisées pour les tâches (cibles supplémentaires, en plus du chauffe-eau)"
         }
       }
     }

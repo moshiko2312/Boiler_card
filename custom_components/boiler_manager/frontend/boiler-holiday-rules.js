@@ -115,32 +115,48 @@ export function resolveHolidayKind({
   };
 }
 
+/**
+ * Per-kind policy overrides the generic (fallback) policy only when it is an
+ * actual restriction. "allow" / empty means "inherit", so the generic
+ * `holiday_*_policy` really is the general rule and the "allow" defaults the
+ * editor persists into card YAML cannot mask it.
+ */
+function resolveKindPolicy(rawKindPolicy, fallbackPolicy) {
+  const kindPolicy = normalizeHolidayPolicy(rawKindPolicy);
+  if (kindPolicy !== "allow") {
+    return kindPolicy;
+  }
+  return normalizeHolidayPolicy(fallbackPolicy);
+}
+
 export function holidayTimerPolicyForKind(kind, config, fallbackPolicy) {
   if (kind === "holiday_shabbat") {
-    return normalizeHolidayPolicy(
-      config?.holiday_shabbat_timer_policy ?? config?.yomtov_timer_policy
+    return resolveKindPolicy(
+      config?.holiday_shabbat_timer_policy ?? config?.yomtov_timer_policy,
+      fallbackPolicy
     );
   }
   if (kind === "holiday_regular") {
-    return normalizeHolidayPolicy(config?.holiday_regular_timer_policy);
+    return resolveKindPolicy(config?.holiday_regular_timer_policy, fallbackPolicy);
   }
   if (kind === "shabbat") {
-    return normalizeHolidayPolicy(config?.shabbat_timer_policy);
+    return resolveKindPolicy(config?.shabbat_timer_policy, fallbackPolicy);
   }
   return fallbackPolicy;
 }
 
 export function holidayTaskPolicyForKind(kind, config, fallbackPolicy) {
   if (kind === "holiday_shabbat") {
-    return normalizeHolidayPolicy(
-      config?.holiday_shabbat_task_policy ?? config?.yomtov_task_policy
+    return resolveKindPolicy(
+      config?.holiday_shabbat_task_policy ?? config?.yomtov_task_policy,
+      fallbackPolicy
     );
   }
   if (kind === "holiday_regular") {
-    return normalizeHolidayPolicy(config?.holiday_regular_task_policy);
+    return resolveKindPolicy(config?.holiday_regular_task_policy, fallbackPolicy);
   }
   if (kind === "shabbat") {
-    return normalizeHolidayPolicy(config?.shabbat_task_policy);
+    return resolveKindPolicy(config?.shabbat_task_policy, fallbackPolicy);
   }
   return fallbackPolicy;
 }

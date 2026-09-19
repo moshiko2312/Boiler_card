@@ -10,6 +10,10 @@ Custom boiler control solution for Home Assistant with:
 - Mobile-friendly popups (Safari + Chrome); task edit modal stays the same grid as desktop, with narrower time/duration fields on small screens only
 - In-card task backup/restore (Import/Export)
 - Per-task conditional execution by external entity state (including numeric operators)
+- Task times as fixed clock, sunrise or sunset (offset up to ±120 minutes) in both window and timeline tasks
+- Timeline auto-fill: one activation every N between two times (for example every 3 h from 06:00 to 23:00, 30 min each)
+- Multi-entity tasks: allow extra entities per integration entry and pick the targets of each task (for example boiler + heater together)
+- `simple_mode` card option: a plain timers + tasks UI with the Holidays & Shabbat (Hebcal) features hidden
 - Card editor auto-fills `boiler_entity` from Boiler Manager integration when a single matching entry is detected
 - `Switcher mode` support with adapter behavior:
   - Uses `boiler_manager` timed/continuous/off services when available
@@ -25,7 +29,7 @@ Custom boiler control solution for Home Assistant with:
 - Timer popup from hamburger menu
 - Tasks popup from same hamburger menu
 - Separate `Import/Export` tab in the same menu
-- `Holidays & Shabbat` tab: Hebcal file status, global timer/task rules, Hebcal window scope (Shabbat / holidays / both), and a scrollable list of all windows from the local cache (read-only; rules apply automatically when status is **Active**)
+- `Holidays & Shabbat` tab (in the guide): Hebcal cache status and a scrollable read-only list of upcoming windows (Shabbat / holidays) with filters; hidden in simple mode
 - Create, edit, enable/disable, and delete tasks from card UI
 - Import/Export tasks directly from dedicated Import/Export tab
   - Import mode buttons: `merge` / `replace`
@@ -153,6 +157,7 @@ Custom boiler control solution for Home Assistant with:
     - When `Title` is still a default card title, changing `Language` auto-updates `Title` to that language's default.
     - Custom user-entered titles are preserved and are not overwritten by language changes.
   - Boiler entity
+  - Simple mode (`simple_mode`) — hides the Holidays & Shabbat features (see **Simple mode** below)
   - Timer values (`timer_values`) for regular mode
     - Default: `15,30,60`
     - If edited manually, quick buttons and timer grid are regenerated automatically
@@ -165,7 +170,7 @@ Custom boiler control solution for Home Assistant with:
   - `holiday_active_states` — which Home Assistant `state` strings count as “active” for optional YAML entities `holiday_entity` / `shabbat_entity` (see **`holiday_active_states` (card setting)** below)
   - `integration_entry_id` — links the card to a Boiler Manager config entry (Hebcal JSON path, services, optional city sync)
   - `hebcal_city` — dropdown of Hebcal `geo=city` tokens (Israel); when changed, the card calls `boiler_manager.refresh_hebcal` with `entry_id` + `hebcal_city` so the value is stored in **integration options** and the local JSON cache is refreshed (requires `integration_entry_id`). Choose “match integration” to clear the option override.
-  - Hebcal file path override remains via card YAML `hebcal_cache_path` when needed (see **Holidays & Shabbat (Hebcal)**); timer/task rules and window scope are edited in the card **menu tab**, not duplicated in the editor list above
+  - Hebcal file path override remains via card YAML `hebcal_cache_path` when needed (see **Holidays & Shabbat (Hebcal)**); timer/task rules are YAML-only and are not shown in the editor
 - Right-side preview:
   - Real-time visual feedback while editing.
 
@@ -174,7 +179,7 @@ Custom boiler control solution for Home Assistant with:
 
 - Purpose: Jewish calendar windows from the local Hebcal cache, plus global rules for timers and tasks during “active” holiday/Shabbat time.
 - The guide’s **Holidays & Shabbat** tab lists upcoming windows (Shabbat / holidays) from the local JSON; filters **All / Holidays / Shabbat** narrow the list. The line **City: ...** reflects the Hebcal city token used for that cache (see **Holidays & Shabbat (Hebcal)** and card **`hebcal_city`**).
-- In-tab controls persist to the card YAML via `config-changed` (save the dashboard after changing rules).
+- The tab is read-only. Global timer/task rules are card YAML options (see **Holidays & Shabbat (Hebcal)** below). The whole tab is hidden when `simple_mode` is on.
 
 ### 8) Mobile UI (reference screenshots)
 
@@ -346,6 +351,9 @@ service_clear_task_history: boiler_manager.clear_task_history
 # Default is "15,30,60" when empty
 timer_values: "15,30,60,90"
 
+# Optional: hide Holidays & Shabbat (Hebcal) features for a plain timers + tasks UI
+# simple_mode: true
+
 # Optional card sensors (card-only configuration)
 temperature_sensor: sensor.boiler_temperature
 power_sensor: sensor.boiler_power
@@ -444,10 +452,10 @@ boiler_entity: climate.dolphin_...
 # current_sensor: dolphin.mydevice_electric_current
 ```
 
-**Tests (Dolphin heuristics):** from the repo root, run:
+**Tests (frontend helpers):** from the repo root, run:
 
 ```bash
-node --test tests/dolphin-utils.test.mjs
+node --test tests/*.test.mjs
 ```
 
 ## Card Usage Guide
@@ -487,17 +495,53 @@ node --test tests/dolphin-utils.test.mjs
   - During vacation, timer activation is blocked until vacation is disabled.
   - Hamburger/menu stays available so vacation can always be disabled from the UI.
 
+### Multi-entity tasks (targets)
+
+By default every task switches the entry's boiler entity. To let tasks switch other entities as well (for example a heater together with the boiler):
+
+1. **Settings → Devices & services → Boiler Manager → Configure** → add entities under **Allowed task entities** and save.
+2. In the card's task editor a **Targets** dropdown appears under the task name (only when at least one extra entity is allowed). It shows the chosen entities; open it to tick the entities the task should control. The boiler entity is preselected; untick it for "heater only" tasks.
+3. The task list shows the targets of every task that is not boiler-only.
+
+Behavior:
+
+- Each target follows the task independently: an entity is on while any active task targets it and is turned off when none does.
+- Manual timer / continuous / OFF and vacation mode keep working on the boiler entity exactly as before. Vacation mode and a manual OFF also release the extra targets, because they pause/snooze the tasks.
+- The Mode sensor reports `schedule` only while a task targets the boiler entity. Its `active_targets` attribute lists everything currently switched by tasks and `allowed_entities` the selectable targets.
+- Services: `create_schedule`, `create_timeline`, `update_schedule` and `import_tasks` accept `target_entities` (list of entity ids; each must be the boiler entity or an allowed one). Omit it, or pass `[]` on update, for boiler-only.
+- Export/import keeps `target_entities`. Importing into an entry that does not allow those entities fails with a clear error naming them.
+
+```yaml
+service: boiler_manager.create_schedule
+data:
+  boiler_entity: switch.boiler
+  name: "Boiler + heater"
+  start_time: "06:00"
+  end_time: "07:00"
+  target_entities: [switch.boiler, switch.heater]
+```
+
+### Simple mode
+
+Set `simple_mode: true` (card editor → **General** → **Simple mode**) for a plain timers + tasks UI:
+
+- The task editor offers only `Time Window` / `Timeline`; the `Holidays/Shabbat` type and its Hebcal fields are hidden.
+- The `Holidays & Shabbat` guide tab and the editor fields `hebcal_city` / `holiday_active_states` are hidden.
+- Holiday/Shabbat timer/task rules are not applied by the card while simple mode is on.
+- Existing Hebcal tasks stay in the list and keep running in the integration; editing one reveals its Hebcal fields for that task only, so nothing is lost on save.
+- Sunrise/sunset times remain available. The integration keeps refreshing its Hebcal cache; nothing is deleted.
+
 ### Holidays & Shabbat (Hebcal)
 
 - **Backend:** With `hebcal_enabled` on the integration (default for new entries), Boiler Manager refreshes the Hebcal cache on setup and once per day, and writes normalized windows to `/config/www/boiler-card/hebcal-<entry_id>.json`.
 - **City:** Default token is `IL-Jerusalem` (`DEFAULT_HEBCAL_CITY`). Set or change **`hebcal_city`** under **Settings → Devices & services → Boiler Manager → Configure**, and/or use the **card editor** dropdown (see Card Editor above). Tokens follow Hebcal’s `geo=city` format (for example `IL-Tel_Aviv`).
 - **Service:** `boiler_manager.refresh_hebcal` — same targeting as other services (`entry_id` or `boiler_entity`). Optional field **`hebcal_city`**: when present, updates the integration’s `hebcal_city` option then refreshes the cache; an **empty string** removes the option override so the entry falls back to data/default.
 - **Card tab** (`☰` → `Holidays & Shabbat`):
-  - **Status** — *Active* when any of: configured `holiday_entity` / `shabbat_entity` (YAML) says “on”, or current time falls inside a Hebcal window allowed by **Hebcal window scope** (Shabbat only / holidays only / both).
-  - **Timer rule** / **Task rule** — global behavior while status is Active (allow / block / postpone / force off). Changed in-tab; Lovelace stores them on the card.
+  - **Status** — *Active* when any of: configured `holiday_entity` / `shabbat_entity` (YAML) says “on”, or the integration's Mode sensor reports `hebcal_active` (current time inside a cached Hebcal window).
+  - **Timer rule** / **Task rule** — behavior while status is Active (`allow` / `block` / `postpone` / `force_off`), set in card YAML. The general rule is `holiday_timer_policy` / `holiday_task_policy` and applies to Shabbat, Yom Tov and regular holidays alike. Per-kind keys override it only when set to a restriction: `shabbat_timer_policy` / `shabbat_task_policy`, `holiday_shabbat_timer_policy` / `holiday_shabbat_task_policy` (Yom Tov), `holiday_regular_timer_policy` / `holiday_regular_task_policy`. A per-kind `allow` (the default) inherits the general rule. Nothing is applied when `simple_mode` is on.
   - **Window list** — full read-only list from the JSON (labels, start→end, kind, past/now/upcoming). It does not assign rules per row; it is for verification and planning.
   - **Per-task exceptions** — still use the task editor **Condition** block (`condition_entity`, `condition_operator`, `skip_if_state`) if one task needs different logic than the global task rule.
-- **Card editor:** Hebcal on/off, optional manual JSON path, entry id helpers — **not** the duplicate timer/task/scope controls (those stay in the tab).
+- **Card editor:** `integration_entry_id`, `hebcal_city` and `holiday_active_states` (the last two are hidden in simple mode). Timer/task rules are YAML-only.
 - **Task editor integration (compact mode):**
   - In `Type`, choose `Holidays/Shabbat` to reveal per-task Hebcal controls directly inside the Time section.
   - When `Event type = Shabbat`, holiday subtype options are hidden.
@@ -533,9 +577,8 @@ Import confirmation:
 
 - Select `Type = Time Window`
 - Set `Start` and `End`:
-  - Toggle `Use sunrise/sunset` on/off per field for cleaner mobile/desktop layout
-  - Fixed time (`HH:MM`)
-  - Or sun-based value: `sunrise`, `sunset`, `sunrise+30`, `sunset-45` (offset range `-120..+120` minutes)
+  - Fixed time (`HH:MM`) by default
+  - Tick **Sunrise/sunset** under a field to replace the clock with a `Sunrise` / `Sunset` choice plus an offset in minutes (`-120..+120`), stored as `sunrise+30`, `sunset-45`
 - Optional: enable condition with the `Enable Condition` toggle, then set `Condition Entity` + `Skip If State`
   - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
@@ -547,12 +590,14 @@ Import confirmation:
 #### Task Type: Timeline
 
 - Select `Type = Timeline`
+- Optional **Auto-fill**: set `From` / `To` / `Every` (30 min … 12 h) / `Run for`, then **Generate points**
+  - Creates one activation every interval starting at `From`, up to and including the last start at or before `To` (for example 06:00 → 23:00 every 3 h → 06:00, 09:00, …, 21:00)
+  - Same day only, fixed clock times only, at most 48 points; the generated rows replace the current list and stay editable
+  - The task is saved as a normal timeline; the auto-fill settings themselves are not stored
 - Add one or more points
-- For each point:
-  - Toggle `Use sunrise/sunset` on/off per point to keep the row compact
-  - choose time mode: fixed `HH:MM`, `sunrise`, or `sunset`
-  - optional offset range: `-120..+120` minutes for sunrise/sunset
-  - choose timer option from existing options (15m..)
+- Each point is one row: time, run duration, a ☀ checkbox and a ✕ remove button
+  - ☀ unticked: fixed `HH:MM`; ticked: `Sunrise` / `Sunset` choice plus offset `-120..+120` minutes
+  - choose a run duration from the timer presets, or pick `Custom` and type minutes (1–1440); the same choice exists in Auto-fill
 - Optional: enable condition with the `Enable Condition` toggle, then set `Condition Entity` + `Skip If State`
   - `Condition Operator` supports text equality and numeric comparisons
   - `Skip If State` field now suggests common values automatically by selected entity domain
@@ -856,6 +901,7 @@ data:
   - `condition_entity`, `skip_if_state`
   - `condition_operator`
   - `timeline_points`, `timeline_label` for timeline tasks
+  - `target_entities` (entities the task switches; the boiler entity unless changed)
   - `active_now`
 - `active_now` represents the task being active by schedule window/timeline timing
 
@@ -896,6 +942,13 @@ Notes:
 
 ## Versioning & Changelog
 
+- Tag `v1.2.0` (see [CHANGELOG.md](CHANGELOG.md) for details):
+  - Multi-entity tasks: integration option **Allowed task entities** and per-task `target_entities` (boiler + heater in one task), scheduler switches each target independently.
+  - Simple mode (`simple_mode`) hides the Holidays & Shabbat features for a plain timers + tasks UI.
+  - Sunrise/sunset times for window start/end and timeline points (checkbox + offset), with ☀/🌙 icons and before/after captions.
+  - Timeline auto-fill (every N hours between two times) and custom run durations in minutes.
+  - Quieter task editor: checkbox lists and a collapsed targets dropdown instead of coloured buttons; single-row timeline points with a ✕ remove button.
+  - Fix: the general `holiday_timer_policy` / `holiday_task_policy` rules now actually apply.
 - Tag `v1.1.1`:
   - Expanded theme catalog and editor options with multiple new visual styles.
   - Refined `clear_frost` theme for readability: black text, aqua-accent timer/menu controls, and consistent modal/list contrast.
@@ -916,8 +969,8 @@ Notes:
   - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:
   - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
-- Integration manifest `1.1.1`:
-  - Aligned with `v1.1.1` tag.
+- Integration manifest `1.2.0`:
+  - Aligned with `v1.2.0` tag.
 
 Recent highlights:
 - `0.1.7`

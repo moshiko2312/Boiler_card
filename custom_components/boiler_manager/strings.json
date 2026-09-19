@@ -30,7 +30,8 @@
           "power_sensor": "Power sensor (optional)",
           "current_sensor": "Current sensor (optional)",
           "hebcal_enabled": "Download Hebcal calendar cache (daily)",
-          "hebcal_city": "Hebcal city token (e.g. IL-Jerusalem)"
+          "hebcal_city": "Hebcal city token (e.g. IL-Jerusalem)",
+          "allowed_entities": "Allowed task entities (extra targets tasks may switch, besides the boiler entity)"
         }
       }
     }

@@ -1,3 +1,5 @@
+import { isSimpleModeEnabled } from "./boiler-simple-mode.js";
+
 export function registerBoilerCardEditor(deps) {
   const { DEFAULT_CONFIG, HEBCAL_CITY_META, I18N, SUPPORTED_LANGUAGES } = deps;
 
@@ -321,6 +323,7 @@ class BoilerWaterCardEditor extends HTMLElement {
     const usesExtendedTimerUi = this._usesExtendedTimerUi();
     const usesSwitcherBoilerPicker = profile === "switcher_touch" || profile === "boiler_smarthome4u";
     const usesClimateBoilerPicker = profile === "dolphin";
+    const simpleMode = isSimpleModeEnabled(this._config);
     this._ensureEditorLayout();
 
     const languageOptions = [
@@ -365,6 +368,12 @@ class BoilerWaterCardEditor extends HTMLElement {
           ? { entity: { domain: "climate" } }
           : { entity: {} },
       },
+      {
+        name: "simple_mode",
+        label: labels.simple_mode || "Simple mode (no holidays & Shabbat)",
+        description: labels.simple_mode_desc,
+        selector: { boolean: {} },
+      },
     ];
     const integrationSchema = [
       {
@@ -372,17 +381,19 @@ class BoilerWaterCardEditor extends HTMLElement {
         label: labels.integration_entry_id || "Integration entry ID",
         selector: { text: {} },
       },
-      {
-        name: "hebcal_city",
-        label: labels.hebcal_city,
-        description: labels.hebcal_city_desc,
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: cityOptions,
+      ...(simpleMode ? [] : [
+        {
+          name: "hebcal_city",
+          label: labels.hebcal_city,
+          description: labels.hebcal_city_desc,
+          selector: {
+            select: {
+              mode: "dropdown",
+              options: cityOptions,
+            },
           },
         },
-      },
+      ]),
     ];
     const regularModeSchema = [
       {
@@ -593,12 +604,14 @@ class BoilerWaterCardEditor extends HTMLElement {
         label: labels.hide_boiler_flow_image,
         selector: { boolean: {} },
       },
-      {
-        name: "holiday_active_states",
-        label: labels.holiday_active_states,
-        description: labels.holiday_active_states_desc,
-        selector: { text: {} },
-      },
+      ...(simpleMode ? [] : [
+        {
+          name: "holiday_active_states",
+          label: labels.holiday_active_states,
+          description: labels.holiday_active_states_desc,
+          selector: { text: {} },
+        },
+      ]),
     ];
 
     this._setSectionForm("general", generalSchema);
@@ -634,6 +647,13 @@ class BoilerWaterCardEditor extends HTMLElement {
       modeTitleText = labels.editor_mode_dolphin_title || "Dolphin";
       modeDescText = labels.editor_mode_dolphin_desc || "Timers, sensors, and optional Dolphin switches (Sabbath, fixed temp, shower).";
     }
+    const simpleMode = isSimpleModeEnabled(this._config);
+    const holidaysTitleText = simpleMode
+      ? (labels.editor_section_integration || "Integration")
+      : (labels.editor_section_holidays || "Holidays & Shabbat");
+    const holidaysDescText = simpleMode
+      ? (labels.editor_section_integration_desc || "Boiler Manager entry link.")
+      : (labels.editor_section_holidays_desc || "Hebcal city synchronization through Boiler Manager options.");
     if (this._editorRoot) {
       const modeTitle = this.querySelector("[data-editor-mode-title]");
       const modeDesc = this.querySelector("[data-editor-mode-desc]");
@@ -651,8 +671,8 @@ class BoilerWaterCardEditor extends HTMLElement {
       const sectionDisplayDesc = this.querySelector("[data-section-display-desc]");
       if (sectionGeneralTitle) sectionGeneralTitle.textContent = labels.editor_section_general || "General";
       if (sectionGeneralDesc) sectionGeneralDesc.textContent = labels.editor_section_general_desc || "Core card identity and primary boiler entity selection.";
-      if (sectionHolidaysTitle) sectionHolidaysTitle.textContent = labels.editor_section_holidays || "Holidays & Shabbat";
-      if (sectionHolidaysDesc) sectionHolidaysDesc.textContent = labels.editor_section_holidays_desc || "Hebcal city synchronization through Boiler Manager options.";
+      if (sectionHolidaysTitle) sectionHolidaysTitle.textContent = holidaysTitleText;
+      if (sectionHolidaysDesc) sectionHolidaysDesc.textContent = holidaysDescText;
       if (sectionDisplayTitle) sectionDisplayTitle.textContent = labels.editor_section_display || "Display & Compatibility";
       if (sectionDisplayDesc) sectionDisplayDesc.textContent = labels.editor_section_display_desc || "Flow image and optional active-state mapping for holiday entities.";
       this._syncSectionCollapseState();
@@ -881,12 +901,12 @@ class BoilerWaterCardEditor extends HTMLElement {
           <button class="bm-editor-header" type="button" data-section-toggle="integration" aria-expanded="false">
             <span class="bm-editor-title-wrap">
               <span class="bm-editor-icon" aria-hidden="true">✡</span>
-              <h3 class="bm-editor-title" data-section-holidays-title>${labels.editor_section_holidays || "Holidays & Shabbat"}</h3>
+              <h3 class="bm-editor-title" data-section-holidays-title>${holidaysTitleText}</h3>
             </span>
             <span class="bm-editor-chevron" aria-hidden="true">⌄</span>
           </button>
           <div class="bm-editor-body" data-section-body="integration">
-            <p class="bm-editor-desc" data-section-holidays-desc>${labels.editor_section_holidays_desc || "Hebcal city synchronization through Boiler Manager options."}</p>
+            <p class="bm-editor-desc" data-section-holidays-desc>${holidaysDescText}</p>
             <div data-section-form="integration"></div>
           </div>
         </section>
@@ -1355,6 +1375,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         editor_mode_smarthome4u_desc: "פרופיל מותאם אישית. הפרמטרים יוגדרו לפי הדרישות שלך.",
         boiler_flow_image: "תמונת זרימת מים (נתיב או כתובת)",
         hide_boiler_flow_image: "הסתר תמונה בכרטיס",
+        simple_mode: "מצב פשוט (ללא חגים ושבת)",
+        simple_mode_desc: "מסתיר את סוג המשימה \"חגים/שבת\", את טאב החגים במדריך ואת הגדרות Hebcal. משימות קיימות נשמרות.",
+        editor_section_integration: "אינטגרציה",
+        editor_section_integration_desc: "קישור הכרטיס לרשומת Boiler Manager.",
         integration_entry_id: "מזהה אינטגרציה (integration_entry_id)",
         hebcal_city: "עיר (חגים ושבת — לוח שנה)",
         hebcal_city_desc:
@@ -1447,6 +1471,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         editor_mode_smarthome4u_desc: "Custom profile. Parameters will be defined per your exact device logic.",
         boiler_flow_image: "Water Flow Image (path / URL)",
         hide_boiler_flow_image: "Hide water flow image on card",
+        simple_mode: "Simple mode (no holidays & Shabbat)",
+        simple_mode_desc: "Hides the Holidays/Shabbat task type, the holidays tab in the guide and Hebcal settings. Existing tasks are kept.",
+        editor_section_integration: "Integration",
+        editor_section_integration_desc: "Link the card to a Boiler Manager entry.",
         integration_entry_id: "Integration entry ID (integration_entry_id)",
         hebcal_city: "City (holidays & Shabbat — Hebcal)",
         hebcal_city_desc:
@@ -1539,6 +1567,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         editor_mode_smarthome4u_desc: "Пользовательский профиль. Параметры будут настроены по вашей точной логике.",
         boiler_flow_image: "Изображение потока (путь / URL)",
         hide_boiler_flow_image: "Скрыть изображение потока на карточке",
+        simple_mode: "Простой режим (без праздников и Шаббата)",
+        simple_mode_desc: "Скрывает тип задачи «Праздники/Шаббат», вкладку праздников в руководстве и настройки Hebcal. Существующие задачи сохраняются.",
+        editor_section_integration: "Интеграция",
+        editor_section_integration_desc: "Связь карточки с записью Boiler Manager.",
         integration_entry_id: "ID интеграции (integration_entry_id)",
         hebcal_city: "Город (праздники и Шаббат — Hebcal)",
         hebcal_city_desc:
@@ -1631,6 +1663,10 @@ class BoilerWaterCardEditor extends HTMLElement {
         editor_mode_smarthome4u_desc: "Profil personnalise. Les parametres seront definis selon votre logique exacte.",
         boiler_flow_image: "Image du flux d'eau (chemin / URL)",
         hide_boiler_flow_image: "Masquer l'image du flux sur la carte",
+        simple_mode: "Mode simple (sans fêtes ni Chabbat)",
+        simple_mode_desc: "Masque le type de tâche « Fêtes/Chabbat », l'onglet fêtes du guide et les réglages Hebcal. Les tâches existantes sont conservées.",
+        editor_section_integration: "Intégration",
+        editor_section_integration_desc: "Lier la carte à une entrée Boiler Manager.",
         integration_entry_id: "ID d'integration (integration_entry_id)",
         hebcal_city: "Ville (fêtes et Chabbat — Hebcal)",
         hebcal_city_desc:

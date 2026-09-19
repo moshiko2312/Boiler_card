@@ -2,3 +2,5 @@
 *.log
 backups/
 dist/
+__pycache__/
+.maestro/

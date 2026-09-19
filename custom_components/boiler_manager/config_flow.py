@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_ALLOWED_ENTITIES,
     CONF_BOILER_ENTITY,
     CONF_HEBCAL_CITY,
     CONF_HEBCAL_ENABLED,
@@ -82,6 +83,10 @@ class BoilerManagerOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(CONF_HEBCAL_ENABLED, default=True): selector.BooleanSelector(),
                 vol.Optional(CONF_HEBCAL_CITY, default=DEFAULT_HEBCAL_CITY): selector.TextSelector(
                     selector.TextSelectorConfig()
+                ),
+                # Extra entities tasks may target (besides the boiler entity).
+                vol.Optional(CONF_ALLOWED_ENTITIES, default=[]): selector.EntitySelector(
+                    selector.EntitySelectorConfig(multiple=True)
                 ),
             }
         )

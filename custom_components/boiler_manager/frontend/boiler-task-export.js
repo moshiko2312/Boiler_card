@@ -29,8 +29,14 @@ export function normalizedRecurrenceForExport(value) {
   return "forever";
 }
 
-export function taskStateToExportTask(taskState, { optionToMinutes, normalizeConditionOperator }) {
+export function taskStateToExportTask(taskState, { optionToMinutes, normalizeConditionOperator, boilerEntity = "" }) {
   const attrs = taskState?.attributes || {};
+  const mainEntity = String(boilerEntity || "").trim();
+  const targetEntities = (Array.isArray(attrs.target_entities) ? attrs.target_entities : [])
+    .map((item) => String(item || "").trim())
+    .filter((item) => item.includes("."));
+  const mainOnlyTargets = targetEntities.length === 0
+    || (targetEntities.length === 1 && targetEntities[0] === mainEntity);
   const taskType = String(attrs.task_type || "window").toLowerCase() === "timeline" ? "timeline" : "window";
   const name = String(attrs.task_name || attrs.friendly_name || "").trim();
   if (!name) {
@@ -56,6 +62,7 @@ export function taskStateToExportTask(taskState, { optionToMinutes, normalizeCon
     ...(conditionEntity ? { condition_entity: conditionEntity } : {}),
     ...(conditionEntity ? { condition_operator: conditionOperator } : {}),
     ...(conditionEntity && skipIfState ? { skip_if_state: skipIfState } : {}),
+    ...(mainOnlyTargets ? {} : { target_entities: targetEntities }),
     enabled,
   };
 

@@ -30,7 +30,8 @@
           "power_sensor": "חיישן צריכה (אופציונלי)",
           "current_sensor": "חיישן זרם (אופציונלי)",
           "hebcal_enabled": "הורדת מטמון Hebcal (יומי)",
-          "hebcal_city": "מזהה עיר Hebcal (למשל IL-Jerusalem)"
+          "hebcal_city": "מזהה עיר Hebcal (למשל IL-Jerusalem)",
+          "allowed_entities": "ישויות מותרות למשימות (יעדים נוספים שמשימות יכולות להפעיל, מלבד ישות הדוד)"
         }
       }
     }
