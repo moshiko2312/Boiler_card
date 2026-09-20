@@ -1353,6 +1353,62 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
           max-width: 100%;
         }
 
+        .schedule-holiday-next-card {
+          display: grid;
+          gap: 4px;
+          margin-top: 2px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(152, 184, 214, 0.35);
+          background: rgba(14, 28, 46, 0.24);
+        }
+
+        .schedule-holiday-next-head {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .schedule-holiday-next-head .guide-hebcal-badge {
+          margin-bottom: 0;
+        }
+
+        .schedule-holiday-next-title {
+          font-weight: 800;
+          font-size: 0.95rem;
+          line-height: 1.3;
+        }
+
+        .schedule-holiday-next-sub {
+          font-size: 0.82rem;
+          opacity: 0.85;
+        }
+
+        .schedule-holiday-next-dates {
+          font-size: 0.8rem;
+          line-height: 1.35;
+          white-space: pre-line;
+          opacity: 0.9;
+        }
+
+        .schedule-holiday-next-activation {
+          font-size: 0.86rem;
+          font-weight: 800;
+        }
+
+        .schedule-holiday-next-note {
+          font-size: 0.74rem;
+          line-height: 1.35;
+          opacity: 0.8;
+        }
+
+        .schedule-holiday-next-status {
+          margin: 2px 0 0;
+          font-size: 0.82rem;
+          color: #ffd7b0;
+        }
+
         .schedule-offset-sign-solo {
           flex: 0 0 auto;
           width: 44px;
@@ -3934,7 +3990,7 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                   </div>
                 </div>
                 <div class="schedule-time-row schedule-condition-row" id="schedule-holiday-row-secondary">
-                  <div class="schedule-field">
+                  <div class="schedule-field" id="schedule-holiday-phase-field">
                     <label class="schedule-label" for="schedule-holiday-phase-input" id="schedule-holiday-phase-label">Event phase</label>
                     <div class="schedule-type-toggle" id="schedule-holiday-phase-toggle">
                       <button type="button" class="schedule-type-btn" id="schedule-holiday-phase-opt-start" data-holiday-phase="start">Start</button>
@@ -3951,6 +4007,20 @@ export function buildBoilerShellHtml({ cardTheme, themeCss }) {
                     </div>
                     <input id="schedule-holiday-subtype-input" type="hidden" value="all" />
                   </div>
+                </div>
+                <div class="schedule-field schedule-holiday-next" id="schedule-holiday-next-field" hidden>
+                  <span class="schedule-label" id="schedule-holiday-next-label">Next event</span>
+                  <div class="schedule-holiday-next-card" id="schedule-holiday-next-card" hidden>
+                    <div class="schedule-holiday-next-head">
+                      <span class="guide-hebcal-badge" id="schedule-holiday-next-badge"></span>
+                      <span class="schedule-holiday-next-title" id="schedule-holiday-next-title"></span>
+                    </div>
+                    <div class="schedule-holiday-next-sub" id="schedule-holiday-next-sub" hidden></div>
+                    <div class="schedule-holiday-next-dates" id="schedule-holiday-next-dates"></div>
+                    <div class="schedule-holiday-next-activation" id="schedule-holiday-next-activation"></div>
+                    <div class="schedule-holiday-next-note" id="schedule-holiday-next-note" hidden></div>
+                  </div>
+                  <p class="schedule-holiday-next-status" id="schedule-holiday-next-status" hidden></p>
                 </div>
               </div>
             </div>

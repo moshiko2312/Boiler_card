@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.1
+
+### Added
+
+- **Next event preview in the task editor** (type `Holidays/Shabbat`): a **Next event** block under the Hebcal controls shows which upcoming Shabbat / holiday the current `Event type` + `Holiday subtype` selection resolves to — kind badge (Shabbat / Holiday / Yom Tov), Hebrew and English name from the Hebcal cache, its date (candle lighting → havdalah for Shabbat), the exact activation time after `Phase` and `Offset`, and a reminder that the task repeats on every event of that type (hidden when recurrence is `once`). Shows loading / missing `integration_entry_id` / cache error / no-match status lines instead when needed. Live-updates as the controls change; in-card guide text updated (HE/EN/RU/FR).
+- New helpers `nextMatchingHebcalWindow` / `hebcalWindowActivationIso` in `boiler-holiday-rules.js`; the editor's existing start/end autofill and the task-list caption now use the same window resolution. Tests in `tests/holiday-rules.test.mjs`.
+
+### Changed
+
+- **Yom Tov windows now use real times.** The Hebcal cache builds the window of a work-prohibited holiday from candle lighting to havdalah (like Shabbat) instead of a whole calendar day, so a `Holiday` + `Yom Tov` task anchors to the actual entry/exit time. Holidays without candle lighting (Erev, Chol HaMoed, Chanukah, Purim, …) stay whole-day windows, now marked `all_day: true` (cache `schema_version` 2).
+- **Regular holidays run at the task's own start clock.** On an all-day window the scheduler activates the task at its `Start` time on that date (phase and offset do not apply). The editor keeps the start clock editable and hides phase/offset for the `Regular holiday` subtype; `All holidays` keeps the clock editable (used on regular days) and shows phase/offset (used on Yom Tov). Previously every holiday anchored at 00:00 and the only way to move it was a large minute offset.
+- Existing tasks: a `Yom Tov` task now starts at candle lighting (+ offset) instead of midnight; a `Regular` / `All holidays` task runs at its saved start time on regular holidays. Review such tasks after updating.
+
+### Fixed
+
+- Shabbat/holiday window pairing cascaded after any two-day Yom Tov: the second evening's candle lighting was paired with the *following week's* havdalah, producing week-long "Shabbat" windows for the rest of the month (Tishrei 5787: `Rosh Hashana 5787` 12 Sep → 19 Sep, `Erev Sukkot` 25 Sep → 3 Oct). That kept Shabbat status and the holiday timer/task rules active for weeks. Candle lightings inside an open window are now ignored, a period longer than 4 days is discarded, and a period containing a Yom Tov day is classified `holiday` (work prohibited) instead of `shabbat`. Tests in `tests/test_hebcal_windows.py`.
+
 ## 1.2.0
 
 ### Added

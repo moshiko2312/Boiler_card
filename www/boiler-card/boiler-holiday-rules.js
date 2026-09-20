@@ -164,3 +164,87 @@ export function holidayTaskPolicyForKind(kind, config, fallbackPolicy) {
 export function shouldForceShutdown({ isOn, legacyTimerActive, builtInTimedActive, scheduleActive }) {
   return Boolean(isOn || builtInTimedActive || (!scheduleActive && legacyTimerActive));
 }
+
+function normalizeHebcalWindowKind(value) {
+  return String(value || "").toLowerCase() === "holiday" ? "holiday" : "shabbat";
+}
+
+/**
+ * Windows from the Hebcal cache that have not ended yet, earliest first.
+ * A window that is currently in progress counts as upcoming.
+ */
+export function upcomingHebcalWindows(windows, now = Date.now()) {
+  const list = Array.isArray(windows) ? windows : [];
+  return list
+    .filter((w) => {
+      const end = Date.parse(w?.ends_at);
+      return Number.isFinite(end) && end > now;
+    })
+    .sort((a, b) => String(a?.starts_at || "").localeCompare(String(b?.starts_at || "")));
+}
+
+/**
+ * Whether a cache window matches the task editor selection
+ * (event kind + holiday subtype: all / yomtov / regular).
+ */
+export function hebcalWindowMatchesSelection(window, kind, holidaySubtype) {
+  const want = normalizeHebcalWindowKind(kind);
+  if (normalizeHebcalWindowKind(window?.kind) !== want) {
+    return false;
+  }
+  if (want !== "holiday") {
+    return true;
+  }
+  const mode = String(holidaySubtype || "").toLowerCase();
+  const workProhibited = Boolean(window?.work_prohibited);
+  if (mode === "yomtov") {
+    return workProhibited;
+  }
+  if (mode === "regular") {
+    return !workProhibited;
+  }
+  return true;
+}
+
+/** The next cache window a Hebcal task with this selection would fire on, or null. */
+export function nextMatchingHebcalWindow(windows, { kind, holidaySubtype, now = Date.now() } = {}) {
+  return upcomingHebcalWindows(windows, now).find((w) => hebcalWindowMatchesSelection(w, kind, holidaySubtype)) || null;
+}
+
+function parseClockHHMM(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || "").trim());
+  if (!match) {
+    return null;
+  }
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return hours <= 23 && minutes <= 59 ? [hours, minutes] : null;
+}
+
+/**
+ * ISO instant at which a task on this window activates, or null.
+ * Timed windows (candle lighting / havdalah): anchor by phase + offset.
+ * All-day windows (no candle lighting): the task's own start clock on that
+ * date (midnight when empty); phase and offset do not apply.
+ */
+export function hebcalWindowActivationIso(window, { phase, offsetMinutes = 0, startHHMM = "" } = {}) {
+  if (window?.all_day) {
+    const dayMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(window?.starts_at || ""));
+    if (!dayMatch) {
+      return null;
+    }
+    const clock = String(startHHMM || "").trim() ? parseClockHHMM(startHHMM) : [0, 0];
+    if (!clock) {
+      return null;
+    }
+    const local = new Date(Number(dayMatch[1]), Number(dayMatch[2]) - 1, Number(dayMatch[3]), clock[0], clock[1], 0, 0);
+    return Number.isFinite(local.getTime()) ? local.toISOString() : null;
+  }
+  const anchorRaw = String(phase || "").toLowerCase() === "end" ? window?.ends_at : window?.starts_at;
+  const anchor = Date.parse(anchorRaw);
+  if (!Number.isFinite(anchor)) {
+    return null;
+  }
+  const offset = Number.parseInt(String(offsetMinutes ?? 0), 10);
+  return new Date(anchor + (Number.isFinite(offset) ? offset : 0) * 60000).toISOString();
+}

@@ -2478,6 +2478,19 @@ def _task_hebcal_event_windows(
                 continue
             if holiday_mode == HEBCAL_HOLIDAY_MODE_REGULAR and work_prohibited:
                 continue
+        if item.get("all_day"):
+            # Whole-day holiday (no candle lighting / havdalah): the task's own
+            # start clock decides the time on that date; phase and offset do not apply.
+            day_start = _parse_stored_datetime(item.get("starts_at"))
+            if day_start is None or dt_util.as_local(day_start).date() != day_date:
+                continue
+            start = _resolve_schedule_time_for_date(manager.hass, task.start_time, day_date)
+            if start is None:
+                continue
+            start_dt = datetime.combine(day_date, start)
+            end = (start_dt + timedelta(minutes=duration_minutes)).time().replace(second=0, microsecond=0)
+            windows.append((start, end))
+            continue
         anchor_raw = item.get("starts_at") if phase == HEBCAL_EVENT_PHASE_START else item.get("ends_at")
         anchor = _parse_stored_datetime(anchor_raw)
         if anchor is None:

@@ -66,11 +66,24 @@ def _resolve_zone(tzid: str | None) -> ZoneInfo:
             return ZoneInfo("UTC")
 
 
+MAX_PROHIBITED_PERIOD_DAYS = 4
+
+
 def _build_windows(items: list[dict[str, Any]], tzid: str | None) -> list[dict[str, Any]]:
-    """Pair candle-lighting with next havdalah; add yom-tov day windows."""
+    """Normalize Hebcal items into windows.
+
+    * Timed windows: candle lighting -> the next havdalah. Candle lightings that
+      fall while a window is already open (second Yom Tov day, Shabbat running
+      into Yom Tov) do not start a new window, so a two-day Yom Tov never pairs
+      with the havdalah of the following week. A window that contains a Yom Tov
+      day is ``kind: holiday`` with ``work_prohibited``; otherwise it is Shabbat.
+    * All-day windows (``all_day: true``, local midnight to midnight): holidays
+      without candle lighting (Erev, Chol HaMoed, Chanukah, ...). A Yom Tov day
+      that has no candle/havdalah data in the feed also falls back to this.
+    """
     tz = _resolve_zone(tzid)
-    candles: list[tuple[datetime, dict[str, Any]]] = []
-    havdalot: list[tuple[datetime, dict[str, Any]]] = []
+    events: list[tuple[datetime, str, dict[str, Any]]] = []
+    holidays: list[tuple[date, dict[str, Any]]] = []
 
     for item in items:
         if not isinstance(item, dict):
@@ -80,27 +93,58 @@ def _build_windows(items: list[dict[str, Any]], tzid: str | None) -> list[dict[s
         if raw_date is None:
             continue
         ds = str(raw_date)
-        if category == "candles" and "T" in ds:
+        if category in ("candles", "havdalah") and "T" in ds:
             dt = _parse_event_datetime(ds)
             if dt is not None:
-                candles.append((dt, item))
-        elif category == "havdalah" and "T" in ds:
-            dt = _parse_event_datetime(ds)
-            if dt is not None:
-                havdalot.append((dt, item))
+                events.append((dt, category, item))
+        elif category == "holiday" and "T" not in ds:
+            try:
+                d = date.fromisoformat(ds.split("T", 1)[0])
+            except ValueError:
+                continue
+            holidays.append((d, item))
 
-    candles.sort(key=lambda pair: pair[0])
-    havdalot.sort(key=lambda pair: pair[0])
+    events.sort(key=lambda entry: entry[0])
+    yomtov_by_date = {d: item for d, item in holidays if item.get("yomtov")}
 
     windows: list[dict[str, Any]] = []
-    used_havdalah: set[int] = set()
+    covered_yomtov: set[date] = set()
+    open_candle: tuple[datetime, dict[str, Any]] | None = None
 
-    for candle_time, candle_item in candles:
-        for idx, (hav_time, hav_item) in enumerate(havdalot):
-            if idx in used_havdalah:
-                continue
-            if hav_time <= candle_time:
-                continue
+    for event_time, category, item in events:
+        if category == "candles":
+            if open_candle is None:
+                open_candle = (event_time, item)
+            continue
+        if open_candle is None:
+            continue
+        start_time, candle_item = open_candle
+        open_candle = None
+        if event_time <= start_time or (event_time - start_time) > timedelta(days=MAX_PROHIBITED_PERIOD_DAYS):
+            _LOGGER.debug("Skipping implausible Hebcal period %s -> %s", start_time, event_time)
+            continue
+        start_local = start_time.astimezone(tz)
+        end_local = event_time.astimezone(tz)
+        yomtov_items: list[dict[str, Any]] = []
+        day = start_local.date()
+        while day <= end_local.date():
+            if day in yomtov_by_date:
+                yomtov_items.append(yomtov_by_date[day])
+                covered_yomtov.add(day)
+            day += timedelta(days=1)
+        if yomtov_items:
+            first = yomtov_items[0]
+            windows.append(
+                {
+                    "kind": "holiday",
+                    "starts_at": start_local.isoformat(),
+                    "ends_at": end_local.isoformat(),
+                    "label": str(first.get("title") or ""),
+                    "hebrew": first.get("hebrew"),
+                    "work_prohibited": True,
+                }
+            )
+        else:
             label = str(
                 candle_item.get("memo")
                 or candle_item.get("title_orig")
@@ -110,32 +154,18 @@ def _build_windows(items: list[dict[str, Any]], tzid: str | None) -> list[dict[s
             windows.append(
                 {
                     "kind": "shabbat",
-                    "starts_at": candle_time.isoformat(),
-                    "ends_at": hav_time.isoformat(),
+                    "starts_at": start_local.isoformat(),
+                    "ends_at": end_local.isoformat(),
                     "label": label,
                     "hebrew": candle_item.get("hebrew"),
                 }
             )
-            used_havdalah.add(idx)
-            break
 
-    for item in items:
-        if not isinstance(item, dict):
+    for d, item in holidays:
+        is_yomtov = bool(item.get("yomtov"))
+        if not is_yomtov and str(item.get("subcat") or "").lower() != "major":
             continue
-        category = str(item.get("category") or "").lower()
-        if category != "holiday":
-            continue
-        if not item.get("yomtov") and str(item.get("subcat") or "").lower() != "major":
-            continue
-        raw_date = item.get("date")
-        if raw_date is None:
-            continue
-        ds = str(raw_date)
-        if "T" in ds:
-            continue
-        try:
-            d = date.fromisoformat(ds.split("T", 1)[0])
-        except ValueError:
+        if is_yomtov and d in covered_yomtov:
             continue
         start_local = datetime.combine(d, time.min, tzinfo=tz)
         end_local = start_local + timedelta(days=1)
@@ -146,7 +176,8 @@ def _build_windows(items: list[dict[str, Any]], tzid: str | None) -> list[dict[s
                 "ends_at": end_local.isoformat(),
                 "label": str(item.get("title") or ""),
                 "hebrew": item.get("hebrew"),
-                "work_prohibited": bool(item.get("yomtov")),
+                "work_prohibited": is_yomtov,
+                "all_day": True,
             }
         )
 
@@ -184,7 +215,7 @@ async def async_ensure_hebcal_cache_file(
     ).strip() or DEFAULT_HEBCAL_CITY
     url = HEBCAL_URL_TEMPLATE.format(city=resolved_city)
     payload: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "fetched_at": dt_util.utcnow().isoformat(),
         "timezone": "Asia/Jerusalem",
         "source_url": url,
@@ -249,7 +280,7 @@ async def async_refresh_hebcal_cache(
 
     windows = _build_windows(items, str(tzid) if tzid else None)
     out: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "fetched_at": dt_util.utcnow().isoformat(),
         "timezone": str(tzid or "Asia/Jerusalem"),
         "source_url": url,

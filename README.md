@@ -534,6 +534,7 @@ Set `simple_mode: true` (card editor → **General** → **Simple mode**) for a 
 ### Holidays & Shabbat (Hebcal)
 
 - **Backend:** With `hebcal_enabled` on the integration (default for new entries), Boiler Manager refreshes the Hebcal cache on setup and once per day, and writes normalized windows to `/config/www/boiler-card/hebcal-<entry_id>.json`.
+- **Windows in the cache:** candle lighting → havdalah periods (`shabbat`, or `holiday` with `work_prohibited: true` when the period contains a Yom Tov day; a two-day Yom Tov is one window), plus whole-day windows (`all_day: true`, midnight → midnight) for holidays without candle lighting (Erev, Chol HaMoed, Chanukah, Purim, …).
 - **City:** Default token is `IL-Jerusalem` (`DEFAULT_HEBCAL_CITY`). Set or change **`hebcal_city`** under **Settings → Devices & services → Boiler Manager → Configure**, and/or use the **card editor** dropdown (see Card Editor above). Tokens follow Hebcal’s `geo=city` format (for example `IL-Tel_Aviv`).
 - **Service:** `boiler_manager.refresh_hebcal` — same targeting as other services (`entry_id` or `boiler_entity`). Optional field **`hebcal_city`**: when present, updates the integration’s `hebcal_city` option then refreshes the cache; an **empty string** removes the option override so the entry falls back to data/default.
 - **Card tab** (`☰` → `Holidays & Shabbat`):
@@ -547,7 +548,9 @@ Set `simple_mode: true` (card editor → **General** → **Simple mode**) for a 
   - When `Event type = Shabbat`, holiday subtype options are hidden.
   - `Phase = start` autofills/locks start time from next entry time.
   - `Phase = end` switches end-time control to timer-duration selection (same options as timeline), then derives start time automatically.
-  - `Holiday + Yom Tov` follows the same start/end behavior as Shabbat.
+  - `Holiday + Yom Tov` follows the same start/end behavior as Shabbat (anchored to candle lighting / havdalah).
+  - `Holiday + Regular holiday`: whole-day events. The task runs at the `Start` clock you set on that date, so the clock stays editable and phase/offset are hidden. `All holidays` keeps the clock editable (used on regular days) and shows phase/offset (used on Yom Tov).
+  - **Next event** block (below the Hebcal controls): shows the upcoming Shabbat / holiday that the current `Event type` + `Holiday subtype` selection resolves to — kind badge, Hebrew and English name from the cache, its date(s), and the exact activation time after `Phase` and `Offset`. The selection is a *type*, not one specific holiday: the task fires on every matching event, and the block says so unless recurrence is `once`. If the cache file is missing or nothing matches, a status line is shown instead.
 
 ### `holiday_active_states` (card setting)
 
@@ -942,7 +945,11 @@ Notes:
 
 ## Versioning & Changelog
 
-- Tag `v1.2.0` (see [CHANGELOG.md](CHANGELOG.md) for details):
+- Tag `v1.2.1` (see [CHANGELOG.md](CHANGELOG.md) for details):
+  - Task editor: **Next event** block shows which upcoming Shabbat / holiday the `Event type` + `Holiday subtype` selection resolves to, with its dates and the exact activation time; updates live.
+  - Yom Tov windows now run from candle lighting to havdalah (real times) instead of a whole calendar day; holidays without candle lighting stay whole-day (`all_day`) and run at the task's own `Start` clock, which is editable for `Regular holiday` (phase/offset hidden there).
+  - Fix: Shabbat/holiday window pairing no longer cascades after a two-day Yom Tov (it produced week-long "Shabbat" windows and kept holiday rules active for weeks).
+- Tag `v1.2.0`:
   - Multi-entity tasks: integration option **Allowed task entities** and per-task `target_entities` (boiler + heater in one task), scheduler switches each target independently.
   - Simple mode (`simple_mode`) hides the Holidays & Shabbat features for a plain timers + tasks UI.
   - Sunrise/sunset times for window start/end and timeline points (checkbox + offset), with ☀/🌙 icons and before/after captions.
@@ -969,8 +976,8 @@ Notes:
   - Documentation: refreshed mobile task-editor screenshot for holiday/Shabbat mode (`mobile-05`).
 - Tag `v0.1.6`:
   - Hebcal city from card, `refresh_hebcal` city option, task-modal mobile time controls, in-card guide updates, task history / `clear_task_history`, and related integration fixes.
-- Integration manifest `1.2.0`:
-  - Aligned with `v1.2.0` tag.
+- Integration manifest `1.2.1`:
+  - Aligned with `v1.2.1` tag.
 
 Recent highlights:
 - `0.1.7`

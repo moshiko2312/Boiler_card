@@ -11,12 +11,14 @@ import {
 } from "./boiler-task-export.js";
 import { timerPageCount, timerPageIndexForOption } from "./boiler-timer-paging.js";
 import {
+  hebcalWindowActivationIso,
   holidayActiveStateList,
   holidayTaskPolicyForKind,
   holidayTimerPolicyForKind,
   holidayWorkProhibited,
   isHolidaySourceActiveState,
   isTruthyHolidayFlag,
+  nextMatchingHebcalWindow,
   normalizeHolidayPolicy,
   resolveHolidayKind,
   shouldForceShutdown,
@@ -357,6 +359,7 @@ class BoilerWaterCard extends HTMLElement {
       scheduleHolidayKindOptHoliday: this.shadowRoot.getElementById("schedule-holiday-kind-opt-holiday"),
       scheduleHolidayPhaseLabel: this.shadowRoot.getElementById("schedule-holiday-phase-label"),
       scheduleHolidayPhaseToggle: this.shadowRoot.getElementById("schedule-holiday-phase-toggle"),
+      scheduleHolidayPhaseField: this.shadowRoot.getElementById("schedule-holiday-phase-field"),
       scheduleHolidayPhaseInput: this.shadowRoot.getElementById("schedule-holiday-phase-input"),
       scheduleHolidayPhaseOptStart: this.shadowRoot.getElementById("schedule-holiday-phase-opt-start"),
       scheduleHolidayPhaseOptEnd: this.shadowRoot.getElementById("schedule-holiday-phase-opt-end"),
@@ -368,6 +371,16 @@ class BoilerWaterCard extends HTMLElement {
       scheduleHolidaySubtypeOptYomtov: this.shadowRoot.getElementById("schedule-holiday-subtype-opt-yomtov"),
       scheduleHolidaySubtypeOptRegular: this.shadowRoot.getElementById("schedule-holiday-subtype-opt-regular"),
       scheduleHolidayOffsetLabel: this.shadowRoot.getElementById("schedule-holiday-offset-label"),
+      scheduleHolidayNextField: this.shadowRoot.getElementById("schedule-holiday-next-field"),
+      scheduleHolidayNextLabel: this.shadowRoot.getElementById("schedule-holiday-next-label"),
+      scheduleHolidayNextCard: this.shadowRoot.getElementById("schedule-holiday-next-card"),
+      scheduleHolidayNextBadge: this.shadowRoot.getElementById("schedule-holiday-next-badge"),
+      scheduleHolidayNextTitle: this.shadowRoot.getElementById("schedule-holiday-next-title"),
+      scheduleHolidayNextSub: this.shadowRoot.getElementById("schedule-holiday-next-sub"),
+      scheduleHolidayNextDates: this.shadowRoot.getElementById("schedule-holiday-next-dates"),
+      scheduleHolidayNextActivation: this.shadowRoot.getElementById("schedule-holiday-next-activation"),
+      scheduleHolidayNextNote: this.shadowRoot.getElementById("schedule-holiday-next-note"),
+      scheduleHolidayNextStatus: this.shadowRoot.getElementById("schedule-holiday-next-status"),
       scheduleHolidayOffsetInput: this.shadowRoot.getElementById("schedule-holiday-offset-input"),
       scheduleHolidayOffsetSignBtn: this.shadowRoot.getElementById("schedule-holiday-offset-sign-btn"),
       scheduleHolidayOffsetMagInput: this.shadowRoot.getElementById("schedule-holiday-offset-mag-input"),
@@ -578,6 +591,9 @@ class BoilerWaterCard extends HTMLElement {
     this._elements.scheduleHolidaySubtypeOptYomtov?.addEventListener("click", () => this._setScheduleHolidaySubtype("yomtov"));
     this._elements.scheduleHolidaySubtypeOptRegular?.addEventListener("click", () => this._setScheduleHolidaySubtype("regular"));
     this._elements.scheduleEndTimerSelect?.addEventListener("change", () => this._syncScheduleHolidayFields());
+    // The start clock drives the activation time of all-day holidays in the preview.
+    this._elements.scheduleStartInput?.addEventListener("input", () => this._renderScheduleHolidayNextEvent());
+    this._elements.scheduleStartInput?.addEventListener("change", () => this._renderScheduleHolidayNextEvent());
     const onHebcalOffsetMagChanged = () => {
       this._syncHebcalOffsetHiddenFromParts();
       this._syncScheduleHolidayFields();
@@ -934,6 +950,9 @@ class BoilerWaterCard extends HTMLElement {
       }
       if (this._elements.scheduleHolidayOffsetLabel) {
         this._elements.scheduleHolidayOffsetLabel.textContent = this._t("schedule_holiday_offset");
+      }
+      if (this._elements.scheduleHolidayNextLabel) {
+        this._elements.scheduleHolidayNextLabel.textContent = this._t("schedule_holiday_next_label");
       }
       this._updateHebcalOffsetEquivLine();
       this._syncScheduleSunModeLabels();
@@ -3022,44 +3041,11 @@ class BoilerWaterCard extends HTMLElement {
     }
   }
 
-  _sortedUpcomingHebcalWindowsFromPayload() {
-    const payload = this._guideHebcalPayload;
-    const windows = Array.isArray(payload?.windows) ? payload.windows : [];
-    const now = Date.now();
-    return windows
-      .filter((w) => {
-        const end = Date.parse(w?.ends_at);
-        return Number.isFinite(end) && end > now;
-      })
-      .sort((a, b) => String(a.starts_at).localeCompare(String(b.starts_at)));
-  }
-
-  _hebcalHolidayWindowMatchesSubtype(window, holidaySubtype) {
-    const mode = this._normalizeHebcalHolidayMode(holidaySubtype);
-    const wp = !!window?.work_prohibited;
-    if (mode === "yomtov") {
-      return wp;
-    }
-    if (mode === "regular") {
-      return !wp;
-    }
-    return true;
-  }
-
   _firstListAnchorHebcalWindow(kind, holidaySubtype) {
-    const want = String(kind || "").toLowerCase() === "holiday" ? "holiday" : "shabbat";
-    const upcoming = this._sortedUpcomingHebcalWindowsFromPayload();
-    for (const w of upcoming) {
-      const wKind = String(w?.kind || "").toLowerCase() === "holiday" ? "holiday" : "shabbat";
-      if (wKind !== want) {
-        continue;
-      }
-      if (want === "holiday" && !this._hebcalHolidayWindowMatchesSubtype(w, holidaySubtype)) {
-        continue;
-      }
-      return w;
-    }
-    return null;
+    return nextMatchingHebcalWindow(this._guideHebcalPayload?.windows, {
+      kind,
+      holidaySubtype: this._normalizeHebcalHolidayMode(holidaySubtype),
+    });
   }
 
   _hebcalWindowPrimaryLabel(window) {
@@ -3121,8 +3107,10 @@ class BoilerWaterCard extends HTMLElement {
           throw new Error("hebcal_fetch_failed");
         }
         this._guideHebcalPayload = payload;
+        this._hebcalCacheLoadFailed = false;
         return payload;
       } catch {
+        this._hebcalCacheLoadFailed = true;
         return null;
       } finally {
         this._hebcalCacheInFlight = null;
@@ -5192,6 +5180,124 @@ class BoilerWaterCard extends HTMLElement {
     return "";
   }
 
+  /**
+   * "Next event" preview in the task editor: which Hebcal window the current
+   * kind / subtype selection resolves to, when the task would activate
+   * (anchor + offset), and a reminder that the task repeats on every such event.
+   */
+  _renderScheduleHolidayNextEvent() {
+    const els = this._elements;
+    const field = els.scheduleHolidayNextField;
+    if (!field) {
+      return;
+    }
+    const triggerMode = this._normalizeHebcalTriggerMode(els.scheduleHolidayTriggerModeInput?.value);
+    const hebcalActive = triggerMode === "hebcal_event" && this._holidayUiVisible();
+    field.hidden = !hebcalActive;
+    field.style.display = hebcalActive ? "" : "none";
+    if (!hebcalActive) {
+      return;
+    }
+    const showStatus = (text) => {
+      if (els.scheduleHolidayNextCard) {
+        els.scheduleHolidayNextCard.hidden = true;
+      }
+      if (els.scheduleHolidayNextStatus) {
+        els.scheduleHolidayNextStatus.textContent = text;
+        els.scheduleHolidayNextStatus.hidden = false;
+      }
+    };
+    const payload = this._guideHebcalPayload;
+    if (!payload) {
+      if (!this._hebcalCacheUrl()) {
+        showStatus(this._t("guide_hebcal_no_entry"));
+      } else if (this._hebcalCacheInFlight) {
+        showStatus(this._t("guide_hebcal_loading"));
+      } else if (this._hebcalCacheLoadFailed) {
+        showStatus(this._t("guide_hebcal_fetch_error"));
+      } else {
+        showStatus(this._t("guide_hebcal_loading"));
+        void this._fetchAndStoreHebcalCachePayload().then(() => this._refreshAfterHebcalCacheLoaded());
+      }
+      return;
+    }
+    const kind = this._normalizeHebcalEventKind(els.scheduleHolidayKindInput?.value);
+    const holidaySubtype = this._normalizeHebcalHolidayMode(els.scheduleHolidaySubtypeInput?.value);
+    const window = nextMatchingHebcalWindow(payload.windows, { kind, holidaySubtype });
+    if (!window) {
+      showStatus(this._t("schedule_holiday_next_none"));
+      return;
+    }
+    const isHoliday = String(window.kind || "").toLowerCase() === "holiday";
+    if (els.scheduleHolidayNextBadge) {
+      els.scheduleHolidayNextBadge.className = `guide-hebcal-badge kind-${isHoliday ? "holiday" : "shabbat"}`;
+      els.scheduleHolidayNextBadge.textContent = !isHoliday
+        ? this._t("schedule_holiday_kind_shabbat")
+        : window.work_prohibited
+          ? this._t("schedule_holiday_next_badge_yomtov")
+          : this._t("schedule_holiday_kind_holiday");
+    }
+    const hebrew = String(window.hebrew || "").trim();
+    const label = String(window.label || "").trim();
+    const preferHebrew = this._lang() === "he";
+    const title = (preferHebrew ? hebrew || label : label || hebrew) || this._hebcalWindowPrimaryLabel(window);
+    const sub = preferHebrew ? label : hebrew;
+    if (els.scheduleHolidayNextTitle) {
+      els.scheduleHolidayNextTitle.textContent = title;
+    }
+    if (els.scheduleHolidayNextSub) {
+      const showSub = Boolean(sub) && sub !== title;
+      els.scheduleHolidayNextSub.textContent = showSub ? sub : "";
+      els.scheduleHolidayNextSub.hidden = !showSub;
+    }
+    if (els.scheduleHolidayNextDates) {
+      // Holiday windows are whole days; Shabbat windows run candle lighting -> havdalah.
+      els.scheduleHolidayNextDates.textContent = isHoliday
+        ? this._formatHebcalInstant(window.starts_at, { withTime: false })
+        : `${this._t("task_start")}: ${this._formatHebcalInstant(window.starts_at)}\n${this._t("task_end")}: ${this._formatHebcalInstant(window.ends_at)}`;
+    }
+    if (els.scheduleHolidayNextActivation) {
+      const phase = this._normalizeHebcalEventPhase(els.scheduleHolidayPhaseInput?.value);
+      const offsetMinutes = this._normalizeHebcalOffsetMinutes(els.scheduleHolidayOffsetInput?.value);
+      const startHHMM = String(els.scheduleStartInput?.value || "").trim();
+      const iso = hebcalWindowActivationIso(window, { phase, offsetMinutes, startHHMM });
+      els.scheduleHolidayNextActivation.textContent = this._t("schedule_holiday_next_activation")
+        .replace("{when}", iso ? this._formatHebcalActivation(iso) : "—");
+    }
+    if (els.scheduleHolidayNextNote) {
+      const notes = [];
+      if (window.all_day) {
+        notes.push(this._t("schedule_holiday_next_allday_note"));
+      }
+      if (String(els.scheduleRecurrenceInput?.value || "forever").toLowerCase() !== "once") {
+        notes.push(this._t("schedule_holiday_next_repeat_note"));
+      }
+      els.scheduleHolidayNextNote.textContent = notes.join(" ");
+      els.scheduleHolidayNextNote.hidden = notes.length === 0;
+    }
+    if (els.scheduleHolidayNextStatus) {
+      els.scheduleHolidayNextStatus.hidden = true;
+      els.scheduleHolidayNextStatus.textContent = "";
+    }
+    if (els.scheduleHolidayNextCard) {
+      els.scheduleHolidayNextCard.hidden = false;
+    }
+  }
+
+  _formatHebcalActivation(iso) {
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) {
+      return "—";
+    }
+    return new Intl.DateTimeFormat(this._guideLocaleTag(), {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  }
+
   _setScheduleHolidayKind(value) {
     if (this._elements.scheduleHolidayKindInput) {
       this._elements.scheduleHolidayKindInput.value = this._normalizeHebcalEventKind(value);
@@ -5279,6 +5385,12 @@ class BoilerWaterCard extends HTMLElement {
     const shabbatLikeEndMode = (shabbatHebcalMode || shabbatLikeHoliday) && phase === "end";
     const holidayKindSelected = kind === "holiday";
     const showSubtype = hebcalActive && holidayKindSelected;
+    // Only Shabbat and Yom Tov have an event time to anchor to (candle lighting /
+    // havdalah). Regular holidays are whole days: the task's own start clock applies,
+    // so the clock stays editable and phase/offset are hidden. "All holidays" keeps
+    // the clock editable (for the regular days) and shows phase/offset (for Yom Tov).
+    const holidayAnchored = holidayKindSelected && holidaySubtype === "yomtov";
+    const holidayDayMode = hebcalActive && holidayKindSelected && holidaySubtype === "regular";
     this._syncScheduleSunModeAvailability(!hebcalActive);
     if (this._elements.scheduleHolidayOffsetMagInput) {
       this._syncHebcalOffsetHiddenFromParts();
@@ -5310,10 +5422,16 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleHolidayRowSecondary.hidden = !hebcalActive;
       this._elements.scheduleHolidayRowSecondary.style.display = hebcalActive ? "" : "none";
     }
+    const showAnchorControls = hebcalActive && !holidayDayMode;
     if (this._elements.scheduleHolidayOffsetField) {
-      this._elements.scheduleHolidayOffsetField.hidden = !hebcalActive;
-      this._elements.scheduleHolidayOffsetField.style.display = hebcalActive ? "" : "none";
+      this._elements.scheduleHolidayOffsetField.hidden = !showAnchorControls;
+      this._elements.scheduleHolidayOffsetField.style.display = showAnchorControls ? "" : "none";
     }
+    if (this._elements.scheduleHolidayPhaseField) {
+      this._elements.scheduleHolidayPhaseField.hidden = !showAnchorControls;
+      this._elements.scheduleHolidayPhaseField.style.display = showAnchorControls ? "" : "none";
+    }
+    this._renderScheduleHolidayNextEvent();
     if (this._elements.scheduleEndTimerSelect) {
       this._fillTimelineDurationSelect(this._elements.scheduleEndTimerSelect, this._elements.scheduleEndTimerSelect.value || null);
       this._elements.scheduleEndTimerSelect.hidden = !shabbatLikeEndMode;
@@ -5348,7 +5466,7 @@ class BoilerWaterCard extends HTMLElement {
             this._elements.scheduleEndInput.value = activationEnd;
           }
         }
-      } else if (hebcalActive && holidayKindSelected) {
+      } else if (hebcalActive && holidayAnchored) {
         if (phase === "start") {
           const base = this._holidayHebcalAnchorStartHHMM(holidaySubtype);
           const activation = base ? this._plusMinutesHHMM(base, offsetMinutes) : "";
@@ -5382,9 +5500,9 @@ class BoilerWaterCard extends HTMLElement {
           this._elements.scheduleStartInput.value = derivedStart;
         }
       }
-      const hebcalHolidayPhaseStart = hebcalActive && holidayKindSelected && phase === "start";
+      const hebcalHolidayPhaseStart = hebcalActive && holidayAnchored && phase === "start";
       const hebcalHolidayPhaseEndAnchor =
-        hebcalActive && holidayKindSelected && phase === "end" && !shabbatLikeEndMode;
+        hebcalActive && holidayAnchored && phase === "end" && !shabbatLikeEndMode;
       this._elements.scheduleStartInput.disabled =
         (shabbatHebcalMode && phase === "start")
         || hebcalHolidayPhaseStart
@@ -5396,17 +5514,17 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleEndInput.hidden = shabbatLikeEndMode || endUsesSun;
       this._elements.scheduleEndInput.style.display = (shabbatLikeEndMode || endUsesSun) ? "none" : "";
       const hebcalHolidayPhaseEndAnchor =
-        hebcalActive && holidayKindSelected && phase === "end" && !shabbatLikeEndMode;
+        hebcalActive && holidayAnchored && phase === "end" && !shabbatLikeEndMode;
       this._elements.scheduleEndInput.disabled =
         (shabbatHebcalMode && phase === "end")
         || hebcalHolidayPhaseEndAnchor;
     }
     if (this._elements.scheduleStartClearBtn) {
       const hebcalHolidayPhaseEndAnchor =
-        hebcalActive && holidayKindSelected && phase === "end" && !shabbatLikeEndMode;
+        hebcalActive && holidayAnchored && phase === "end" && !shabbatLikeEndMode;
       this._elements.scheduleStartClearBtn.disabled =
         (shabbatHebcalMode && phase === "start")
-        || (hebcalActive && holidayKindSelected && phase === "start")
+        || (hebcalActive && holidayAnchored && phase === "start")
         || hebcalHolidayPhaseEndAnchor
         || shabbatLikeEndMode;
     }
@@ -5414,7 +5532,7 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleEndClearBtn.hidden = shabbatLikeEndMode;
       this._elements.scheduleEndClearBtn.style.display = shabbatLikeEndMode ? "none" : "";
       const hebcalHolidayPhaseEndAnchor =
-        hebcalActive && holidayKindSelected && phase === "end" && !shabbatLikeEndMode;
+        hebcalActive && holidayAnchored && phase === "end" && !shabbatLikeEndMode;
       this._elements.scheduleEndClearBtn.disabled =
         (shabbatHebcalMode && phase === "end")
         || hebcalHolidayPhaseEndAnchor;
@@ -5605,6 +5723,7 @@ class BoilerWaterCard extends HTMLElement {
       this._elements.scheduleRecurrenceInput.value = normalized;
     }
     this._syncScheduleRecurrenceFields();
+    this._renderScheduleHolidayNextEvent();
   }
 
   _syncScheduleSectionToggles() {

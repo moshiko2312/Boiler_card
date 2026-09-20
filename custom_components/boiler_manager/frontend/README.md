@@ -13,7 +13,7 @@ This folder contains the Lovelace frontend source for `boiler-water-card`.
 - `boiler-timer-paging.js`  
   Timer modal pagination helpers (page count/index calculations).
 - `boiler-holiday-rules.js`  
-  Holiday/Shabbat policy normalization and rule-evaluation helpers.
+  Holiday/Shabbat policy normalization and rule-evaluation helpers, plus next-event resolution for the task editor (`nextMatchingHebcalWindow`, `hebcalWindowActivationIso`).
 - `boiler-heat-utils.js`  
   Heating/temperature calculation helpers shared by runtime visual logic.
 - `boiler-import-display.js`  
